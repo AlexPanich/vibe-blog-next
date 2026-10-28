@@ -10,7 +10,8 @@ export const officeMenuResource = z.object({
   counts: z.object({
     reports: z.number(),
     authorRequests: z.number(),
-    messages: z.number()
+    messages: z.number(),
+    notifications: z.number()
   })
 })
 

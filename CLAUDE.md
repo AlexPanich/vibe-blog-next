@@ -244,6 +244,16 @@ production-сервер не отдаёт файлы, появившиеся т�
   тоже). Гость получает только типы из `LIVE_BROADCAST_EVENT_TYPES`, поток у него
   открывается, лишь пока на странице есть подписчик такого события (`LiveEventsProvider`),
   лимит потоков гостя — по IP.
+- Третий режим — темы (`publishTopic`, спека 29): события открытой страницы — `post:<id>`
+  (комментарии, реакции, оценка) и `user:<id>` (число подписчиков). Компонент держит тему
+  через `useLiveTopic()`, провайдер открывает поток с `?topics=` и переоткрывает его при
+  смене тем; гостю тоже. В событии темы — только то, что
+  видно всем (счётчики) или сигнал «перечитай» (`post.comments.changed` → `loadCommentsAction`).
+- Тосты — `@mantine/notifications`, `<Notifications />` в `ClientSideInitializer`, показ —
+  `showToast` (`components/general/`); источники — `NotificationToasts` и `MessageToasts` в
+  `SiteHeader`. Колокольчик показывает только непрочитанные, история — `office/notifications`.
+- Выход в публичной части — мягкая навигация внутри того же root layout: пользователя
+  сбрасывает `useLogout` через `useSetUser()`, иначе страница остаётся «вошедшей».
 - Личные сообщения — домен `messages`, правила — `docs/lifecycles/message.md`. Staff
   переписку не видит: чужой диалог — 404, admin-доступа нет намеренно.
 

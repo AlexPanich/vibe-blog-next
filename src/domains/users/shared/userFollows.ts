@@ -1,5 +1,7 @@
 import 'server-only';
 import { db } from "@/globals/db";
+import { liveBus } from "@/globals/liveBus";
+import { userTopic } from "@/shared/liveEvents";
 import { isBlockedBetween } from "@/domains/users/shared/userBlocks";
 import { userFollows } from "@/database/schema";
 import { and, count, eq } from "drizzle-orm";
@@ -30,4 +32,11 @@ export async function followersCount(authorId: number){
   const [ row ] = await db.select({ n: count() }).from(userFollows).where(eq(userFollows.followingId, authorId));
 
   return row.n;
+}
+
+// Число подписчиков у всех, кто смотрит автора (спека 29). После commit
+export async function publishFollowersCount(authorIds: number[]){
+  for(const userId of authorIds){
+    liveBus.publishTopic(userTopic(userId), 'user.followers', { userId, followersCount: await followersCount(userId) });
+  }
 }

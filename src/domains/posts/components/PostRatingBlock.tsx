@@ -5,7 +5,10 @@ import { StrictResource } from "@/core/resource";
 import { PostRatingBlockResource } from "@/domains/posts/dto/postResources";
 import { myPostRatingAction, ratePostAction } from "@/domains/posts/actions/postRatingActions";
 import { formatRating, ratingsCountLabel } from "@/domains/posts/shared/formatRating";
+import useLiveEvent from "@/hooks/useLiveEvent";
+import useLiveTopic from "@/hooks/useLiveTopic";
 import useUser from "@/hooks/useUser";
+import { postTopic } from "@/shared/liveEvents";
 import { Anchor, Group, Rating, Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
@@ -15,8 +18,8 @@ type PostRatingBlockProps<T extends PostRatingBlockResource> = {
   post: StrictResource<T, PostRatingBlockResource>
 }
 
-// Оценка поста. Средняя приходит с сервера, своя — отдельным запросом после гидрации:
-// публичная страница сессию на сервере не читает.
+// Оценка поста. Средняя приходит с сервера и дальше — из живого канала (спека 29), своя —
+// отдельным запросом после гидрации: публичная страница сессию на сервере не читает.
 export default function PostRatingBlock<T extends PostRatingBlockResource>({ post }: PostRatingBlockProps<T>) {
   const { user, ready } = useUser();
   const [ stats, setStats ] = useState(post.rating);
@@ -31,6 +34,14 @@ export default function PostRatingBlock<T extends PostRatingBlockResource>({ pos
   const { execute: loadMine } = load;
   // execute из useAction меняется на каждом рендере: без этой метки эффект запрашивал бы оценку по кругу
   const loadedFor = useRef<number | null>(null);
+
+  useLiveTopic(postTopic(post.id));
+
+  useLiveEvent('post.rating', data => {
+    if(data.postId === post.id){
+      setStats({ average: data.average, count: data.count });
+    }
+  });
 
   useEffect(() => {
     if(ready && user && !own && loadedFor.current !== user.id){

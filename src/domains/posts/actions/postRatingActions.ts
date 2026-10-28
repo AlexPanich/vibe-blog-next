@@ -8,6 +8,8 @@ import { aiIdSchema } from "@/domains/posts/dto/postRequests";
 import { postRateDto } from "@/domains/posts/dto/postRatingRequests";
 import { ratePost } from "@/domains/posts/policy";
 import { myRating, postRatingStats } from "@/domains/posts/shared/postRatings";
+import { liveBus } from "@/globals/liveBus";
+import { postTopic } from "@/shared/liveEvents";
 import { and, eq } from "drizzle-orm";
 
 export const ratePostAction = actionAuthClient
@@ -39,7 +41,11 @@ export const ratePostAction = actionAuthClient
       }
     });
 
-    return { ...(await postRatingStats(id)), mine: value };
+    const stats = await postRatingStats(id);
+    // Звёзды у всех, кто смотрит пост (спека 29); своя оценка — только в ответе
+    liveBus.publishTopic(postTopic(id), 'post.rating', { postId: id, average: stats.average, count: stats.count });
+
+    return { ...stats, mine: value };
   });
 
 /*

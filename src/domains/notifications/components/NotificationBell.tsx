@@ -1,8 +1,7 @@
 'use client'
 
 import 'client-only';
-import LocalDate from "@/components/general/LocalDate";
-import UserAvatar from "@/domains/users/exports/UserAvatar";
+import NotificationRow from "@/domains/notifications/components/NotificationRow";
 import { loadNotificationsAction, readAllNotificationsAction, readNotificationAction, unreadNotificationsAction } from "@/domains/notifications/actions/notificationActions";
 import { notificationItemResource, type NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
 import useLiveEvent from "@/hooks/useLiveEvent";
@@ -10,7 +9,6 @@ import useUser from "@/hooks/useUser";
 import { ActionIcon, Button, Indicator, Loader, Popover, PopoverDropdown, PopoverTarget, Text } from "@mantine/core";
 import { IconBell } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import type { Route } from "next";
 import Link from "@/components/general/Link";
 import { useEffect, useRef, useState } from "react";
 
@@ -21,7 +19,8 @@ type NotificationBellProps = {
 
 /*
   Колокольчик в шапке: число непрочитанных живое (SSE), панель при открытии перечитывает
-  список. Прочитанным делает клик по строке
+  список. В панели — только непрочитанные (спека 29): клик по строке читает её и убирает,
+  прочитанные — в истории office/notifications
 */
 export default function NotificationBell({ initialUnread }: NotificationBellProps) {
   const { user, ready } = useUser();
@@ -42,7 +41,7 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
   const readAll = useAction(readAllNotificationsAction, {
     onSuccess: ({ data }) => {
       setUnread(data.unread);
-      setItems(prev => prev?.map(item => ({ ...item, read: true })) ?? null);
+      setItems(prev => prev && []);
     }
   });
 
@@ -83,7 +82,7 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
 
   useLiveEvent('notification.read', data => {
     setUnread(data.unread);
-    setItems(prev => prev?.map(item => data.id === null || item.id === data.id ? { ...item, read: true } : item) ?? null);
+    setItems(prev => prev && (data.id === null ? [] : prev.filter(item => item.id !== data.id)));
   });
 
   if(!ready || !user){
@@ -93,17 +92,15 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
   function toggle(){
     if(!opened){
       setItems(null);
-      load.execute({});
+      load.execute({ unreadOnly: true });
     }
 
     setOpened(!opened);
   }
 
   function open(item: NotificationItemResource){
-    if(!item.read){
-      setItems(prev => prev?.map(i => i.id === item.id ? { ...i, read: true } : i) ?? null);
-      readOne.execute({ id: item.id });
-    }
+    setItems(prev => prev && prev.filter(i => i.id !== item.id));
+    readOne.execute({ id: item.id });
 
     if(item.href){
       setOpened(false);
@@ -123,22 +120,29 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
       </PopoverTarget>
       <PopoverDropdown p={0}>
         <div className="ui-notifications">
-          <div className="ui-notifications__head">Уведомления</div>
+          <div className="ui-notifications__head">
+            Уведомления
+            { !!items?.length && <Button variant="subtle" size="compact-xs" color="gray" loading={readAll.isPending} onClick={() => readAll.execute()}>
+              Отметить прочитанными
+            </Button> }
+          </div>
           { items === null && <div className="ui-notifications__state"><Loader size="sm" /></div> }
-          { items?.length === 0 && <div className="ui-notifications__state">Уведомлений пока нет</div> }
+          { items?.length === 0 && <div className="ui-notifications__state">Новых уведомлений нет</div> }
           { items && items.length > 0 && <ul className="ui-notifications__list">
             { items.map(item => <li key={item.id}>
               <NotificationRow item={item} onOpen={() => open(item)} />
             </li>) }
           </ul> }
           { load.result.serverError && <Text size="sm" c="red" px="md" py="xs">{ load.result.serverError.message }</Text> }
-          { (hasMore || !!unread) && items !== null && <div className="ui-notifications__foot">
-            { hasMore && <Button variant="subtle" size="xs" loading={load.isPending} onClick={() => load.execute({ beforeId: items[items.length - 1].id })}>
-              Показать ещё
-            </Button> }
-            { !!unread && <Button variant="subtle" size="xs" color="gray" loading={readAll.isPending} onClick={() => readAll.execute()}>
-              Прочитать все
-            </Button> }
+          { items !== null && <div className="ui-notifications__foot">
+            { hasMore && items.length > 0
+              ? <Button variant="subtle" size="xs" loading={load.isPending} onClick={() => load.execute({ beforeId: items[items.length - 1].id, unreadOnly: true })}>
+                Показать ещё
+              </Button>
+              : <span /> }
+            <Button component={Link} href="/office/notifications" variant="subtle" size="xs" color="gray" onClick={() => setOpened(false)}>
+              Все уведомления
+            </Button>
           </div> }
         </div>
       </PopoverDropdown>
@@ -146,23 +150,3 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
   );
 }
 
-function NotificationRow({ item, onOpen }: { item: NotificationItemResource, onOpen: () => void }) {
-  const body = <>
-    { item.actor ? <UserAvatar name={item.actor.name} avatarKey={item.actor.avatarKey} size={32} /> : <span className="ui-notification__icon"><IconBell size={16} /></span> }
-    <span className="ui-notification__body">
-      { item.actor && <span className="ui-notification__actor">{ item.actor.name }</span> }
-      <span className="ui-notification__text">{ item.text }</span>
-      <span className="ui-notification__meta">
-        <LocalDate value={item.createdAt} relative />
-        { item.unavailable && ' · пост недоступен' }
-      </span>
-    </span>
-  </>;
-  const className = `ui-notification${item.read ? '' : ' ui-notification--unread'}`;
-
-  if(item.href){
-    return <Link className={className} href={item.href as Route} onClick={onOpen}>{ body }</Link>;
-  }
-
-  return <button type="button" className={className} onClick={onOpen}>{ body }</button>;
-}

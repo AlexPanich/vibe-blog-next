@@ -6,24 +6,13 @@ import { db } from "@/globals/db";
 import { liveBus } from "@/globals/liveBus";
 import { notifications } from "@/database/schema";
 import { notificationPageDto, notificationReadDto } from "@/domains/notifications/dto/notificationRequests";
-import { countUnread, loadNotificationRows, toNotificationItem } from "@/domains/notifications/shared/loadNotifications";
-import { and, eq, isNull, lt } from "drizzle-orm";
-
-const PAGE_SIZE = 20;
+import { countUnread, loadNotificationPage } from "@/domains/notifications/shared/loadNotifications";
+import { and, eq, isNull } from "drizzle-orm";
 
 export const loadNotificationsAction = actionAuthClient
   .inputSchema(notificationPageDto)
-  .action(async ({ parsedInput: { beforeId }, ctx: { auth } }) => {
-    const rows = loadNotificationRows(and(
-      eq(notifications.userId, auth.id),
-      beforeId === undefined ? undefined : lt(notifications.id, beforeId)
-    ), PAGE_SIZE + 1);
-
-    return {
-      items: rows.slice(0, PAGE_SIZE).map(toNotificationItem),
-      hasMore: rows.length > PAGE_SIZE,
-      unread: countUnread(auth.id)
-    };
+  .action(async ({ parsedInput: { beforeId, unreadOnly }, ctx: { auth } }) => {
+    return loadNotificationPage(auth.id, beforeId, unreadOnly);
   });
 
 // Счётчик после гидрации, переподключения и возврата на вкладку

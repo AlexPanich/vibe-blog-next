@@ -1674,7 +1674,12 @@ a.ui-gallery__item:hover img {
 /* ---- Уведомления (popover колокольчика) ------------------------------------ */
 
 .ui-notifications__head {
-  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.6rem 0.5rem 1rem;
   border-bottom: 1px solid var(--line);
   font-weight: 600;
   font-size: 0.9rem;
@@ -1699,6 +1704,15 @@ a.ui-gallery__item:hover img {
 
 .ui-notifications__list > li + li {
   border-top: 1px solid var(--line);
+}
+
+/* История office/notifications: тот же список, без прокрутки внутри */
+.ui-notifications__list--page {
+  max-height: none;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 
 .ui-notifications__foot {
@@ -1769,6 +1783,48 @@ a.ui-gallery__item:hover img {
 .ui-notification__meta {
   font-size: 0.75rem;
   color: var(--ink-faint);
+}
+
+/* ---- Тосты живого канала (спека 29) ------------------------------------ */
+
+.ui-toast {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.ui-toast > .ui-avatar,
+.ui-toast > .ui-notification__icon {
+  flex: none;
+}
+
+.ui-toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.ui-toast__title {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-toast__text {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.ui-toast__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-toast__link:hover .ui-toast__title {
+  text-decoration: underline;
 }
 
 /* ---- Личные сообщения ------------------------------------------------------ */

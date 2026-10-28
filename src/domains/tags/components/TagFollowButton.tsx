@@ -37,11 +37,12 @@ export default function TagFollowButton({ tagId, name }: { tagId: number, name: 
       size="compact-sm"
       variant={following ? 'default' : 'light'}
       leftSection={following ? <IconBellCheck size={15} /> : <IconBellPlus size={15} />}
-      loading={toggle.isPending || following === null}
+      loading={toggle.isPending || (following === null && !load.hasErrored)}
       onClick={() => toggle.execute({ follow: !following })}
     >
       { following ? `Вы подписаны на «${name}» — отписаться` : `Подписаться на «${name}»` }
     </Button>
     { toggle.result.serverError && <Text size="sm" c="red">{ toggle.result.serverError.message }</Text> }
+    { load.result.serverError && <Text size="sm" c="red">{ load.result.serverError.message }</Text> }
   </div>
 }

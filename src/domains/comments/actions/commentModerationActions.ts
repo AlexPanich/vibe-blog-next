@@ -11,6 +11,7 @@ import { findCommentOrStale } from "@/domains/comments/shared/commentGuards";
 import { resolveOpenReports } from "@/domains/comments/shared/commentReports";
 import { notifyReportsResolved } from "@/domains/comments/shared/commentNotifications";
 import { notify, publishNotifications } from "@/domains/notifications/exports/notify";
+import { publishCommentsChanged } from "@/domains/comments/shared/publishComments";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -25,7 +26,7 @@ export const hideCommentAction = actionAuthClient
   .action(async ({ parsedInput: { reason }, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
     await CONTAINER.boucerService.breakIfCant(moderateComments);
 
-    const { content, notificationIds } = db.transaction(tx => {
+    const { content, branch, notificationIds } = db.transaction(tx => {
       const comment = findCommentOrStale(tx, id);
 
       if(comment.userId === auth.id){
@@ -48,6 +49,7 @@ export const hideCommentAction = actionAuthClient
 
       return {
         content: comment.content,
+        branch: { postId: comment.postId, imageId: comment.imageId },
         notificationIds: [
           ...notify(tx, 'comment.hidden', [ comment.userId ], { actorId: auth.id, postId: comment.postId, commentId: id }),
           ...notifyReportsResolved(tx, comment, reporterIds, auth.id)
@@ -56,6 +58,7 @@ export const hideCommentAction = actionAuthClient
     });
 
     publishNotifications(notificationIds);
+    publishCommentsChanged(branch);
     revalidateBranches();
 
     // Модератору текст скрытого нужен и дальше, а с сервера он больше не придёт
@@ -67,7 +70,7 @@ export const unhideCommentAction = actionAuthClient
   .action(async ({ bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
     await CONTAINER.boucerService.breakIfCant(moderateComments);
 
-    const notificationIds = db.transaction(tx => {
+    const { branch, notificationIds } = db.transaction(tx => {
       const comment = findCommentOrStale(tx, id);
 
       if(comment.userId === auth.id){
@@ -86,10 +89,14 @@ export const unhideCommentAction = actionAuthClient
 
       tx.insert(commentModerations).values({ commentId: id, userId: auth.id, decision: 'unhidden' }).run();
 
-      return notify(tx, 'comment.unhidden', [ comment.userId ], { actorId: auth.id, postId: comment.postId, commentId: id });
+      return {
+        branch: { postId: comment.postId, imageId: comment.imageId },
+        notificationIds: notify(tx, 'comment.unhidden', [ comment.userId ], { actorId: auth.id, postId: comment.postId, commentId: id })
+      };
     });
 
     publishNotifications(notificationIds);
+    publishCommentsChanged(branch);
     revalidateBranches();
 
     return { done: true };

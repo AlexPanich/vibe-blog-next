@@ -9,6 +9,7 @@ import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import "@/theme/tokens.css";
 import "@/theme/layout.css";
 

@@ -8,6 +8,7 @@ import { defaultColorScheme } from "@/theme/colorScheme";
 import { theme } from "@/theme/theme";
 import { AuthUser } from "@/shared/authUser";
 import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { useEffect, useMemo, useState } from "react";
 
 type ClientSideInitializerProps = {
@@ -29,7 +30,7 @@ export default function ClientSideInitializer({ children, user: initialUser }: C
   const [ sessionLoaded, setSessionLoaded ] = useState<boolean>(false);
   const user = initialUser ?? sessionUser;
   const loaded = initialUser !== undefined || sessionLoaded;
-  const userContext = useMemo(() => ({ user, loaded }), [ user, loaded ])
+  const userContext = useMemo(() => ({ user, loaded, setUser: setSessionUser }), [ user, loaded ])
 
   useEffect(() => {
     if(initialUser){
@@ -57,6 +58,8 @@ export default function ClientSideInitializer({ children, user: initialUser }: C
   }, [ initialUser ]);
 
   return <MantineProvider theme={theme} defaultColorScheme={defaultColorScheme}>
+    { /* Тосты живого канала (спека 29) */ }
+    <Notifications position="bottom-right" limit={3} autoClose={6000} />
     <UserContext value={userContext}>
       <LiveEventsProvider>
         { children }

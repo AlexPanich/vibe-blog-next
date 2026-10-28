@@ -5,7 +5,8 @@ import type { Role } from "@/database/schema";
 import { StrictResource } from "@/core/resource";
 import { OfficeMenuResource } from "@/components/navigation/officeMenuResource";
 import MessagesMenuCount from "@/domains/messages/exports/MessagesMenuCount";
-import { IconArticle, IconBookmark, IconChecklist, IconFiles, IconFlag, IconHome, IconMessage, IconMessages, IconNews, IconPencilPlus, IconTags, IconUserCheck, IconUserCircle, IconUsers, IconUsersGroup, type Icon } from "@tabler/icons-react";
+import NotificationsMenuCount from "@/domains/notifications/exports/NotificationsMenuCount";
+import { IconArticle, IconBell, IconBookmark, IconChecklist, IconFiles, IconFlag, IconHome, IconMessage, IconMessages, IconNews, IconPencilPlus, IconTags, IconUserCheck, IconUserCircle, IconUsers, IconUsersGroup, type Icon } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "@/components/general/Link";
 import { usePathname } from "next/navigation";
@@ -23,6 +24,7 @@ const groups: { label: string, items: MenuItem[] }[] = [
       { label: 'Мои посты', href: '/office/posts', icon: IconArticle, roles: [ 'author' ] },
       { label: 'Новый пост', href: '/office/posts/create', icon: IconPencilPlus, roles: [ 'author' ] },
       { label: 'Сообщения', href: '/office/messages', icon: IconMessages, count: 'messages' },
+      { label: 'Уведомления', href: '/office/notifications', icon: IconBell, count: 'notifications' },
       { label: 'Моя лента', href: '/office/feed', icon: IconNews },
       { label: 'Подписки', href: '/office/follows', icon: IconUsersGroup },
       { label: 'Избранное', href: '/office/favorites', icon: IconBookmark },
@@ -77,9 +79,9 @@ export default function OfficeMenu<T extends OfficeMenuResource>({ menu }: { men
             >
               <item.icon size={18} stroke={1.7} />
               { item.label }
-              { item.count === 'messages'
-                ? <MessagesMenuCount initial={menu.counts.messages} />
-                : item.count && menu.counts[item.count] > 0 && <span className="ui-desk__count">{ menu.counts[item.count] }</span> }
+              { item.count === 'messages' && <MessagesMenuCount initial={menu.counts.messages} /> }
+              { item.count === 'notifications' && <NotificationsMenuCount initial={menu.counts.notifications} /> }
+              { (item.count === 'reports' || item.count === 'authorRequests') && menu.counts[item.count] > 0 && <span className="ui-desk__count">{ menu.counts[item.count] }</span> }
             </Link>
           )) }
         </Fragment>

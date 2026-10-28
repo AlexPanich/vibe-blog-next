@@ -1,9 +1,11 @@
 import 'server-only';
-import type { LiveBroadcastEventType, LiveEvents, LiveEventType } from "@/shared/liveEvents";
+import type { LiveBroadcastEventType, LiveEvents, LiveEventType, LiveTopic, LiveTopicEventType } from "@/shared/liveEvents";
 
 export type LiveSubscriber = {
   send: (chunk: string) => void,
-  close: () => void
+  close: () => void,
+  // Темы потока (?topics=), спека 29
+  topics: ReadonlySet<LiveTopic>
 }
 
 // Вкладки одного пользователя: шестой поток закрывает самый старый
@@ -45,6 +47,17 @@ export const liveBus = {
     }
   },
 
+  // Подписчикам темы — вошедшим и гостям. Тоже после commit
+  publishTopic<T extends LiveTopicEventType>(topic: LiveTopic, type: T, data: LiveEvents[T]){
+    const message = chunk(type, data);
+
+    for(const map of [ subscribers, guests ] as Map<unknown, LiveSubscriber[]>[]){
+      for(const key of [ ...map.keys() ]){
+        sendAll(map, key, message, subscriber => subscriber.topics.has(topic));
+      }
+    }
+  },
+
   subscribe(userId: number, subscriber: LiveSubscriber){
     add(subscribers, userId, subscriber, STREAMS_PER_USER);
   },
@@ -74,8 +87,12 @@ function chunk(type: LiveEventType, data: unknown){
   return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function sendAll<K>(map: Map<K, LiveSubscriber[]>, key: K, message: string){
+function sendAll<K>(map: Map<K, LiveSubscriber[]>, key: K, message: string, filter?: (subscriber: LiveSubscriber) => boolean){
   for(const subscriber of [ ...(map.get(key) ?? []) ]){
+    if(filter && !filter(subscriber)){
+      continue;
+    }
+
     try{
       subscriber.send(message);
     }

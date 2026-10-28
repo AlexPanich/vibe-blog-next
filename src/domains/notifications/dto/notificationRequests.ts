@@ -6,9 +6,10 @@ export const notificationReadDto = z.object({
 
 export type NotificationReadDto = z.infer<typeof notificationReadDto>
 
-// Порция панели: строки старше beforeId
+// Порция: строки старше beforeId. unreadOnly — колокольчик, без него — история (спека 29)
 export const notificationPageDto = z.object({
-  beforeId: z.int().positive().optional()
+  beforeId: z.int().positive().optional(),
+  unreadOnly: z.boolean().optional()
 })
 
 export type NotificationPageDto = z.infer<typeof notificationPageDto>

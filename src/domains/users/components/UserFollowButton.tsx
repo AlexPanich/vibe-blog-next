@@ -2,7 +2,10 @@
 
 import 'client-only';
 import { followUserAction, myUserFollowAction } from "@/domains/users/actions/userFollowActions";
+import useLiveEvent from "@/hooks/useLiveEvent";
+import useLiveTopic from "@/hooks/useLiveTopic";
 import useUser from "@/hooks/useUser";
+import { userTopic } from "@/shared/liveEvents";
 import { Button, Group, Text } from "@mantine/core";
 import { IconHeartHandshake, IconUserCheck, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
@@ -21,15 +24,28 @@ type UserFollowButtonProps = {
 type FollowState = { following: boolean, friend: boolean, blocked: boolean, followersCount: number }
 
 // Подписка на автора. Своё состояние — после гидрации: публичная страница сессию на сервере не читает.
+// Число подписчиков — живое (спека 29), у всех, кто смотрит автора.
 export default function UserFollowButton({ authorId, followersCount, authorName }: UserFollowButtonProps) {
   const { user, ready } = useUser();
-  const [ state, setState ] = useState<FollowState | null>(null);
-  const toggle = useAction(followUserAction.bind(null, authorId), { onSuccess: ({ data }) => setState(data) });
+  const [ loadedState, setState ] = useState<FollowState | null>(null);
+  // После выхода в той же вкладке состояние прежнего пользователя не показываем
+  const state = ready && user ? loadedState : null;
+  // Из живого канала — свежее и props, и ответа своего действия
+  const [ liveCount, setLiveCount ] = useState<number | null>(null);
+  const toggle = useAction(followUserAction.bind(null, authorId), { onSuccess: ({ data }) => { setState(data); setLiveCount(data.followersCount) } });
   const load = useAction(myUserFollowAction.bind(null, authorId), { onSuccess: ({ data }) => setState(data) });
   const { execute: loadMine } = load;
   // execute меняется на каждом рендере — без метки эффект запрашивал бы по кругу
   const loadedFor = useRef<number | null>(null);
   const own = ready && user?.id === authorId;
+
+  useLiveTopic(userTopic(authorId));
+
+  useLiveEvent('user.followers', data => {
+    if(data.userId === authorId){
+      setLiveCount(data.followersCount);
+    }
+  });
 
   useEffect(() => {
     if(ready && user && !own && loadedFor.current !== user.id){
@@ -38,7 +54,9 @@ export default function UserFollowButton({ authorId, followersCount, authorName 
     }
   }, [ ready, user, own, loadMine ]);
 
-  const count = state?.followersCount ?? followersCount;
+  // Где числа нет с сервера (страница поста) и «своё» не пришло — его нет и в живом канале
+  const known = followersCount !== undefined || state !== null;
+  const count = known ? liveCount ?? state?.followersCount ?? followersCount : undefined;
   const label = authorName ? ` на ${authorName}` : '';
 
   return (
@@ -50,12 +68,13 @@ export default function UserFollowButton({ authorId, followersCount, authorName 
         size={authorName ? 'sm' : 'compact-sm'}
         variant={state?.following ? 'default' : 'light'}
         leftSection={state?.following ? <IconUserCheck size={16} /> : <IconUserPlus size={16} />}
-        loading={toggle.isPending || state === null}
+        loading={toggle.isPending || (state === null && !load.hasErrored)}
         onClick={() => toggle.execute({ follow: !state?.following })}
       >
         { state?.following ? 'Отписаться' : `Подписаться${label}` }
       </Button> }
       { toggle.result.serverError && <Text size="sm" c="red">{ toggle.result.serverError.message }</Text> }
+      { ready && user && load.result.serverError && <Text size="sm" c="red">{ load.result.serverError.message }</Text> }
     </Group>
   );
 }
