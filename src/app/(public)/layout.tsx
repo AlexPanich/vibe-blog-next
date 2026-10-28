@@ -5,6 +5,7 @@ import { defaultColorScheme } from "@/theme/colorScheme";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import type { Metadata } from "next";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import "@/theme/tokens.css";
 import "@/theme/layout.css";
 

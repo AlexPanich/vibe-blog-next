@@ -8,6 +8,7 @@ import { aiIdSchema } from "@/domains/users/dto/userAdminRequests";
 import { blockUser } from "@/domains/users/policy";
 import { parseRoles } from "@/domains/users/shared/userRoles";
 import { blockState, USER_BLOCKS_LIMIT } from "@/domains/users/shared/userBlocks";
+import { publishFollowersCount } from "@/domains/users/shared/userFollows";
 import { deleteSocialNotificationsBetween } from "@/domains/notifications/exports/notify";
 import { and, count, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -54,6 +55,11 @@ export const blockUserAction = actionAuthClient
         .run();
       deleteSocialNotificationsBetween(tx, auth.id, id);
     });
+
+    // Блокировка снимает подписки в обе стороны — счётчики обоих
+    if(block){
+      await publishFollowersCount([ auth.id, id ]);
+    }
 
     revalidatePath('/authors/[id]', 'page');
     revalidatePath('/office/follows');

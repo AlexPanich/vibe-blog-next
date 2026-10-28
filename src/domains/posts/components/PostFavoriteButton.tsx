@@ -38,11 +38,12 @@ export default function PostFavoriteButton({ id }: { id: number }) {
     <Button
       variant={favorite ? 'light' : 'default'}
       leftSection={favorite ? <IconBookmarkFilled size={16} /> : <IconBookmark size={16} />}
-      loading={toggle.isPending || favorite === null}
+      loading={toggle.isPending || (favorite === null && !load.hasErrored)}
       onClick={() => toggle.execute({ favorite: !favorite })}
     >
       { favorite ? 'В избранном' : 'В избранное' }
     </Button>
     { toggle.result.serverError && <Text size="sm" c="red">{ toggle.result.serverError.message }</Text> }
+    { load.result.serverError && <Text size="sm" c="red">{ load.result.serverError.message }</Text> }
   </>
 }

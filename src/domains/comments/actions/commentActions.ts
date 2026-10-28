@@ -1,18 +1,19 @@
 'use server'
 
 import 'server-only';
-import { actionAuthClient, actionError } from "@/globals/actionClient";
+import { actionAuthClient, actionClient, actionError } from "@/globals/actionClient";
 import { db } from "@/globals/db";
 import { rateLimiters } from "@/globals/rateLimiter";
 import { commentModerations, commentReactions, commentReports, comments, postImages, posts } from "@/database/schema";
 import { aiIdSchema, commentCreateDto, commentDto, commentReactDto, receivedCommentsPageDto } from "@/domains/comments/dto/commentRequests";
-import { receivedCommentListResource, type CommentViewer } from "@/domains/comments/dto/commentResources";
+import { commentListResource, receivedCommentListResource, type CommentViewer } from "@/domains/comments/dto/commentResources";
 import { moderateComments, reactComment, replyComment } from "@/domains/comments/policy";
 import { commentState } from "@/domains/comments/shared/commentState";
 import { ensurePostPublished, findCommentOrStale, removeComment } from "@/domains/comments/shared/commentGuards";
-import { branchOf, reactionCounts } from "@/domains/comments/shared/loadComments";
+import { branchOf, loadComments, reactionCounts } from "@/domains/comments/shared/loadComments";
 import { notifyCommentCreated } from "@/domains/comments/shared/commentNotifications";
 import { loadReceivedComments } from "@/domains/comments/shared/loadReceivedComments";
+import { publishCommentReactions, publishCommentsChanged } from "@/domains/comments/shared/publishComments";
 import { resource } from "@/core/resource";
 import { blockedAmong, blockingAmong, isBlockedBetween } from "@/domains/users/exports/userBlocks";
 import { notify, publishNotifications } from "@/domains/notifications/exports/notify";
@@ -64,6 +65,7 @@ export const createCommentAction = actionAuthClient
     });
 
     publishNotifications(created.notificationIds);
+    publishCommentsChanged({ postId, imageId });
     revalidatePost();
 
     return { id: created.id };
@@ -78,8 +80,9 @@ export const updateCommentAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
   .inputSchema(commentDto)
   .action(async ({ parsedInput: { content }, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
-    const notificationIds = db.transaction(tx => {
+    const { branch, notificationIds } = db.transaction(tx => {
       const comment = findCommentOrStale(tx, id);
+      const branch = { postId: comment.postId, imageId: comment.imageId };
       const own = comment.userId === auth.id;
 
       if(!own && !moderateComments(auth)){
@@ -89,7 +92,7 @@ export const updateCommentAction = actionAuthClient
       ensurePostPublished(tx, comment.postId);
 
       if(comment.content === content){
-        return [];
+        return { branch: null, notificationIds: [] };
       }
 
       const updated = tx.update(comments)
@@ -103,15 +106,20 @@ export const updateCommentAction = actionAuthClient
       }
 
       if(own){
-        return [];
+        return { branch, notificationIds: [] };
       }
 
       tx.insert(commentModerations).values({ commentId: id, userId: auth.id, decision: 'edited', comment: comment.content }).run();
 
-      return notify(tx, 'comment.edited', [ comment.userId ], { actorId: auth.id, postId: comment.postId, commentId: id });
+      return { branch, notificationIds: notify(tx, 'comment.edited', [ comment.userId ], { actorId: auth.id, postId: comment.postId, commentId: id }) };
     });
 
     publishNotifications(notificationIds);
+
+    if(branch){
+      publishCommentsChanged(branch);
+    }
+
     revalidatePost();
 
     return { done: true };
@@ -120,7 +128,7 @@ export const updateCommentAction = actionAuthClient
 export const deleteCommentAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
   .action(async ({ bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
-    db.transaction(tx => {
+    const branch = db.transaction(tx => {
       const comment = findCommentOrStale(tx, id);
 
       if(comment.userId !== auth.id){
@@ -133,8 +141,11 @@ export const deleteCommentAction = actionAuthClient
 
       ensurePostPublished(tx, comment.postId);
       removeComment(tx, id);
+
+      return { postId: comment.postId, imageId: comment.imageId };
     });
 
+    publishCommentsChanged(branch);
     revalidatePost();
 
     return { done: true };
@@ -144,7 +155,7 @@ export const reactCommentAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
   .inputSchema(commentReactDto)
   .action(async ({ parsedInput: { value }, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
-    db.transaction(tx => {
+    const postId = db.transaction(tx => {
       const comment = findCommentOrStale(tx, id);
 
       if(comment.userId === auth.id){
@@ -172,11 +183,31 @@ export const reactCommentAction = actionAuthClient
           .onConflictDoUpdate({ target: [ commentReactions.commentId, commentReactions.userId ], set: { value } })
           .run();
       }
+
+      return comment.postId;
     });
 
+    const counts = await reactionCounts(id);
+    publishCommentReactions(postId, id, counts);
     revalidatePost();
 
-    return { ...(await reactionCounts(id)), mine: value };
+    return { ...counts, mine: value };
+  });
+
+/*
+  Ветка заново — по событию post.comments.changed (спека 29), гостям тоже. Тот же loadComments,
+  что у страницы: скрытые и удалённые без текста. Комментарии бывают только у опубликованного
+*/
+export const loadCommentsAction = actionClient
+  .bindArgsSchemas([ aiIdSchema, aiIdSchema.nullable() ])
+  .action(async ({ bindArgsParsedInputs: [ postId, imageId ] }) => {
+    const post = db.select({ status: posts.status }).from(posts).where(eq(posts.id, postId)).get();
+
+    if(post?.status !== 'published'){
+      actionError(404, 'Пост не найден');
+    }
+
+    return resource(commentListResource, await loadComments(postId, imageId));
   });
 
 /*

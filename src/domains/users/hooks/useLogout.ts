@@ -1,5 +1,6 @@
 import 'client-only';
 import { signOut } from "@/globals/authClient";
+import useSetUser from "@/hooks/useSetUser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -7,6 +8,7 @@ import { useState } from "react";
 export default function useLogout(){
   const [ pending, setPending ] = useState(false);
   const router = useRouter();
+  const setUser = useSetUser();
 
   async function logout(){
     if(pending){
@@ -19,6 +21,8 @@ export default function useLogout(){
       const result = await signOut();
 
       if(result.data?.success){
+        // Без сброса публичная часть осталась бы «вошедшей»: /auth в том же root layout
+        setUser(null);
         router.push('/auth/login');
       }
     }

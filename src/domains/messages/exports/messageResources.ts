@@ -1,1 +1,1 @@
-export { messageItemResource, type MessageItemResource } from "@/domains/messages/dto/messageResources";
+export { messageItemResource, type MessageItemResource, type MessagePeerResource } from "@/domains/messages/dto/messageResources";

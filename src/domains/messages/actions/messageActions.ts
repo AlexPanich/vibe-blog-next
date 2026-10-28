@@ -7,7 +7,7 @@ import { liveBus } from "@/globals/liveBus";
 import { rateLimiters } from "@/globals/rateLimiter";
 import { dialogs, messages, users } from "@/database/schema";
 import { aiIdSchema, dialogPageDto, messageDto, messagePageDto } from "@/domains/messages/dto/messageRequests";
-import type { MessageItemResource } from "@/domains/messages/dto/messageResources";
+import type { MessageItemResource, MessagePeerResource } from "@/domains/messages/dto/messageResources";
 import { dialogPair, findDialogBetween, findOwnDialog, isIgnored, isRestricted, writeBlockReason } from "@/domains/messages/shared/messageAccess";
 import { countUnreadMessages, loadDialogRows, loadMessages } from "@/domains/messages/shared/loadMessages";
 import { deleteDialogNotifications, dropMessageNotification, notifyMessage, readMessageNotifications } from "@/domains/messages/shared/messageNotifications";
@@ -56,7 +56,7 @@ export const sendMessageAction = actionAuthClient
     });
 
     publishNotifications(sent.notificationIds);
-    publishMessage(sent.dialogId, sent.message, [ auth.id, recipientId ]);
+    publishMessage(sent.dialogId, sent.message, { id: auth.id, name: auth.name, avatarKey: auth.avatarKey }, [ auth.id, recipientId ]);
     revalidatePath('/office/messages');
 
     return { dialogId: sent.dialogId, message: sent.message };
@@ -173,8 +173,8 @@ export const messageStateAction = actionAuthClient
     }));
   });
 
-function publishMessage(dialogId: number, message: MessageItemResource, userIds: number[]){
+function publishMessage(dialogId: number, message: MessageItemResource, sender: MessagePeerResource, userIds: number[]){
   for(const userId of userIds){
-    liveBus.publish(userId, 'message.created', { dialogId, message });
+    liveBus.publish(userId, 'message.created', { dialogId, message, sender });
   }
 }

@@ -3,9 +3,26 @@ import { db } from "@/globals/db";
 import { comments, notifications, posts, users } from "@/database/schema";
 import type { NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
 import { describeNotification } from "@/domains/notifications/shared/notificationText";
-import { and, count, desc, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lt, type SQL } from "drizzle-orm";
 
 export type NotificationRow = ReturnType<typeof loadNotificationRows>[number];
+
+const PAGE_SIZE = 20;
+
+// Порция колокольчика (unreadOnly) или истории: строки старше beforeId
+export function loadNotificationPage(userId: number, beforeId?: number, unreadOnly = false){
+  const rows = loadNotificationRows(and(
+    eq(notifications.userId, userId),
+    beforeId === undefined ? undefined : lt(notifications.id, beforeId),
+    unreadOnly ? isNull(notifications.readAt) : undefined
+  ), PAGE_SIZE + 1);
+
+  return {
+    items: rows.slice(0, PAGE_SIZE).map(toNotificationItem),
+    hasMore: rows.length > PAGE_SIZE,
+    unread: countUnread(userId)
+  };
+}
 
 /*
   Строки с тем, что нужно для текста и ссылки при показе: актор, пост сейчас, ветка комментария
@@ -41,6 +58,7 @@ export function loadNotificationRows(where: SQL | undefined, limit?: number){
 export function toNotificationItem(row: NotificationRow): NotificationItemResource {
   return {
     id: row.id,
+    type: row.type,
     actor: row.actorName === null ? null : { name: row.actorName, avatarKey: row.actorAvatarKey },
     ...describeNotification(row),
     read: row.readAt !== null,

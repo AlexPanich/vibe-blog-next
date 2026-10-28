@@ -5,7 +5,7 @@ import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { db } from "@/globals/db";
 import { userFollows, users } from "@/database/schema";
 import { aiIdSchema } from "@/domains/users/dto/userAdminRequests";
-import { followersCount, followState, USER_FOLLOWS_LIMIT } from "@/domains/users/shared/userFollows";
+import { followersCount, followState, publishFollowersCount, USER_FOLLOWS_LIMIT } from "@/domains/users/shared/userFollows";
 import { isBlockedBetween } from "@/domains/users/shared/userBlocks";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -48,6 +48,7 @@ export const followUserAction = actionAuthClient
       tx.insert(userFollows).values({ followerId: auth.id, followingId: id }).onConflictDoNothing().run();
     });
 
+    await publishFollowersCount([ id ]);
     revalidatePath('/authors/[id]', 'page');
     revalidatePath('/office/follows');
     revalidatePath('/office/feed');

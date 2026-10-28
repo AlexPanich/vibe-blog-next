@@ -1,6 +1,7 @@
 import { liveBus, type LiveSubscriber } from "@/globals/liveBus";
 import { getAuthUser } from "@/shared/auth";
 import { getUserIp } from "@/shared/request";
+import { isLiveTopic, LIVE_TOPICS_LIMIT, type LiveTopic } from "@/shared/liveEvents";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +11,16 @@ const HEARTBEAT_MS = 25_000;
 /*
   Живой канал (SSE): вошедшему — его события и широковещательные, гостю — только
   широковещательные (спека 22), лимит потоков гостя — по IP. Переподключения держит
-  глобальный лимит proxy.ts
+  глобальный лимит proxy.ts. ?topics=post:12 — ещё события открытой страницы (спека 29):
+  проверяется только формат, в событиях темы нет содержимого, которое видно не всем
 */
 export async function GET(request: Request){
+  const topics = parseTopics(new URL(request.url).searchParams.get('topics'));
+
+  if(topics === null){
+    return new Response('Bad topics', { status: 400 });
+  }
+
   const channel = await liveChannel();
 
   const encoder = new TextEncoder();
@@ -24,7 +32,8 @@ export async function GET(request: Request){
 
       const subscriber: LiveSubscriber = {
         send: chunk => controller.enqueue(encoder.encode(chunk)),
-        close: () => finish()
+        close: () => finish(),
+        topics
       };
 
       const heartbeat = setInterval(() => {
@@ -92,4 +101,14 @@ async function liveChannel(){
     subscribe: (subscriber: LiveSubscriber) => liveBus.subscribeGuest(ip, subscriber),
     unsubscribe: (subscriber: LiveSubscriber) => liveBus.unsubscribeGuest(ip, subscriber)
   };
+}
+
+function parseTopics(value: string | null): ReadonlySet<LiveTopic> | null {
+  const list = value ? value.split(',') : [];
+
+  if(list.length > LIVE_TOPICS_LIMIT || !list.every(isLiveTopic)){
+    return null;
+  }
+
+  return new Set(list);
 }
