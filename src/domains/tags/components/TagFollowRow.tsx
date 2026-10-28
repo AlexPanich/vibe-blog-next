@@ -6,7 +6,7 @@ import { followTagAction } from "@/domains/tags/actions/tagFollowActions";
 import type { TagResource } from "@/domains/tags/dto/tagResources";
 import { Button, Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 // Строка вкладки «Рубрики»: отписка на месте, вернуть — той же кнопкой.

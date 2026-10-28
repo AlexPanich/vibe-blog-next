@@ -9,7 +9,7 @@ import { authorRequestRowResource } from "@/domains/users/dto/userResources";
 import { authorRequestAdminFilterDto } from "@/domains/users/dto/authorRequestRequests";
 import { asc, count, desc, eq, isNull, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconChecks } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

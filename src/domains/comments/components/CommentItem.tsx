@@ -14,7 +14,7 @@ import { editComment, hideComment, manageComment, reactComment, replyComment, re
 import { CommentNode, INDENT_LEVELS, INDENT_LEVELS_SM } from "@/domains/comments/shared/commentTree";
 import { Anchor, Button, Group, Text, TextInput } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 type CommentItemProps = {

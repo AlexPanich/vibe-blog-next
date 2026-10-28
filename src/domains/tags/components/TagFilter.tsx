@@ -1,6 +1,6 @@
 import type { Tag } from "@/database/types";
 import type { Route } from "next";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type TagFilterProps = {
   tags: (Pick<Tag, 'id' | 'name' | 'slug'> & { postsCount: number })[],

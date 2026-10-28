@@ -8,7 +8,7 @@ import { createPost, moderatePosts } from "@/domains/posts/policy";
 import { countOpenCommentReports, moderateComments } from "@/domains/comments/exports/countOpenCommentReports";
 import { authorRequestState } from "@/domains/users/shared/authorRequests";
 import { count, desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import type { ReactNode } from "react";
 import { IconHourglass, IconLock, IconPencilPlus, IconUserCircle, IconUsersGroup, type Icon } from "@tabler/icons-react";
 

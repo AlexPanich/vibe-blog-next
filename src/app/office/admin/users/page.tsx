@@ -6,7 +6,7 @@ import UserRow from "@/domains/users/components/UserRow";
 import { userAdminFilterDto } from "@/domains/users/dto/userAdminRequests";
 import { parseRoles } from "@/domains/users/shared/userRoles";
 import { count, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconUsers } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

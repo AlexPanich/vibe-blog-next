@@ -6,7 +6,7 @@ import UserAvatar from "@/domains/users/components/UserAvatar";
 import useLogout from "@/domains/users/hooks/useLogout";
 import { Button, Group, Menu, MenuDivider, MenuDropdown, MenuItem, MenuLabel, MenuTarget, UnstyledButton } from "@mantine/core";
 import { IconChevronDown, IconLayoutGrid, IconLogin, IconLogout, IconUserCircle, IconUserPlus } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 // Правый край шапки: гостю — вход и регистрация, вошедшему — меню под аватаром.
 export default function UserBox() {

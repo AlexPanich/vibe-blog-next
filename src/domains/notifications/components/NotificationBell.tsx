@@ -11,7 +11,7 @@ import { ActionIcon, Button, Indicator, Loader, Popover, PopoverDropdown, Popove
 import { IconBell } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import type { Route } from "next";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useEffect, useRef, useState } from "react";
 
 type NotificationBellProps = {

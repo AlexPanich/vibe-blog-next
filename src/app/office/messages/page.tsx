@@ -9,7 +9,7 @@ import { requireAuthUser } from "@/shared/auth";
 import EmptyState from "@/components/general/EmptyState";
 import { IconMessages } from "@tabler/icons-react";
 import { eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import z from "zod";
 
 export const dynamic = 'force-dynamic';

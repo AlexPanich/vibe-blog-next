@@ -8,7 +8,7 @@ import { UserSigninDto } from "@/domains/users/dto/authRequests";
 import { fieldError } from "@/components/general/FieldError";
 import { signIn } from "@/globals/authClient";
 import { Alert, Button, Divider, PasswordInput, Stack, TextInput } from "@mantine/core";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconBrandGithub, IconLock, IconLogin, IconMail, IconMailForward } from "@tabler/icons-react";
 
 export default function LoginForm() {

@@ -20,7 +20,7 @@ import { resource } from "@/core/resource";
 import { idOrFail } from "@/shared/params";
 import LocalDate from "@/components/general/LocalDate";
 import { desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import PostMarkdown from "@/domains/posts/components/PostMarkdown";
 import { notFound } from "next/navigation";
 import { IconArrowLeft, IconCalendar, IconLink, IconUser } from "@tabler/icons-react";

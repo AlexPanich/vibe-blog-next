@@ -1,6 +1,6 @@
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedPath, feedUrl } from "@/domains/posts/shared/feedUrl";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconSearch, IconX } from "@tabler/icons-react";
 
 // Поиск обычной GET-формой: работает без JS, каждый поиск — запись в истории.

@@ -8,7 +8,7 @@ import { formatRating, ratingsCountLabel } from "@/domains/posts/shared/formatRa
 import useUser from "@/hooks/useUser";
 import { Anchor, Group, Rating, Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useEffect, useRef, useState } from "react";
 
 type PostRatingBlockProps<T extends PostRatingBlockResource> = {

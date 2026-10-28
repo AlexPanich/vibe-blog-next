@@ -11,7 +11,7 @@ import { buildCommentTree, commentsCountLabel } from "@/domains/comments/shared/
 import useUser from "@/hooks/useUser";
 import { Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type CommentsBlockProps<T extends CommentListResource> = {

@@ -1,5 +1,5 @@
 import ForgotPasswordForm from "@/domains/users/components/ForgotPasswordForm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export const metadata = { title: 'Восстановление пароля' };
 

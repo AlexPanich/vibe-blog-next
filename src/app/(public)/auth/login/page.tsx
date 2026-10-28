@@ -1,5 +1,5 @@
 import LoginForm from "@/domains/users/components/LoginForm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export const metadata = { title: 'Вход' };
 

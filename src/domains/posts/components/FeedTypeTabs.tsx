@@ -1,7 +1,7 @@
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedUrl } from "@/domains/posts/shared/feedUrl";
 import { POST_TYPE_TABS } from "@/domains/posts/shared/postTypes";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 // Вкладки типов над лентой. Остальные условия сохраняются, загруженное число — нет.
 export default function FeedTypeTabs({ filter }: { filter: PostFeedFilterDto }) {

@@ -9,7 +9,7 @@ import PostTypeMeta from "@/domains/posts/components/PostTypeMeta";
 import PostCover from "@/domains/posts/components/PostCover";
 import { Button } from "@mantine/core";
 import { IconCalendar, IconUser } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 export default function PostCard({ post }: { post: PostResource }) {

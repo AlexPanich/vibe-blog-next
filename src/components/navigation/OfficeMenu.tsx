@@ -7,7 +7,7 @@ import { OfficeMenuResource } from "@/components/navigation/officeMenuResource";
 import MessagesMenuCount from "@/domains/messages/exports/MessagesMenuCount";
 import { IconArticle, IconBookmark, IconChecklist, IconFiles, IconFlag, IconHome, IconMessage, IconMessages, IconNews, IconPencilPlus, IconTags, IconUserCheck, IconUserCircle, IconUsers, IconUsersGroup, type Icon } from "@tabler/icons-react";
 import type { Route } from "next";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 

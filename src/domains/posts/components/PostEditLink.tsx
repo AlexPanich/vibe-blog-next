@@ -4,7 +4,7 @@ import 'client-only';
 import UserGate from "@/components/general/UserGate";
 import { PostEditLinkResource } from "@/domains/posts/dto/postResources";
 import { StrictResource } from "@/core/resource";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type PostEditLinkProps<T extends PostEditLinkResource> = {
   post: StrictResource<T, PostEditLinkResource>

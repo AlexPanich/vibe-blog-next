@@ -1,6 +1,6 @@
 import { FeedFollow, PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedUrl } from "@/domains/posts/shared/feedUrl";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 const TABS: { follow: FeedFollow, label: string }[] = [
   { follow: 'authors', label: 'Авторы' },

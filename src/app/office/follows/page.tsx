@@ -12,7 +12,7 @@ import ButtonLink from "@/components/general/ButtonLink";
 import EmptyState from "@/components/general/EmptyState";
 import { and, eq, exists } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconUsersGroup } from "@tabler/icons-react";
 import type { Route } from "next";
 import z from "zod";

@@ -8,7 +8,7 @@ import type { UserFollowRowResource } from "@/domains/users/dto/userResources";
 import { Button, Text } from "@mantine/core";
 import { IconHeartHandshake } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 type UserFollowRowProps<T extends UserFollowRowResource> = {

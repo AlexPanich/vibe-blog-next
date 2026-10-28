@@ -3,7 +3,7 @@
 import 'client-only';
 import UserGate from "@/components/general/UserGate";
 import { moderatePosts } from "@/domains/posts/policy";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconShieldCheck } from "@tabler/icons-react";
 
 // Ссылка на страницу модерации поста — только навигация, права проверяют page и actions.

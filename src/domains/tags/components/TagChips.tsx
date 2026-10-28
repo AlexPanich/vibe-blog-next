@@ -1,5 +1,5 @@
 import { TagResource } from "@/domains/tags/dto/tagResources";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type TagChipsProps = {
   tags: Pick<TagResource, 'id' | 'name' | 'slug'>[],

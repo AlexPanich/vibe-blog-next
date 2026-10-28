@@ -11,7 +11,7 @@ import { AUTHOR_REQUEST_PAUSE_DAYS } from "@/domains/users/dto/authorRequestRequ
 import { Button, Group, Text, TextInput } from "@mantine/core";
 import { IconCalendar, IconCheck, IconMessage, IconX } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 

@@ -1,5 +1,5 @@
 import SignupForm from "@/domains/users/components/SignupForm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export const metadata = { title: 'Регистрация' };
 

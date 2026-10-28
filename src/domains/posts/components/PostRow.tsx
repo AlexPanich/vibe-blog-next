@@ -7,7 +7,7 @@ import type { Tag } from "@/database/types";
 import { IconCalendar, IconEye, IconUser } from "@tabler/icons-react";
 import type { Route } from "next";
 import { stripMarkdown } from "@/core/markdown";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type PostRowProps<T extends string> = {
   post: Pick<Post, 'url' | 'title' | 'content' | 'status' | 'createdAt' | 'type' | 'source' | 'lat' | 'lng'>,

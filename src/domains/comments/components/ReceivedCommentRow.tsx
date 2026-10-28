@@ -3,7 +3,7 @@ import type { ReceivedCommentResource } from "@/domains/comments/dto/commentReso
 import UserAvatar from "@/domains/users/exports/UserAvatar";
 import LocalDate from "@/components/general/LocalDate";
 import { Button } from "@mantine/core";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import type { Route } from "next";
 import { IconArrowBackUp } from "@tabler/icons-react";
 

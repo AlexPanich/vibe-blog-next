@@ -14,7 +14,7 @@ import useLiveEvent from "@/hooks/useLiveEvent";
 import { Button, Text } from "@mantine/core";
 import { IconMessages } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 type DialogListProps<T extends DialogRowResource[]> = {

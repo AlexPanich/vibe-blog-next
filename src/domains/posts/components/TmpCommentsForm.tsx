@@ -2,7 +2,7 @@
 
 import 'client-only';
 import UserGate from "@/components/general/UserGate";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export default function TmpCommentsForm() {
   return (

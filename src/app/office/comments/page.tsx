@@ -9,7 +9,7 @@ import ReceivedCommentList from "@/domains/comments/components/ReceivedCommentLi
 import { receivedCommentListResource } from "@/domains/comments/dto/commentResources";
 import { countReceivedComments, loadReceivedComments } from "@/domains/comments/shared/loadReceivedComments";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconCalendar, IconMessage } from "@tabler/icons-react";
 import z from "zod";
 

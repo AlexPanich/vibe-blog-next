@@ -4,7 +4,7 @@ import type { PostType } from "@/database/schema";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
 import PostAuthorGate from "@/domains/posts/components/PostAuthorGate";
 import { IconArrowRight } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type Move = {
   id: number,

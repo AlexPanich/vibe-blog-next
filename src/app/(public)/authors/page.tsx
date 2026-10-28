@@ -5,7 +5,7 @@ import { resource } from "@/core/resource";
 import { authorCardResource } from "@/domains/users/dto/userResources";
 import { authorsFilterDto } from "@/domains/users/dto/userRequests";
 import { and, asc, avg, countDistinct, desc, eq, sql } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconUsers } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

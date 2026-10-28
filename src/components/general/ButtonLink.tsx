@@ -3,7 +3,7 @@
 import 'client-only';
 import { Button, type ButtonProps } from "@mantine/core";
 import type { Route } from "next";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type ButtonLinkProps<T extends string> = ButtonProps & { href: Route<T> }
 

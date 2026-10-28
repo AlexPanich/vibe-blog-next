@@ -4,7 +4,7 @@ import 'client-only';
 import { PostLinkResource } from "@/domains/posts/dto/postResources";
 import { StrictResource } from "@/core/resource";
 import { Button } from "@mantine/core";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useState } from "react";
 
 type PostLinkToggleProps<T extends PostLinkResource> = {

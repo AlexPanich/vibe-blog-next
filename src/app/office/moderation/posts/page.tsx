@@ -6,7 +6,7 @@ import PostRow from "@/domains/posts/components/PostRow";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { POST_MODERATION_TABS, postModerationFilterDto } from "@/domains/posts/dto/postModerationRequests";
 import { asc, desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconChecks } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

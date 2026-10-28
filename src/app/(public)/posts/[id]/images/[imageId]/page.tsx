@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { notFound } from "next/navigation";
 import { getPublishedPost } from "@/domains/posts/shared/getPublishedPost";
 import { getPostImages } from "@/domains/posts/shared/postImages";

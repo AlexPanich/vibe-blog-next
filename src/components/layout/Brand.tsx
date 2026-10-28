@@ -1,5 +1,5 @@
 import { IconChessKnightFilled } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 // Знак и название сайта в шапке. Бренд меняется здесь, в одном месте.
 export default function Brand() {

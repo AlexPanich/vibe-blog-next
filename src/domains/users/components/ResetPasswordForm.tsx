@@ -7,7 +7,7 @@ import { fieldError } from "@/components/general/FieldError";
 import useForm from "@/hooks/useForm";
 import { Alert, Button, PasswordInput, Stack } from "@mantine/core";
 import { IconDeviceFloppy, IconLock, IconLogin } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 // Новый пароль по ссылке из письма. Токен приходит строкой из url — он и так у человека в адресной строке.
 export default function ResetPasswordForm({ token }: { token: string }) {

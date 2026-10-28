@@ -4,7 +4,7 @@ import type { User } from "@/database/types";
 import UserStatusTags from "@/domains/users/components/UserStatusTags";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import { IconArticle, IconCalendar, IconMail } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type UserRowProps = {
   user: Pick<User, 'id' | 'name' | 'email' | 'emailVerified' | 'bannedAt' | 'createdAt' | 'avatarKey'> & { roles: Role[], postsCount: number }

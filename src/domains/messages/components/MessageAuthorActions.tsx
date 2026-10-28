@@ -8,7 +8,7 @@ import useUser from "@/hooks/useUser";
 import { Group, Text } from "@mantine/core";
 import { IconMessage } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useEffect, useRef } from "react";
 
 /*

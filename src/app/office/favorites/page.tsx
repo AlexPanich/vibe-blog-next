@@ -7,7 +7,7 @@ import ButtonLink from "@/components/general/ButtonLink";
 import EmptyState from "@/components/general/EmptyState";
 import { stripMarkdown } from "@/core/markdown";
 import { and, desc, eq, sql } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconBookmark, IconCalendar } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

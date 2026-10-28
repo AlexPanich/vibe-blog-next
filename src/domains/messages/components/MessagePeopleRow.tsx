@@ -7,7 +7,7 @@ import type { MessagePeerResource } from "@/domains/messages/dto/messageResource
 import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { Button, Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
 
 type MessagePeopleRowProps<T extends MessagePeerResource> = {

@@ -1,6 +1,6 @@
 import { CONTAINER } from "@/globals/container";
 import { workWithPost } from "@/domains/posts/policy";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import PostEditForm from "@/domains/posts/components/PostEditForm";
 import PostGalleryManager from "@/domains/posts/components/PostGalleryManager";
 import { getPostImages } from "@/domains/posts/shared/postImages";

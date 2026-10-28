@@ -1,7 +1,7 @@
 import { db } from "@/globals/db";
 import { postRatings, posts } from "@/database/schema";
 import { and, avg, count, desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { resource } from "@/core/resource";
 import { postResource } from "@/domains/posts/dto/postResources";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";

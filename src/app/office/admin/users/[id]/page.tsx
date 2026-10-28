@@ -15,7 +15,7 @@ import { requireAuthUser } from "@/shared/auth";
 import { idOrFail } from "@/shared/params";
 import LocalDate from "@/components/general/LocalDate";
 import { desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { notFound } from "next/navigation";
 import { IconArrowLeft, IconCalendar, IconExternalLink, IconMail } from "@tabler/icons-react";
 

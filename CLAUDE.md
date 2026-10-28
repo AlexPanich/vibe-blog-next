@@ -144,6 +144,11 @@
 - просмотр сущности — `article.ui-article` с `.ui-meta`, `.ui-article__body` и рядом
   кнопок `.ui-actions`.
 
+Ссылки — `Link` из `@/components/general/Link`, не `next/link` (запрещено в eslint):
+prefetch выключен по умолчанию. В production Next подгружает каждую видимую ссылку, и меню
+кабинета со списками выбирают глобальный rate limit (429). В dev prefetch нет — проблему
+видно только на `npm run build` / в Docker.
+
 Mantine в серверных компонентах: `component={Link}` передать нельзя — для кнопки-ссылки
 есть `ButtonLink` (`src/components/general/`), compound-компоненты (`Table.Tr`) — только
 плоскими импортами (`TableTr`).

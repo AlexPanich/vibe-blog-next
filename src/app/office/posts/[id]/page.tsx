@@ -1,6 +1,6 @@
 import { CONTAINER } from "@/globals/container";
 import { editPost, ownerTransitions, workWithPost } from "@/domains/posts/policy";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import PostMarkdown from "@/domains/posts/components/PostMarkdown";
 import PostStatusTag from "@/domains/posts/components/PostStatusTag";
 import PostTransitionButtons from "@/domains/posts/components/PostTransitionButtons";

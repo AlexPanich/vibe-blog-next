@@ -1,7 +1,7 @@
 import { imageUrl } from "@/core/imageUrl";
 import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
 import { IconMessage } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 type PostGalleryProps = {
   postId: number,

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import PostMarkdown from "@/domains/posts/components/PostMarkdown";
 import PostModerateLink from "@/domains/posts/components/PostModerateLink";
 import { getPostTags } from "@/domains/posts/shared/getPostTags";

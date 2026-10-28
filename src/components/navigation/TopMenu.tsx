@@ -2,7 +2,7 @@
 
 import 'client-only';
 import type { Route } from "next";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { usePathname } from "next/navigation";
 
 const items: { label: string, href: Route }[] = [

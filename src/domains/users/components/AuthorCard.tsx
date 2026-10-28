@@ -2,7 +2,7 @@ import LocalDate from "@/components/general/LocalDate";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import { AuthorCardResource } from "@/domains/users/dto/userResources";
 import { IconArticle, IconCalendar, IconStarFilled } from "@tabler/icons-react";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 // Карточка автора: сколько опубликовано и куда перейти.
 export default function AuthorCard({ author }: { author: AuthorCardResource }) {

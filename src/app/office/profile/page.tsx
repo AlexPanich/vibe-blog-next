@@ -8,7 +8,7 @@ import MessagesFriendsOnlyForm from "@/domains/messages/components/MessagesFrien
 import { db } from "@/globals/db";
 import { accounts, users } from "@/database/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export const metadata = { title: 'Профиль' };
 

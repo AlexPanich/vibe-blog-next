@@ -7,7 +7,7 @@ import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { postAdminFilterDto } from "@/domains/posts/dto/postAdminRequests";
 import { POST_STATUS_LABELS } from "@/domains/posts/shared/postStatuses";
 import { desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconChessKnight } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';

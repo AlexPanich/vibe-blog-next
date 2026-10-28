@@ -1,6 +1,6 @@
 import ResetPasswordForm from "@/domains/users/components/ResetPasswordForm";
 import { findResetToken } from "@/domains/users/shared/findResetToken";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { IconLinkOff } from "@tabler/icons-react";
 import z from "zod";
 

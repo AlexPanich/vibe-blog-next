@@ -12,7 +12,7 @@ import useLiveEvent from "@/hooks/useLiveEvent";
 import { Anchor, Button, Group, Text } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 

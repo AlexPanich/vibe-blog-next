@@ -11,7 +11,7 @@ import { latestMoves, topRatedPosts } from "@/domains/posts/shared/homeBoard";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { IconArrowRight, IconArticle, IconPencilPlus } from "@tabler/icons-react";
 import { and, count, desc, eq } from "drizzle-orm";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 
 export const dynamic = 'force-dynamic';
 

@@ -11,7 +11,7 @@ import type { CommentReportRowResource } from "@/domains/comments/dto/commentRes
 import { Button, Group, Text, TextInput } from "@mantine/core";
 import { IconFlag } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "next/link";
+import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
