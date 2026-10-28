@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 # allow examples
 !.env.example
+!.env.docker.example
 
 # local editor and Claude settings
 .vscode

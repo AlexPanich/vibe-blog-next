@@ -32,7 +32,19 @@
 - Проверка типов — `npx tsc --noEmit`. TS не проверяет side-effect импорты, так что
   отсутствие пакетов `server-only` / `client-only` видно только при build.
 - `npm run queue:listen` — worker очереди (см. ниже).
-- Миграции — `npx drizzle-kit generate` / `npx drizzle-kit migrate`, npm-скриптов нет.
+- Миграции — `npx drizzle-kit generate` / `npx drizzle-kit migrate`. `npm run db:migrate`
+  (`scripts/migrate.ts`, drizzle-orm migrator) и `npm run db:seed` (`scripts/seed.ts`,
+  демо-данные только в пустую базу) — то же, что делает контейнер при старте.
+
+## Docker и деплой
+
+- `Dockerfile` (standalone + production-пакеты целиком), `docker/entrypoint.sh` (миграции →
+  сид → worker в фоне → сервер), `docker-compose.yml` (том `storage`), `render.yaml` —
+  демо на Render free, подробно — `README.md`.
+- `scripts/` и всё, что они импортируют (`src/database/`, `src/config/database.ts`),
+  запускается голым node: импорты относительные с `.ts`, без `@/` и `'server-only'`.
+  Новый файл, нужный им, — добавить в `COPY` рантайма в `Dockerfile`.
+- Новая демо-сущность — дописать в `scripts/seed.ts`, хеш пароля там общий.
 
 ## База данных
 

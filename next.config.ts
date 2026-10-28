@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Самодостаточный сервер для Docker-образа (Dockerfile)
+  output: 'standalone',
   typedRoutes: true,
   reactStrictMode: false,
   /*

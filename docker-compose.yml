@@ -1,0 +1,27 @@
+# Запуск на своей машине или сервере одним контейнером: SQLite и загрузки — в томе.
+#   cp .env.docker.example .env   # задать BETTER_AUTH_SECRET
+#   docker compose up -d --build
+# При первом старте база создаётся миграциями и заполняется демо-данными (SEED_ON_BOOT).
+
+services:
+  app:
+    build: .
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Задайте BETTER_AUTH_SECRET в .env (openssl rand -base64 32)}
+      # Адрес сайта, как его видит браузер: ссылки в письмах и проверка origin в better-auth
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # Без прокси перед контейнером X-Forwarded-For нет — все в одном bucket rate limiter
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      # SQLite (dev.db, data.db очереди) и картинки: без тома пересоздание контейнера
+      # обнулило бы базу
+      - storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  storage:

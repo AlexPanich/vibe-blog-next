@@ -1,0 +1,35 @@
+# Демо-стенд на Render (Blueprint): Render → New → Blueprint → этот репозиторий.
+#
+# Бесплатный план: сервис засыпает через 15 минут без запросов, диск эфемерный. SQLite и
+# загруженные картинки живут в контейнере, поэтому после каждого деплоя, рестарта и
+# засыпания база создаётся заново и заполняется демо-данными (docker/entrypoint.sh).
+# Для демо это плюс: каждый показ начинается с чистого стенда.
+#
+# Если имя vibe-blog-next в аккаунте занято, Render добавит суффикс — тогда поправьте
+# BETTER_AUTH_URL под настоящий адрес сервиса.
+services:
+  - type: web
+    name: vibe-blog-next
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      # Render отдаёт трафик на 10000
+      - key: PORT
+        value: "10000"
+      # Публичный адрес: ссылки в письмах и проверка origin в better-auth
+      - key: BETTER_AUTH_URL
+        value: https://vibe-blog-next.onrender.com
+      # Генерируется при применении blueprint; сессии и так живут до перезапуска базы
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      # Прокси Render дописывает IP клиента в X-Forwarded-For
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      - key: SEED_ON_BOOT
+        value: "true"
