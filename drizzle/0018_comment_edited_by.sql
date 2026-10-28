@@ -1,0 +1,1 @@
+ALTER TABLE `comments` ADD `edited_by` integer REFERENCES users(id);

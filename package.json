@@ -1,0 +1,55 @@
+{
+  "name": "next-full-1",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "queue:listen": "node queue-runner.ts"
+  },
+  "dependencies": {
+    "@mantine/core": "^9.7.1",
+    "@mantine/hooks": "^9.7.1",
+    "@mdxeditor/editor": "^4.3.4",
+    "@tabler/icons-react": "^3.49.0",
+    "bcrypt": "^6.0.0",
+    "better-auth": "^1.7.5",
+    "better-sqlite3": "^12.11.1",
+    "client-only": "^0.0.1",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-validator": "^0.0.1",
+    "leaflet": "^1.9.4",
+    "next": "16.4.2",
+    "next-safe-action": "^8.7.3",
+    "plainjob": "^0.0.14",
+    "rate-limiter-flexible": "^11.2.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "playwright": "^1.63.0",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "better-sqlite3@12.11.1": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

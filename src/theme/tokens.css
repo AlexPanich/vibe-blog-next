@@ -1,0 +1,150 @@
+/* ==========================================================================
+   Токены дизайн-системы: цвета и шрифты для ручной вёрстки.
+   Палитра Mantine — в ./theme.ts; тёмная схема здесь ссылается на неё,
+   чтобы компоненты и ручной CSS не расходились.
+   ========================================================================== */
+
+:root {
+  /* Поверхности */
+  --paper: #fefcf8;
+  --surface: #ffffff;
+  --paper-tint: #faf6ef;
+
+  /* Текст */
+  --ink: #09324b;
+  --ink-soft: #436075;
+  --ink-faint: #8196a2;
+
+  /* Линии */
+  --rule: #e6e2dc;
+  --line: #ece9e3;
+  --input-line: #dad5cc;
+
+  /* Акцент */
+  --accent: #ffb923;
+  --accent-bright: #ffd079;
+  --accent-soft: #fff1d2;
+  --accent-ink: #765412;   /* читаемый акцентный текст на фоне */
+
+  /* Ссылки и фокус */
+  --link: #43479c;
+  --link-soft: #e0e5ff;
+
+  /* Состояния */
+  --success: #1c7a52;
+  --success-soft: #e3f4ea;
+  --danger: #c22f4a;
+  --danger-soft: #fdeaee;
+
+  /* Клетка доски (см. .ui-board) */
+  --sq-size: 34px;
+  --sq-color: rgba(9, 50, 75, 0.055);
+
+  /* Тени: карточка, карточка под курсором, большая панель */
+  --shadow-card: 0 1px 2px rgba(9, 50, 75, 0.05), 0 10px 24px -18px rgba(9, 50, 75, 0.5);
+  --shadow-hover: 0 2px 4px rgba(9, 50, 75, 0.06), 0 20px 36px -22px rgba(118, 84, 18, 0.5);
+  --shadow-panel: 0 35px 75px rgba(9, 50, 75, 0.2);
+
+  /* Низкое солнце над страницей: тёплая подсветка сверху */
+  --page-wash:
+    radial-gradient(56rem 34rem at 6% -12%, rgba(255, 185, 35, 0.18), transparent 62%),
+    radial-gradient(48rem 32rem at 96% -8%, rgba(67, 71, 156, 0.08), transparent 58%);
+
+  /* Ширины: колонка чтения и внешний контейнер */
+  --measure: 40rem;
+  --shell: 74rem;
+
+  /* Шрифты: одно семейство в трёх ролях. --font-inter задаёт next/font. */
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-label: var(--font-sans);
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  color-scheme: dark;
+
+  --paper: var(--mantine-color-dark-7);
+  --surface: var(--mantine-color-dark-6);
+  --paper-tint: var(--mantine-color-dark-8);
+
+  --ink: var(--mantine-color-dark-0);
+  --ink-soft: var(--mantine-color-dark-2);
+  --ink-faint: var(--mantine-color-dark-3);
+
+  --rule: var(--mantine-color-dark-4);
+  --line: var(--mantine-color-dark-5);
+  --input-line: var(--mantine-color-dark-4);
+
+  /* В тёмной схеме soft — тёмная заливка под светлым текстом, bright — тоже тёмный. */
+  --accent: var(--mantine-color-emerald-5);
+  --accent-bright: #0e4926;
+  --accent-soft: #10301b;
+  --accent-ink: var(--mantine-color-emerald-3);
+
+  --link: #76bbe2;
+  --link-soft: #143141;
+
+  --success: #5dd0a9;
+  --success-soft: #0b3326;
+  --danger: #fa878c;
+  --danger-soft: #4b1d20;
+
+  --sq-color: rgba(150, 230, 180, 0.05);
+
+  /* На чёрном глубину дают граница и подъём поверхности, поэтому тени плотные и короткие */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 24px -18px rgba(0, 0, 0, 0.95);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.55), 0 20px 36px -22px rgba(64, 185, 108, 0.55);
+  --shadow-panel: 0 35px 75px rgba(0, 0, 0, 0.6);
+
+  --page-wash:
+    radial-gradient(56rem 34rem at 6% -12%, rgba(64, 185, 108, 0.16), transparent 62%),
+    radial-gradient(48rem 32rem at 96% -8%, rgba(118, 187, 226, 0.07), transparent 58%);
+}
+
+/* Mantine пишет свой `:root[data-mantine-color-scheme="dark"]` позже и с той же
+   специфичностью; двойной :root выигрывает без !important.
+   autoContrast для virtualColor берёт светлый акцент, поэтому контраст для
+   изумруда задаём явно — белый на нём нечитаем. */
+:root:root[data-mantine-color-scheme='dark'] {
+  --mantine-primary-color-contrast: #071009;
+  --mantine-color-amber-contrast: #071009;
+
+  /* Mantine красит ошибки полей в red-8 — на чёрном это не читается. */
+  --mantine-color-error: var(--danger);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--page-wash), var(--paper);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--link);
+}
+
+::selection {
+  background: var(--accent-bright);
+  color: var(--ink);
+}
+
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

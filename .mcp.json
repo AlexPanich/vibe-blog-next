@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sql-dev": {
+      "command": "node",
+      "args": ["mcp/sql-server.ts"]
+    }
+  }
+}

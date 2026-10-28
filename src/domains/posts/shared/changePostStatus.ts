@@ -1,0 +1,61 @@
+import 'server-only';
+import { db } from "@/globals/db";
+import { posts } from "@/database/schema";
+import { actionError } from "@/globals/actionClient";
+import { POST_TRANSITIONS, PostTransition } from "@/domains/posts/shared/postStatuses";
+import { notifyPostTransition } from "@/domains/posts/shared/postNotifications";
+import { publishNotifications } from "@/domains/notifications/exports/notify";
+import { liveBus } from "@/globals/liveBus";
+import { and, eq, isNull, type SQL } from "drizzle-orm";
+
+type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/*
+  Атомарный переход: статус меняется, только если пост всё ещё в статусе from (и выполнено
+  guard — например, «ревью ведёт не другой модератор»). also выполняется в той же транзакции
+  (запись в историю модерации). Смена статуса всегда снимает ревьюера: ревью — только внутри
+  moderating. Первое одобрение ставит publishedAt — дату в ленте «Новые» (спека 22).
+  Уведомления перехода пишутся в той же транзакции, а в браузер уходят после commit, туда же
+  — широковещательный post.published. Права проверяет вызывающий.
+*/
+export function changePostStatus(postId: number, transition: PostTransition, actorId: number, also?: (tx: DBTransaction) => void, guard?: SQL){
+  const { from, to } = POST_TRANSITIONS[transition];
+
+  const { notificationIds, authorId, firstPublished } = db.transaction(tx => {
+    const [ changed ] = tx.update(posts)
+      .set({ status: to, reviewerId: null, reviewStartedAt: null })
+      .where(and(eq(posts.id, postId), eq(posts.status, from), guard))
+      .returning({ userId: posts.userId })
+      .all();
+
+    if(!changed){
+      actionError(409, guard ? 'Пост уже изменился — обновите страницу' : 'Статус поста уже изменился — обновите страницу');
+    }
+
+    also?.(tx);
+
+    const firstPublished = transition === 'approve' && markFirstPublished(tx, postId);
+
+    return {
+      notificationIds: notifyPostTransition(tx, postId, transition, actorId, firstPublished),
+      authorId: changed.userId,
+      firstPublished
+    };
+  });
+
+  publishNotifications(notificationIds);
+
+  if(firstPublished){
+    // Автор и одобривший и так знают — плашка «Новые посты» им не нужна
+    liveBus.broadcast('post.published', { postId }, [ authorId, actorId ]);
+  }
+}
+
+// Дата первой публикации ставится один раз: повторное одобрение после снятия её не двигает
+function markFirstPublished(tx: DBTransaction, postId: number){
+  return tx.update(posts)
+    .set({ publishedAt: new Date() })
+    .where(and(eq(posts.id, postId), isNull(posts.publishedAt)))
+    .returning({ id: posts.id })
+    .all().length > 0;
+}
