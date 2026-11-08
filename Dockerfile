@@ -21,6 +21,14 @@ RUN npm ci
 FROM deps AS prod-deps
 RUN npm prune --omit=dev
 
+# ── Картинки демо-данных ──────────────────────────────────────────────────
+# Аватары и фото постов скачиваются и режутся в webp здесь, а не при старте: на слабом CPU
+# (Render free) sharp по 80 фото занял бы минуты, а стенд пересоздаётся после каждого
+# засыпания. Сид при старте их только копирует (SEED_IMAGES_DIR). Нужна сеть при сборке.
+FROM deps AS seed-images
+COPY scripts ./scripts
+RUN NODE_OPTIONS="--disable-warning=MODULE_TYPELESS_PACKAGE_JSON" node scripts/seed-images.ts /app/seed-images
+
 # ── Сборка ────────────────────────────────────────────────────────────────
 FROM deps AS builder
 COPY . .
@@ -50,6 +58,7 @@ COPY --chown=node:node src/config ./src/config
 COPY --chown=node:node src/database ./src/database
 COPY --chown=node:node src/globals/queue.ts ./src/globals/queue.ts
 COPY --chown=node:node docker/entrypoint.sh ./entrypoint.sh
+COPY --from=seed-images --chown=node:node /app/seed-images ./seed-images
 
 USER node
 

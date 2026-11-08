@@ -35,11 +35,14 @@
 - Миграции — `npx drizzle-kit generate` / `npx drizzle-kit migrate`. `npm run db:migrate`
   (`scripts/migrate.ts`, drizzle-orm migrator) и `npm run db:seed` (`scripts/seed.ts`,
   демо-данные только в пустую базу) — то же, что делает контейнер при старте.
-- `npm run db:seed-dev` (`scripts/seed-dev.ts` + `scripts/seed-dev/`) — наполненная dev-база:
-  20 пользователей с аватарами, посты всех типов и статусов с фото, комментарии, оценки,
-  подписки, сообщения. **Затирает** контент `dev.db` (учётки из `seed-dev/people.ts`
-  остаются, пароль новых — `password123`), бэкап — `storage/dev.db.bak-seed-*`. Фото
-  кэшируются в `storage/seed-photos/`, источники и лицензии — `seed-dev/photos.json`.
+- Демо-контент один на оба сида — `scripts/seed-demo/` (`fill.ts` пишет всё одной
+  транзакцией, данные — `people.ts`, `posts-*.ts`, `comments.ts`): 20 пользователей с
+  аватарами, посты всех типов и статусов с фото, комментарии, жалобы, оценки, подписки,
+  сообщения, заявки в авторы. Фото — `seed-demo/photos.json` (источники и лицензии),
+  кэшируются в `storage/seed-photos/`.
+- `npm run db:seed-dev` (`scripts/seed-dev.ts`) — тот же контент поверх dev-базы.
+  **Затирает** контент `dev.db` (учётки из `seed-demo/people.ts` остаются, пароль новых —
+  `password123`), бэкап — `storage/dev.db.bak-seed-*`.
 
 ## Docker и деплой
 
@@ -49,7 +52,11 @@
 - `scripts/` и всё, что они импортируют (`src/database/`, `src/config/database.ts`),
   запускается голым node: импорты относительные с `.ts`, без `@/` и `'server-only'`.
   Новый файл, нужный им, — добавить в `COPY` рантайма в `Dockerfile`.
-- Новая демо-сущность — дописать в `scripts/seed.ts`, хеш пароля там общий.
+- Новая демо-сущность — дописать в `scripts/seed-demo/fill.ts`: попадёт и в dev, и в прод.
+- Картинки демо режутся при сборке образа (stage `seed-images`, `scripts/seed-images.ts` →
+  `/app/seed-images`, нужна сеть), сид при старте их только копирует. Без готовых
+  (`npm run db:seed` локально) — скачивает и режет сам. Сборка тянет и Google Fonts
+  (`next/font`): разовый сбой загрузки шрифта роняет `npm run build` — повторить.
 
 ## База данных
 
