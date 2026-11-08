@@ -12,15 +12,21 @@ Mantine 9, SQLite (`better-sqlite3` + Drizzle ORM), better-auth.
 
 ## Демо-учётки
 
-Создаются сидом в пустой базе (`scripts/seed.ts`), у всех пароль `password123`:
+Создаются сидом в пустой базе (`scripts/seed.ts`, контент — `scripts/seed-demo/`): 20
+пользователей с аватарами, около 40 постов всех типов и статусов с фото, комментарии,
+жалобы, подписки, сообщения. У всех пароль `password123`. Главные учётки:
 
 | email | роли | что показать |
 | --- | --- | --- |
 | `alice@example.com` | admin | пользователи, роли, бан, заявки в авторы |
 | `some@example.com` | author, moderator | очередь модерации, жалобы, рубрики |
-| `bob@example.com` | author | свои посты, черновик и пост на модерации |
-| `dan@example.com` | — | читатель: «Начало», заявка в авторы |
+| `bob@example.com` | author | черновик, пост на модерации, отклонённый и скрытый; переписки |
+| `anya@example.com` | author | самый активный автор: 13 постов, подписчики |
+| `dan@example.com` | — | читатель: лента, избранное, заявка в авторы |
 | `eva@example.com` | — | читатель с ожидающей заявкой |
+
+Остальные — в `scripts/seed-demo/people.ts`. Фото — Wikimedia Commons (авторы и лицензии —
+`scripts/seed-demo/photos.json`), аватары — pravatar.cc.
 
 Регистрация требует подтверждения email. SMTP нет: письма печатает worker очереди в лог
 (локально — в консоль `npm run queue:listen`, в Docker — `docker compose logs app`).
@@ -66,6 +72,8 @@ docker compose logs -f app    # в том числе письма
 Образ — `node:24-bookworm-slim`, а не alpine: `better-sqlite3`, `bcrypt` и `sharp` —
 нативные модули с готовыми сборками под glibc. Next собирается в `output: 'standalone'`,
 рядом кладутся production-пакеты целиком: миграции, сид и worker запускаются голым node.
+Картинки демо-данных скачиваются и режутся в webp при сборке (stage `seed-images`, нужна
+сеть), поэтому старт с сидом занимает пару секунд.
 
 ## Демо на Render
 

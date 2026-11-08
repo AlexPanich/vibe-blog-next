@@ -9,6 +9,7 @@ export NODE_OPTIONS="--disable-warning=MODULE_TYPELESS_PACKAGE_JSON"
 
 node scripts/migrate.ts
 
+# Сид — только в пустую базу; картинки готовы в образе (/app/seed-images), копируются
 if [ "${SEED_ON_BOOT:-true}" = "true" ]; then
   node scripts/seed.ts
 fi
