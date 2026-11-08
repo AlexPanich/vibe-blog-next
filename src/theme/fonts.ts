@@ -1,9 +1,20 @@
-import { Inter } from 'next/font/google'
+import { Golos_Text, Unbounded } from 'next/font/google'
 
-// Курсив загружается намеренно: <em> должен быть настоящим, а не синтетическим.
-export const inter = Inter({
+// Тело и подписи. У Golos Text нет курсива: <em> будет синтетическим наклоном.
+export const golos = Golos_Text({
   subsets: ['latin', 'cyrillic'],
-  style: ['normal', 'italic'],
-  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-golos',
   display: 'swap',
 })
+
+// Заголовки. Широкий гротеск — только для коротких строк, не для текста.
+export const unbounded = Unbounded({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['500', '600', '700'],
+  variable: '--font-unbounded',
+  display: 'swap',
+})
+
+// Классы для <html>: объявляют CSS-переменные обоих шрифтов.
+export const fontVariables = `${golos.variable} ${unbounded.variable}`

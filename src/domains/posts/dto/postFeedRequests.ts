@@ -9,11 +9,6 @@ export const FEED_SORTS = [ 'new', 'old', 'rating', 'author' ] as const;
 
 export const FEED_PERIODS = [ 'week', 'month', 'year' ] as const;
 
-// Лента подписок в кабинете: посты моих авторов, моих рубрик или и то и другое («И»)
-export const FEED_FOLLOWS = [ 'authors', 'tags', 'both' ] as const;
-
-export type FeedFollow = (typeof FEED_FOLLOWS)[number];
-
 /*
   Условия ленты из searchParams. У каждого поля свой catch: битое значение не роняет
   остальные, а битая ссылка открывает ленту
@@ -24,8 +19,8 @@ export const postFeedFilterDto = z.object({
   sort: z.enum(FEED_SORTS).catch('new').default('new'),
   author: z.coerce.number().int().positive().optional().catch(undefined),
   period: z.enum(FEED_PERIODS).optional().catch(undefined),
-  // Только в «Моей ленте»: публичная /posts его отбрасывает, кабинет подставляет authors
-  follow: z.enum(FEED_FOLLOWS).optional().catch(undefined),
+  // «Моя лента» в кабинете: ставит страница, в URL его нет (?follow= отбрасывается)
+  follow: z.boolean().optional().catch(undefined),
   // ?tag=a&tag=b приходит массивом, ?tag=a — строкой
   tag: z.union([ z.string(), z.array(z.string()) ])
     .optional()

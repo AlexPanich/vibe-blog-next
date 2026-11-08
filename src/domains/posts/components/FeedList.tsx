@@ -104,7 +104,7 @@ export default function FeedList<T extends PostListResource>({ initial, total: i
     <p ref={top} className="ui-meta ui-feed-count" aria-live="polite">
       { filter.search ? `Найдено: ${total}. ` : '' }Показано { posts.length } из { total }
     </p>
-    <div className="ui-grid">
+    <div className="ui-post-grid">
       { posts.map(post => <PostCard key={post.id} post={post} />) }
     </div>
     { hasMore && <div ref={sentinel} className="ui-feed-more">

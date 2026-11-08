@@ -1,24 +1,35 @@
 'use client'
 
 import 'client-only';
-import ButtonLink from "@/components/general/ButtonLink";
 import { messageStateAction } from "@/domains/messages/actions/messageActions";
-import MessagePeerControls from "@/domains/messages/components/MessagePeerControls";
+import { restrictMessagesAction } from "@/domains/messages/actions/messageSettingsActions";
 import useUser from "@/hooks/useUser";
-import { Group, Text } from "@mantine/core";
-import { IconMessage } from "@tabler/icons-react";
+import { Menu, MenuDropdown, MenuItem, MenuTarget, Text } from "@mantine/core";
+import { IconDots, IconMessage, IconMessageCircle, IconMessageCircleOff } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type MessageAuthorActionsProps = {
+  authorId: number,
+  // Пункты других доменов в меню «…» (блокировка) — домен messages о них не знает
+  menuItems?: React.ReactNode
+}
 
 /*
-  «Написать» и «Запретить писать» на странице автора. Состояние — после гидрации: публичная
-  страница сессию на сервере не читает. Писать нельзя — кнопки нет, вместо неё причина
+  «Написать» и меню «…» на странице автора — пилюлями рядом с подпиской (спека 30). В меню —
+  «Запретить писать» / «Разрешить писать» и пункты из menuItems. Состояние — после гидрации:
+  публичная страница сессию на сервере не читает. Гостю «Написать» ведёт на вход, меню нет.
+  Писать нельзя — вместо «Написать» причина. На телефоне от «Написать» остаётся иконка
+  (подпись — в span, прячет CSS)
 */
-export default function MessageAuthorActions({ authorId }: { authorId: number }) {
+export default function MessageAuthorActions({ authorId, menuItems }: MessageAuthorActionsProps) {
   const { user, ready } = useUser();
-  const load = useAction(messageStateAction.bind(null, authorId));
+  const load = useAction(messageStateAction.bind(null, authorId), { onSuccess: ({ data }) => setRestricted(data.restricted) });
   const { execute: loadState } = load;
+  // Меню размонтирует пункты при закрытии — состояние и action живут здесь
+  const [ restricted, setRestricted ] = useState(false);
+  const restrict = useAction(restrictMessagesAction.bind(null, authorId), { onSuccess: ({ data }) => setRestricted(data.restricted) });
   // execute меняется на каждом рендере — без метки эффект запрашивал бы по кругу
   const loadedFor = useRef<number | null>(null);
   const own = ready && user?.id === authorId;
@@ -35,7 +46,7 @@ export default function MessageAuthorActions({ authorId }: { authorId: number })
   }
 
   if(!user){
-    return <Text size="sm"><Link href="/auth/login">Войдите</Link>, чтобы написать сообщение.</Text>;
+    return <Link href="/auth/login" className="ui-pill ui-pill--message" aria-label="Написать"><IconMessage size={17} stroke={1.8} /><span>Написать</span></Link>;
   }
 
   const state = load.result.data;
@@ -46,12 +57,27 @@ export default function MessageAuthorActions({ authorId }: { authorId: number })
 
   const href = state.dialogId ? `/office/messages/${state.dialogId}` as const : `/office/messages/new?to=${authorId}` as const;
 
-  return (
-    <Group gap="sm" className="ui-follow">
-      { state.blockReason
-        ? <Text size="sm" c="dimmed">{ state.blockReason }</Text>
-        : <ButtonLink href={href} size="compact-sm" variant="light" leftSection={<IconMessage size={16} />}>Написать</ButtonLink> }
-      <MessagePeerControls peerId={authorId} restricted={state.restricted} />
-    </Group>
-  );
+  return <>
+    { state.blockReason
+      ? <Text size="sm" c="dimmed" className="ui-author-head__reason">{ state.blockReason }</Text>
+      : <Link href={href} className="ui-pill ui-pill--message" aria-label="Написать"><IconMessage size={17} stroke={1.8} /><span>Написать</span></Link> }
+    <Menu position="bottom-end" withinPortal>
+      <MenuTarget>
+        <button type="button" className="ui-pill ui-pill--icon" aria-label="Ещё" title="Ещё">
+          <IconDots size={18} stroke={1.8} />
+        </button>
+      </MenuTarget>
+      <MenuDropdown>
+        <MenuItem
+          leftSection={restricted ? <IconMessageCircle size={16} stroke={1.8} /> : <IconMessageCircleOff size={16} stroke={1.8} />}
+          disabled={restrict.isPending}
+          onClick={() => restrict.execute({ restrict: !restricted })}
+        >
+          { restricted ? 'Разрешить писать' : 'Запретить писать' }
+        </MenuItem>
+        { menuItems }
+      </MenuDropdown>
+    </Menu>
+    { restrict.result.serverError && <Text size="sm" c="red">{ restrict.result.serverError.message }</Text> }
+  </>;
 }

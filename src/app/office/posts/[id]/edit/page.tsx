@@ -1,23 +1,35 @@
 import { CONTAINER } from "@/globals/container";
 import { workWithPost } from "@/domains/posts/policy";
-import Link from "@/components/general/Link";
-import PostEditForm from "@/domains/posts/components/PostEditForm";
+import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
+import PostEditorForm from "@/domains/posts/components/editor/PostEditorForm";
+import PostCoverField from "@/domains/posts/components/editor/PostCoverField";
+import PostPhotosCard from "@/domains/posts/components/editor/PostPhotosCard";
 import PostGalleryManager from "@/domains/posts/components/PostGalleryManager";
 import { getPostImages } from "@/domains/posts/shared/postImages";
 import { resource } from "@/core/resource";
-import { postOfficeResource } from "@/domains/posts/dto/postResources";
+import { postCoverResource, postGalleryResource, postOfficeResource } from "@/domains/posts/dto/postResources";
 import { getPost } from "@/domains/posts/shared/getPost";
 import { getTagOptions } from "@/domains/posts/shared/getTagOptions";
 import { tagListResource } from "@/domains/tags/exports/tagResources";
-import { postGalleryResource } from "@/domains/posts/dto/postResources";
+import { uploadsConfig } from "@/config/uploads";
 import { db } from "@/globals/db";
 import { postTags } from "@/database/schema";
 import { eq } from "drizzle-orm";
 import { idOrFail } from "@/shared/params";
-import { IconArrowLeft } from "@tabler/icons-react";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 
-export default async function OfficePostsItem({ params }: PageProps<'/office/posts/[id]/edit'>) {
+export async function generateMetadata({ params }: PageProps<'/office/posts/[id]/edit'>) {
+  const post = await getPost(idOrFail((await params).id));
+
+  return { title: `Правка: ${post.title}` };
+}
+
+/*
+  Редактор черновика (спека 42, шаг 4). Под формой — полная галерея: подписи, выбор обложки,
+  удаление; карточка «Фото к посту» справа ведёт к ней
+*/
+export default async function OfficePostsEdit({ params }: PageProps<'/office/posts/[id]/edit'>) {
   const post = await getPost(idOrFail((await params).id));
   await CONTAINER.boucerService.breakIfCant(u => workWithPost(u, post))
 
@@ -28,25 +40,33 @@ export default async function OfficePostsItem({ params }: PageProps<'/office/pos
 
   const [ tags, images ] = await Promise.all([ getTagOptions(), getPostImages(post.id) ]);
   const tagIds = (await db.select({ tagId: postTags.tagId }).from(postTags).where(eq(postTags.postId, post.id))).map(pt => pt.tagId);
+  const cover = images.find(image => image.id === post.coverImageId) ?? images[0] ?? null;
 
   return (
     <>
-      <Link href={`/office/posts/${post.id}`} className="ui-backlink">
-        <IconArrowLeft size={15} />К посту
-      </Link>
+      <PostEditorForm
+        post={resource(postOfficeResource, { ...post, tagIds })}
+        tags={resource(tagListResource, tags)}
+        head={<>
+          <OfficeCrumbs items={[
+            { label: 'Мои посты', href: '/office/posts' },
+            { label: post.title, href: `/office/posts/${post.id}` as Route },
+            { label: 'Правка' }
+          ]} />
+          <h1 className="ui-title">Правка черновика</h1>
+        </>}
+        cover={<PostCoverField
+          postId={post.id}
+          cover={cover && resource(postCoverResource, cover)}
+          full={images.length >= uploadsConfig.postImagesPerPost}
+        />}
+        photos={<PostPhotosCard images={resource(postGalleryResource, images)} anchor="photos" />}
+      />
 
-      <section className="ui-panel ui-panel--form">
-        <div className="ui-panel__head">
-          <p className="ui-kicker">Редактирование</p>
-          <h1 className="ui-panel__title">{ post.title }</h1>
-        </div>
-        <PostEditForm post={resource(postOfficeResource, { ...post, tagIds })} tags={resource(tagListResource, tags)} />
-      </section>
-
-      <section className="ui-panel ui-panel--form">
-        <div className="ui-panel__head">
-          <p className="ui-kicker">Галерея</p>
-          <h2 className="ui-panel__title">Картинки</h2>
+      <section id="photos" className="ui-post-photos">
+        <div className="ui-post-photos__head">
+          <h2>Фото к посту</h2>
+          <p>Подписи сохраняются сразу, обложку можно выбрать из загруженных.</p>
         </div>
         <PostGalleryManager postId={post.id} coverImageId={post.coverImageId} images={resource(postGalleryResource, images)} />
       </section>

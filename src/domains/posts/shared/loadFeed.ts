@@ -3,10 +3,11 @@ import { db } from "@/globals/db";
 import { postTags, posts, tagFollows, tags, userFollows, users } from "@/database/schema";
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
-import { ratingAggregate, withRatings } from "@/domains/posts/shared/postRatings";
-import { withCovers } from "@/domains/posts/shared/postImages";
+import { ratingAggregate } from "@/domains/posts/shared/postRatings";
+import { withCardData } from "@/domains/posts/shared/postCards";
 import { blockedWithQueries } from "@/domains/users/exports/userBlocks";
-import { and, asc, count, desc, eq, gte, inArray, notInArray, sql, type SQL } from "drizzle-orm";
+import { escapeLike } from "@/shared/escapeLike";
+import { and, asc, count, desc, eq, gte, inArray, notInArray, or, sql, type SQL } from "drizzle-orm";
 
 type FeedConditions = Omit<PostFeedFilterDto, 'limit'>;
 
@@ -36,7 +37,7 @@ export async function loadFeed(filter: FeedConditions, offset: number, limit: nu
     with: { author: true, ...POST_TAGS_WITH }
   });
 
-  const byId = new Map((await withCovers(await withRatings(rows))).map(row => [ row.id, { ...row, tags: pickTags(row) } ]));
+  const byId = new Map((await withCardData(rows)).map(row => [ row.id, { ...row, tags: pickTags(row) } ]));
 
   return { posts: ids.map(id => byId.get(id)!), total };
 }
@@ -54,7 +55,7 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
   const conditions: (SQL | undefined)[] = [ eq(posts.status, 'published') ];
 
   if(filter.follow){
-    conditions.push(...followConditions(filter.follow, viewerId));
+    conditions.push(...followConditions(viewerId));
   }
 
   if(filter.search){
@@ -92,28 +93,22 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
 }
 
 /*
-  Лента подписок: посты моих авторов, посты хотя бы с одной моей рубрикой («ИЛИ» внутри
-  рубрик), both — оба условия сразу («И»); без авторов, с кем у меня блокировка
+  Лента подписок: посты моих авторов или посты хотя бы с одной моей рубрикой («ИЛИ»);
+  без авторов, с кем у меня блокировка
 */
-function followConditions(follow: NonNullable<FeedConditions['follow']>, viewerId: number | null): SQL[] {
+function followConditions(viewerId: number | null): (SQL | undefined)[] {
   if(viewerId === null){
     return [ sql`0` ];
   }
 
   // Блокировка в любую сторону (спека 26): через подписку на рубрику такой автор пришёл бы
-  const conditions: SQL[] = blockedWithQueries(viewerId).map(query => notInArray(posts.userId, query));
+  const conditions: (SQL | undefined)[] = blockedWithQueries(viewerId).map(query => notInArray(posts.userId, query));
+  const authors = db.select({ id: userFollows.followingId }).from(userFollows).where(eq(userFollows.followerId, viewerId));
+  const tagged = db.selectDistinct({ id: postTags.postId })
+    .from(postTags)
+    .innerJoin(tagFollows, and(eq(tagFollows.tagId, postTags.tagId), eq(tagFollows.userId, viewerId)));
 
-  if(follow !== 'tags'){
-    const authors = db.select({ id: userFollows.followingId }).from(userFollows).where(eq(userFollows.followerId, viewerId));
-    conditions.push(inArray(posts.userId, authors));
-  }
-
-  if(follow !== 'authors'){
-    const tagged = db.selectDistinct({ id: postTags.postId })
-      .from(postTags)
-      .innerJoin(tagFollows, and(eq(tagFollows.tagId, postTags.tagId), eq(tagFollows.userId, viewerId)));
-    conditions.push(inArray(posts.id, tagged));
-  }
+  conditions.push(or(inArray(posts.userId, authors), inArray(posts.id, tagged)));
 
   return conditions;
 }
@@ -132,8 +127,4 @@ function feedOrder(sort: FeedConditions['sort'], ratings: ReturnType<typeof rati
   }
 
   return [ desc(posts.publishedAt), desc(posts.id) ];
-}
-
-function escapeLike(value: string){
-  return value.replace(/[\\%_]/g, char => `\\${char}`);
 }

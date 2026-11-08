@@ -6,23 +6,27 @@ import { feedAuthors, tagsWithCounts } from "@/domains/posts/shared/feedOptions"
 import { feedUrl } from "@/domains/posts/shared/feedUrl";
 import { isPlainFeed } from "@/domains/posts/shared/plainFeed";
 import FeedSearch from "@/domains/posts/components/FeedSearch";
-import FeedTypeTabs from "@/domains/posts/components/FeedTypeTabs";
+import FeedSortTabs from "@/domains/posts/components/FeedSortTabs";
 import FeedControls from "@/domains/posts/components/FeedControls";
 import FeedList from "@/domains/posts/components/FeedList";
 import TagFilter from "@/domains/tags/exports/TagFilter";
 import TagFollowButton from "@/domains/tags/exports/TagFollowButton";
 import ButtonLink from "@/components/general/ButtonLink";
+import { plural } from "@/core/plural";
+import { db } from "@/globals/db";
+import { posts as postsTable } from "@/database/schema";
 import { IconMoodEmpty } from "@tabler/icons-react";
+import { eq } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Блог' };
+export const metadata = { title: 'Все истории' };
 
 export default async function Authros({ searchParams }: PageProps<'/posts'>) {
   const parsed = postFeedFilterDto.parse(await searchParams);
   // Неизвестные слаги выкидываем сразу: и из запроса, и из ссылок фильтра
   const selectedTags = await findFeedTags(parsed.tag);
-  const [ authors, tags ] = await Promise.all([ feedAuthors(), tagsWithCounts() ]);
+  const [ authors, tags, published ] = await Promise.all([ feedAuthors(), tagsWithCounts(), db.$count(postsTable, eq(postsTable.status, 'published')) ]);
   const filter = {
     ...parsed,
     // Лента подписок живёт в кабинете: здесь сессию не читаем
@@ -35,14 +39,20 @@ export default async function Authros({ searchParams }: PageProps<'/posts'>) {
 
   return (
     <>
-      <div className="ui-section-head">
-        <h1 className="ui-title ui-title--lg">Блог</h1>
-        <span className="ui-kicker">Все партии на одной доске</span>
+      <div className="ui-feed-head">
+        <div>
+          <h1 className="ui-title ui-title--lg">Все истории</h1>
+          <p className="ui-feed-head__sub">
+            { published } { plural(published, [ 'пост', 'поста', 'постов' ]) } от { authors.length } { plural(authors.length, [ 'автора', 'авторов', 'авторов' ]) }
+          </p>
+        </div>
+        <FeedSortTabs filter={filter} />
       </div>
 
-      <FeedTypeTabs filter={filter} />
-      <FeedSearch filter={filter} />
-      <FeedControls filter={filter} authors={resource(feedAuthorsResource, authors)} />
+      <div className="ui-feed-tools">
+        <FeedSearch filter={filter} />
+        <FeedControls filter={filter} authors={resource(feedAuthorsResource, authors)} />
+      </div>
       <TagFilter
         tags={tags}
         selected={filter.tag}

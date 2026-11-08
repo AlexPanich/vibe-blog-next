@@ -18,10 +18,14 @@ export const messagePageDto = z.object({
 
 export type MessagePageDto = z.infer<typeof messagePageDto>
 
-// Курсор списка диалогов: время последнего сообщения (мс) и id; без курсора — первая порция
+/*
+  Курсор списка диалогов: время последнего сообщения (мс) и id; без курсора — первая порция.
+  q — поиск по имени собеседника
+*/
 export const dialogPageDto = z.object({
   beforeAt: z.int().nonnegative().optional(),
-  beforeId: z.int().positive().optional()
+  beforeId: z.int().positive().optional(),
+  q: z.string().trim().max(100).optional()
 })
 
 export type DialogPageDto = z.infer<typeof dialogPageDto>

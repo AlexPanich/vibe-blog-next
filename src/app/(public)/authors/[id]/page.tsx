@@ -1,25 +1,23 @@
 import { db } from "@/globals/db";
-import { postRatings, posts } from "@/database/schema";
+import { POST_TYPES, PostType, postRatings, posts } from "@/database/schema";
 import { and, avg, count, desc, eq } from "drizzle-orm";
-import Link from "@/components/general/Link";
 import { resource } from "@/core/resource";
 import { postResource } from "@/domains/posts/dto/postResources";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
+import { withCardData } from "@/domains/posts/shared/postCards";
 import { withCovers } from "@/domains/posts/shared/postImages";
-import { withRatings } from "@/domains/posts/shared/postRatings";
+import { formatRating } from "@/domains/posts/shared/formatRating";
+import { feedUrl } from "@/domains/posts/shared/feedUrl";
 import PostCardBridge from "@/domains/posts/components/PostCardBridge";
-import UserAvatar from "@/domains/users/components/UserAvatar";
+import AuthorPostTabs from "@/domains/posts/components/AuthorPostTabs";
+import AuthorHead from "@/domains/users/components/AuthorHead";
 import { getAuthor } from "@/domains/users/shared/getAuthor";
 import { followersCount } from "@/domains/users/shared/userFollows";
 import UserBlockProvider from "@/domains/users/components/block/UserBlockProvider";
 import UserBlockGate from "@/domains/users/components/block/UserBlockGate";
-import UserBlockButton from "@/domains/users/components/block/UserBlockButton";
-import UserFollowButton from "@/domains/users/exports/UserFollowButton";
-import MessageAuthorActions from "@/domains/messages/exports/MessageAuthorActions";
-import LocalDate from "@/components/general/LocalDate";
 import ButtonLink from "@/components/general/ButtonLink";
 import { idOrFail } from "@/shared/params";
-import { IconArrowLeft, IconArticle, IconCalendar, IconChessKnight, IconStarFilled } from "@tabler/icons-react";
+import { IconArticle } from "@tabler/icons-react";
 
 const LATEST = 12;
 
@@ -28,65 +26,60 @@ export async function generateMetadata({ params }: PageProps<'/authors/[id]'>) {
   return { title: author.name, description: author.bio ?? undefined };
 }
 
-export default async function AuthorPage({ params }: PageProps<'/authors/[id]'>) {
+export default async function AuthorPage({ params, searchParams }: PageProps<'/authors/[id]'>) {
   const author = await getAuthor(idOrFail((await params).id));
+  const type = postTypeParam((await searchParams).type);
   const published = and(eq(posts.userId, author.id), eq(posts.status, 'published'));
+  const shown = type ? and(published, eq(posts.type, type)) : published;
 
-  const [ [ stats ], [ rating ], latest, followers ] = await Promise.all([
-    db.select({ postsCount: count() }).from(posts).where(published),
+  const [ byType, [ rating ], latest, [ last ], followers ] = await Promise.all([
+    db.select({ type: posts.type, count: count() }).from(posts).where(published).groupBy(posts.type),
     // Взвешенная средняя по опубликованным постам — как на странице авторов
     db.select({ average: avg(postRatings.value) }).from(postRatings).innerJoin(posts, eq(posts.id, postRatings.postId)).where(published),
-    db.query.posts.findMany({ where: published, orderBy: desc(posts.publishedAt), limit: LATEST, with: { author: true, ...POST_TAGS_WITH } }),
+    db.query.posts.findMany({ where: shown, orderBy: desc(posts.publishedAt), limit: LATEST, with: { author: true, ...POST_TAGS_WITH } }),
+    // Баннер — обложка последнего опубликованного поста, какая бы вкладка ни была открыта
+    db.select({ id: posts.id, coverImageId: posts.coverImageId }).from(posts).where(published).orderBy(desc(posts.publishedAt)).limit(1),
     followersCount(author.id)
   ]);
-  const cards = await withCovers(await withRatings(latest.map(post => ({ ...post, tags: pickTags(post) }))));
+  const counts = Object.fromEntries(POST_TYPES.map(t => [ t, byType.find(row => row.type === t)?.count ?? 0 ])) as Record<PostType, number>;
+  const postsCount = byType.reduce((sum, row) => sum + row.count, 0);
+  const shownCount = type ? counts[type] : postsCount;
+  const [ cards, [ banner ] ] = await Promise.all([
+    withCardData(latest.map(post => ({ ...post, tags: pickTags(post) }))),
+    last ? withCovers([ last ]) : [ undefined ]
+  ]);
 
   return (
     <UserBlockProvider authorId={author.id} authorName={author.name}>
-      <Link href="/authors" className="ui-backlink">
-        <IconArrowLeft size={15} />Все авторы
-      </Link>
-
-      <section className="ui-profile">
-        <UserAvatar name={author.name} avatarKey={author.avatarKey} size={96} />
-        <div className="ui-profile__body">
-          <h1 className="ui-title">{ author.name }</h1>
-          <UserBlockGate>
-            { author.bio && <p className="ui-profile__bio">{ author.bio }</p> }
-            <div className="ui-meta">
-              <span className="ui-meta__item"><IconArticle size={14} stroke={1.8} />Постов: { stats.postsCount }</span>
-              { rating.average !== null && <span className="ui-meta__item">
-                <IconStarFilled size={14} className="ui-star" />
-                { Number(rating.average).toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }
-              </span> }
-              <span className="ui-meta__item">
-                <IconCalendar size={14} stroke={1.8} />С нами с <LocalDate value={author.createdAt} options={{ dateStyle: 'long' }} />
-              </span>
-            </div>
-            <UserFollowButton authorId={author.id} followersCount={followers} />
-            <MessageAuthorActions authorId={author.id} />
-          </UserBlockGate>
-          <UserBlockButton />
-        </div>
-      </section>
+      <AuthorHead
+        author={author}
+        cover={banner?.cover ?? null}
+        postsCount={postsCount}
+        followersCount={followers}
+        rating={rating.average === null ? null : formatRating(Number(rating.average))}
+      />
 
       <UserBlockGate>
+        <AuthorPostTabs authorId={author.id} counts={counts} active={type} />
         { cards.length === 0 ? (
           <div className="ui-empty">
-            <IconChessKnight size={26} stroke={1.6} />
+            <IconArticle size={26} stroke={1.6} />
             <p>Постов пока нет.</p>
           </div>
         ) : <>
-          <div className="ui-section-head">
-            <h2 className="ui-panel__title">Последние посты</h2>
-            { stats.postsCount > LATEST && <ButtonLink href={`/posts?author=${author.id}`} variant="default">Все посты в ленте</ButtonLink> }
-          </div>
-          <div className="ui-grid">
+          <div className="ui-post-grid ui-author-posts">
             { cards.map(post => <PostCardBridge key={post.id} post={resource(postResource, post)} />) }
           </div>
+          { shownCount > LATEST && <div className="ui-author-more">
+            <ButtonLink href={feedUrl({ author: author.id, type })} variant="default">Все посты в ленте</ButtonLink>
+          </div> }
         </> }
       </UserBlockGate>
     </UserBlockProvider>
   );
 }
 
+// ?type= — один из типов поста; что-то другое — «все посты»
+function postTypeParam(value: string | string[] | undefined): PostType | undefined {
+  return POST_TYPES.find(t => t === value);
+}

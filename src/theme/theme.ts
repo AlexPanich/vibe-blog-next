@@ -2,6 +2,7 @@
 // у них нет `.extend`, и createTheme падает.
 import 'client-only'
 import {
+  Badge,
   Button,
   Card,
   createTheme,
@@ -11,83 +12,84 @@ import {
   NumberInput,
   Paper,
   PasswordInput,
+  SegmentedControl,
   Select,
   Textarea,
   TextInput,
-  virtualColor,
   type MantineColorsTuple,
 } from '@mantine/core'
 
 /**
- * Тема Mantine: только цвета и шрифты, две схемы — светлая и тёмная.
+ * Тема Mantine: цвета, шрифты и скругления, две схемы — светлая и тёмная.
+ * Макет — Pencil, спека 30 (`docs/specs/30-redesign.md`).
  *
- * Светлая: тёплая «бумага», тёмно-синий текст, янтарный акцент, индиго для
- * ссылок и фокуса. Тёмная: почти чёрные поверхности с лёгким зелёным оттенком
- * и изумрудный акцент. Переключение акцента сделано через `virtualColor`:
- * компоненты всегда просят `amber`, а он резолвится в `sun` или `emerald`
- * в зависимости от схемы.
+ * Тёплая и дружелюбная: белый фон, почти чёрный текст с фиолетовым оттенком,
+ * коралловый акцент действий. Солнечный, мятный и фиолетовый — для типов постов
+ * и рубрик. Тёмная схема — тёмно-фиолетовые поверхности и те же акценты чуть
+ * ярче. Акцент в обеих схемах один (coral), меняется только оттенок:
+ * `primaryShade` 5 на светлом, 4 на тёмном.
  *
  * CSS-переменные для ручной вёрстки лежат в ./tokens.css и указывают на ту же
  * палитру, чтобы Mantine и ручной CSS не расходились.
  */
 
-// Янтарь — акцент светлой схемы. 5 — цвет действия, 9 — читаемый текст на бумаге.
+// Коралл — акцент действий. 5 — светлая схема, 4 — тёмная, 7 — текст на белом.
+const coral: MantineColorsTuple = [
+  '#fff0ec',
+  '#ffe7e1',
+  '#ffc9bd',
+  '#fba493',
+  '#f26a52',
+  '#e8553d',
+  '#d4462f',
+  '#c23e28',
+  '#9c3120',
+  '#762517',
+]
+
+// Солнце — «Выбор редакции», звёзды оценок, счётчики. Текст на нём всегда тёмный.
 const sun: MantineColorsTuple = [
-  '#fff9ea',
-  '#ffeece',
-  '#ffdea4',
-  '#ffd079',
-  '#ffc452',
-  '#ffb923',
-  '#eca714',
-  '#c98e14',
-  '#a17214',
-  '#765412',
+  '#fffaeb',
+  '#fff3d1',
+  '#ffe6a3',
+  '#ffd770',
+  '#ffcb4f',
+  '#ffc23d',
+  '#e8a923',
+  '#c48a12',
+  '#9c6c0b',
+  '#765107',
 ]
 
-// Изумруд — акцент тёмной схемы. 5 — цвет действия, 3 — текст на тёмном.
-const emerald: MantineColorsTuple = [
-  '#d5f0db',
-  '#b3e2be',
-  '#92d7a4',
-  '#6ecc8a',
-  '#57c37b',
-  '#40b96c',
-  '#33a65e',
-  '#268b4d',
-  '#1b6c3a',
-  '#0e4e28',
+// Мята — успешные состояния и путешествия.
+const mint: MantineColorsTuple = [
+  '#eefaf7',
+  '#ddf4ee',
+  '#b4e7d9',
+  '#86d8c2',
+  '#3cc2a2',
+  '#24ad90',
+  '#1f9e84',
+  '#18806b',
+  '#126353',
+  '#0c463b',
 ]
 
-// Индиго — ссылки и фокус.
-const cobalt: MantineColorsTuple = [
-  '#f0f3ff',
-  '#e0e5ff',
-  '#c3ccfe',
-  '#a4b0f9',
-  '#8792ec',
-  '#6c75d5',
-  '#555bb9',
-  '#43479c',
-  '#34377c',
-  '#26295e',
+// Фиолетовый — ссылки, фокус и переводы.
+const plum: MantineColorsTuple = [
+  '#f5f2ff',
+  '#ece7ff',
+  '#d4caff',
+  '#b6a6fb',
+  '#9781f5',
+  '#7a60e6',
+  '#5b3fd1',
+  '#4b32b0',
+  '#3b278c',
+  '#2b1c66',
 ]
 
-// Зелёный — успешные / позитивные состояния.
-const moss: MantineColorsTuple = [
-  '#e3f4ea',
-  '#c6e9d6',
-  '#95d5b5',
-  '#61bd92',
-  '#3aa475',
-  '#238c60',
-  '#1c7a52',
-  '#166342',
-  '#104c33',
-  '#0a3322',
-]
-
-// Красный — ошибки и деструктивные действия.
+// Красный — ошибки и деструктивные действия. Холоднее коралла, чтобы не путать с акцентом.
 const rose: MantineColorsTuple = [
   '#fdeaee',
   '#fbd2da',
@@ -101,57 +103,58 @@ const rose: MantineColorsTuple = [
   '#5f1523',
 ]
 
-// Серые от тёплой бумаги к тёмно-синему тексту — `c="dimmed"` в тон заголовкам.
+// Серые — холодные, от фона карточек к тексту. `c="dimmed"` в тон тексту.
 const slate: MantineColorsTuple = [
-  '#f7f5f1',
-  '#eceef0',
-  '#d6dee5',
-  '#adbdc9',
-  '#899dac',
-  '#647c8e',
-  '#436075',
-  '#284a61',
-  '#08324b',
-  '#002135',
+  '#f7f7fa',
+  '#f4f5f8',
+  '#e4e5eb',
+  '#c9c7d1',
+  '#a9a6b4',
+  '#8e8a99',
+  '#5c5868',
+  '#45414f',
+  '#2e2a38',
+  '#231f2e',
 ]
 
 // Поверхности тёмной схемы (Mantine `dark`): 0 — текст, 2 — dimmed,
 // 4 — граница, 6 — поверхность, 7 — фон страницы.
-const nightfall: MantineColorsTuple = [
-  '#e4e9e5',
-  '#c7cec9',
-  '#a7afa9',
-  '#7a837d',
-  '#414a44',
-  '#28302b',
-  '#1c221e',
-  '#0d120e',
-  '#060907',
-  '#020403',
+const night: MantineColorsTuple = [
+  '#f3f0f7',
+  '#d5d1dd',
+  '#b7b2c3',
+  '#857f93',
+  '#2f2b3a',
+  '#27232f',
+  '#211e2a',
+  '#15131b',
+  '#100e15',
+  '#0a090d',
 ]
 
 export const theme = createTheme({
-  primaryColor: 'amber',
-  primaryShade: 5,
+  primaryColor: 'coral',
+  primaryShade: { light: 5, dark: 4 },
   autoContrast: true,
   white: '#ffffff',
-  black: '#09324b',
+  black: '#231f2e',
   colors: {
+    coral,
     sun,
-    emerald,
-    amber: virtualColor({ name: 'amber', light: 'sun', dark: 'emerald' }),
-    cobalt,
-    moss,
+    mint,
+    plum,
     rose,
     gray: slate,
-    dark: nightfall,
-    green: moss,
+    dark: night,
+    green: mint,
     red: rose,
-    blue: cobalt,
+    blue: plum,
+    yellow: sun,
+    orange: coral,
   },
-  // Почти квадратная геометрия: 6px у контролов, 14px у больших панелей.
+  // Кнопки и чипы — пилюли, поля — мягкие, карточки — крупное скругление.
   defaultRadius: 'md',
-  radius: { xs: '2px', sm: '4px', md: '6px', lg: '14px', xl: '999px' },
+  radius: { xs: '4px', sm: '8px', md: '12px', lg: '20px', xl: '999px' },
   // Сами стеки шрифтов — в tokens.css, здесь только ссылки на них.
   fontFamily: 'var(--font-body)',
   fontFamilyMonospace: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
@@ -159,34 +162,45 @@ export const theme = createTheme({
     fontFamily: 'var(--font-display)',
     fontWeight: '700',
     sizes: {
-      h1: { fontSize: '2.85rem', lineHeight: '1.12', fontWeight: '700' },
-      h2: { fontSize: '1.95rem', lineHeight: '1.18', fontWeight: '700' },
-      h3: { fontSize: '1.35rem', lineHeight: '1.25', fontWeight: '600' },
-      h4: { fontSize: '1.1rem', lineHeight: '1.3', fontWeight: '600' },
+      h1: { fontSize: '2.6rem', lineHeight: '1.1', fontWeight: '700' },
+      h2: { fontSize: '1.85rem', lineHeight: '1.18', fontWeight: '700' },
+      h3: { fontSize: '1.3rem', lineHeight: '1.25', fontWeight: '600' },
+      h4: { fontSize: '1.05rem', lineHeight: '1.3', fontWeight: '600' },
     },
   },
   components: {
     Button: Button.extend({
-      defaultProps: { radius: 'md' },
+      defaultProps: { radius: 'xl' },
       styles: {
         root: {
           fontWeight: 600,
-          letterSpacing: '-0.01em',
         },
       },
     }),
+    Badge: Badge.extend({
+      defaultProps: { radius: 'xl' },
+      styles: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+        },
+      },
+    }),
+    SegmentedControl: SegmentedControl.extend({
+      defaultProps: { radius: 'xl' },
+    }),
     Card: Card.extend({
-      defaultProps: { radius: 'md', bg: 'var(--surface)' },
+      defaultProps: { radius: 'lg', bg: 'var(--surface)' },
     }),
     Paper: Paper.extend({
-      defaultProps: { radius: 'md', bg: 'var(--surface)' },
+      defaultProps: { radius: 'lg', bg: 'var(--surface)' },
     }),
 
-    // Поля тихие и почти квадратные; подписи — мелкие капители с разрядкой.
+    // Поля мягкие; подписи — обычный регистр, полужирные, приглушённые.
     Input: Input.extend({
       styles: {
         input: {
-          backgroundColor: 'var(--surface)',
+          backgroundColor: 'var(--field)',
           borderColor: 'var(--input-line)',
         },
       },
@@ -196,19 +210,17 @@ export const theme = createTheme({
         label: {
           fontFamily: 'var(--font-label)',
           fontWeight: 600,
-          fontSize: '0.72rem',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
+          fontSize: '0.875rem',
           color: 'var(--ink-soft)',
           marginBottom: 6,
         },
       },
     }),
-    TextInput: TextInput.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
-    PasswordInput: PasswordInput.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
-    Textarea: Textarea.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
-    Select: Select.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
-    MultiSelect: MultiSelect.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
-    NumberInput: NumberInput.extend({ defaultProps: { size: 'md', radius: 'sm' } }),
+    TextInput: TextInput.extend({ defaultProps: { size: 'md', radius: 'md' } }),
+    PasswordInput: PasswordInput.extend({ defaultProps: { size: 'md', radius: 'md' } }),
+    Textarea: Textarea.extend({ defaultProps: { size: 'md', radius: 'md' } }),
+    Select: Select.extend({ defaultProps: { size: 'md', radius: 'md' } }),
+    MultiSelect: MultiSelect.extend({ defaultProps: { size: 'md', radius: 'md' } }),
+    NumberInput: NumberInput.extend({ defaultProps: { size: 'md', radius: 'md' } }),
   },
 })

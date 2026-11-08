@@ -33,10 +33,12 @@ export const userRemoveAvatarDto = z.object({
 })
 
 /*
-  Фильтр списка пользователей из searchParams: неизвестное значение — без фильтра
+  Фильтр списка пользователей из searchParams (спека 42, шаг 18): вкладка и номер страницы.
+  Мусор в URL — значение по умолчанию, а не 404. Вкладки по ролям и поиск — спека 44
 */
 export const userAdminFilterDto = z.object({
-  filter: z.enum([ 'banned' ]).optional().catch(undefined)
+  filter: z.enum([ 'banned' ]).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).catch(1).default(1),
 })
 
 export type UserAdminFilterDto = z.infer<typeof userAdminFilterDto>

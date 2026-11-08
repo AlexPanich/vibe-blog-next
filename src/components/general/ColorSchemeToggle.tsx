@@ -15,8 +15,8 @@ export default function ColorSchemeToggle() {
     <ActionIcon
       variant="subtle"
       color="gray"
-      size="lg"
-      radius="sm"
+      size={40}
+      radius="xl"
       aria-label="Переключить тему"
       title="Переключить тему"
       onClick={() => setColorScheme(computed === 'dark' ? 'light' : 'dark')}

@@ -11,23 +11,34 @@ type PostGalleryProps = {
   linked?: boolean
 }
 
-// Галерея поста: сетка превью. Без 'use client' — рендерят серверные страницы.
+// Сколько фото в мозаике публичной страницы; остальные — за плашкой «+N» на последнем
+const MOSAIC_SIZE = 3;
+
+/*
+  Галерея поста. В кабинете — сетка всех превью; на публичной странице (linked) — мозаика
+  из первых фото (спека 30), остальные листаются на странице картинки. Без 'use client' —
+  рендерят серверные страницы
+*/
 export default function PostGallery({ postId, title, images, linked = false }: PostGalleryProps) {
   if(images.length === 0){
     return null;
   }
 
+  const shown = linked ? images.slice(0, MOSAIC_SIZE) : images;
+  const rest = images.length - shown.length;
+
   return (
-    <div className="ui-gallery">
-      { images.map((image, index) => {
+    <div className={linked ? 'ui-gallery ui-gallery--mosaic' : 'ui-gallery'} data-count={linked ? shown.length : undefined}>
+      { shown.map((image, index) => {
         const picture = <>
           <img
-            src={imageUrl(image.fileKey, 400)}
+            src={imageUrl(image.fileKey, linked ? 800 : 400)}
             width={image.width}
             height={image.height}
             alt={image.caption || `${title}, фото ${index + 1}`}
             loading="lazy"
           />
+          { rest > 0 && index === shown.length - 1 && <span className="ui-gallery__more">+{ rest } фото</span> }
           { image.commentsCount > 0 && <span className="ui-gallery__count"><IconMessage size={12} stroke={2} />{ image.commentsCount }</span> }
         </>;
 

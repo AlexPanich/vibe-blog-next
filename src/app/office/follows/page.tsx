@@ -1,17 +1,17 @@
-import { db } from "@/globals/db";
-import { tagFollows, tags, userBlocks, userFollows, users } from "@/database/schema";
 import { resource } from "@/core/resource";
-import UserFollowRow from "@/domains/users/components/UserFollowRow";
-import { userBlockRowResource, userFollowRowResource } from "@/domains/users/dto/userResources";
+import UserFollowList from "@/domains/users/components/follows/UserFollowList";
 import UserBlockRow from "@/domains/users/components/block/UserBlockRow";
-import TagFollowRow from "@/domains/tags/exports/TagFollowRow";
-import { tagResource } from "@/domains/tags/exports/tagResources";
-import { sortTags } from "@/domains/tags/exports/tagNames";
+import AuthorsFindBanner from "@/domains/users/components/follows/AuthorsFindBanner";
+import { userBlockRowResource, userFollowRowListResource } from "@/domains/users/dto/userResources";
+import { followCounts, loadFollowPeople, type FollowsTab } from "@/domains/users/shared/loadFollows";
+import TagFollowList from "@/domains/tags/components/follows/TagFollowList";
+import TagFollowCard from "@/domains/tags/components/follows/TagFollowCard";
+import { tagRowListResource } from "@/domains/tags/dto/tagResources";
+import { loadFollowedTags } from "@/domains/tags/shared/loadFollowedTags";
 import { requireAuthUser } from "@/shared/auth";
+import OfficeHead from "@/components/layout/OfficeHead";
 import ButtonLink from "@/components/general/ButtonLink";
 import EmptyState from "@/components/general/EmptyState";
-import { and, eq, exists } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
 import Link from "@/components/general/Link";
 import { IconUsersGroup } from "@tabler/icons-react";
 import type { Route } from "next";
@@ -21,8 +21,44 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Подписки' };
 
+/*
+  «Подписки» (спека 42, шаг 9): вкладки с числами (?tab=), список людей или рубрик; справа —
+  «Мои рубрики» (кроме вкладки «Рубрики» — там они списком) и баннер «Найдите ещё авторов»
+*/
+export default async function OfficeFollows({ searchParams }: PageProps<'/office/follows'>) {
+  const user = await requireAuthUser();
+  const { tab } = tabDto.parse(await searchParams);
+  const [ counts, tags ] = await Promise.all([ followCounts(user.id), loadFollowedTags(user.id) ]);
+
+  return (
+    <>
+      <OfficeHead title="Подписки" sub="Авторы и рубрики, чьи посты собираются в вашей ленте" />
+
+      <nav className="ui-tabs" aria-label="Подписки">
+        { (Object.keys(TABS) as FollowsTab[]).map(t => (
+          <Link key={t} href={t === 'following' ? '/office/follows' : `/office/follows?tab=${t}`} data-active={t === tab}>
+            { TABS[t].label } <span className="ui-tabs__count">{ counts[t] }</span>
+          </Link>
+        )) }
+      </nav>
+
+      <div className="ui-follows">
+        <div className="ui-follows__main">
+          { tab === 'tags'
+            ? <TagsTab tags={tags} />
+            : <PeopleTab userId={user.id} tab={tab} /> }
+        </div>
+        <aside className="ui-follows__side">
+          { tab !== 'tags' && <TagFollowCard tags={resource(tagRowListResource, tags)} /> }
+          <AuthorsFindBanner />
+        </aside>
+      </div>
+    </>
+  );
+}
+
 // link — куда идти за следующим шагом; у подписчиков и блокировок своего шага нет
-const TABS: Record<'following' | 'followers' | 'tags' | 'blocked', { label: string, empty: EmptyText }> = {
+const TABS: Record<FollowsTab, { label: string, empty: EmptyText }> = {
   following: {
     label: 'Подписки',
     empty: { title: 'Вы пока ни на кого не подписаны', text: 'Подписаться можно на странице автора — его новые посты появятся в «Моей ленте».', link: { href: '/authors', label: 'К авторам' } }
@@ -41,93 +77,27 @@ const TABS: Record<'following' | 'followers' | 'tags' | 'blocked', { label: stri
   },
 };
 
-type Tab = keyof typeof TABS
-
 const tabDto = z.object({ tab: z.enum([ 'following', 'followers', 'tags', 'blocked' ]).catch('following').default('following') });
 
-export default async function OfficeFollows({ searchParams }: PageProps<'/office/follows'>) {
-  const user = await requireAuthUser();
-  const { tab } = tabDto.parse(await searchParams);
+async function PeopleTab({ userId, tab }: { userId: number, tab: Exclude<FollowsTab, 'tags'> }){
+  const list = await loadFollowPeople(userId, tab);
 
-  return (
-    <>
-      <div className="ui-section-head">
-        <h1 className="ui-title">Подписки</h1>
-      </div>
+  if(list.length === 0){
+    return <Empty {...TABS[tab].empty} />;
+  }
 
-      <nav className="ui-filter">
-        { (Object.keys(TABS) as Tab[]).map(t => (
-          <Link key={t} href={t === 'following' ? '/office/follows' : `/office/follows?tab=${t}`} data-active={t === tab}>
-            { TABS[t].label }
-          </Link>
-        )) }
-      </nav>
-
-      { tab === 'tags'
-        ? <TagsTab userId={user.id} />
-        : tab === 'blocked' ? <BlockedTab userId={user.id} /> : <PeopleTab userId={user.id} tab={tab} /> }
-    </>
-  );
+  // Разблокированный уходит из списка сразу, подписки — снимок (UserFollowList)
+  return tab === 'blocked'
+    ? <ul className="ui-follow-list">{ list.map(row => <UserBlockRow key={row.id} row={resource(userBlockRowResource, row)} />) }</ul>
+    : <UserFollowList key={tab} rows={resource(userFollowRowListResource, list)} />;
 }
 
-/*
-  Подписки и подписчики — одна выборка с разной стороной связи. friend — есть встречная
-  подписка; в «Подписках» я подписан всегда, в «Подписчиках» — когда это друг
-*/
-async function PeopleTab({ userId, tab }: { userId: number, tab: Exclude<Tab, 'tags' | 'blocked'> }){
-  const mine = tab === 'following';
-  const back = alias(userFollows, 'back');
-  const theirSide = mine ? userFollows.followingId : userFollows.followerId;
-  const rows = await db.select({
-    id: users.id,
-    name: users.name,
-    avatarKey: users.avatarKey,
-    friend: exists(db.select().from(back).where(and(
-      eq(back.followerId, mine ? users.id : userId),
-      eq(back.followingId, mine ? userId : users.id)
-    )))
-  })
-    .from(userFollows)
-    .innerJoin(users, eq(users.id, theirSide))
-    .where(eq(mine ? userFollows.followerId : userFollows.followingId, userId));
+function TagsTab({ tags }: { tags: Awaited<ReturnType<typeof loadFollowedTags>> }){
+  if(tags.length === 0){
+    return <Empty {...TABS.tags.empty} />;
+  }
 
-  const list = rows
-    .map(r => ({ ...r, friend: !!r.friend, following: mine || !!r.friend }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-
-  return list.length === 0
-    ? <Empty {...TABS[tab].empty} />
-    : <div className="ui-rows">
-      { list.map(row => <UserFollowRow key={row.id} row={resource(userFollowRowResource, row)} />) }
-    </div>;
-}
-
-async function TagsTab({ userId }: { userId: number }){
-  const list = sortTags(await db.select({ id: tags.id, name: tags.name, slug: tags.slug })
-    .from(tagFollows)
-    .innerJoin(tags, eq(tags.id, tagFollows.tagId))
-    .where(eq(tagFollows.userId, userId)));
-
-  return list.length === 0
-    ? <Empty {...TABS.tags.empty} />
-    : <div className="ui-rows">
-      { list.map(tag => <TagFollowRow key={tag.id} tag={resource(tagResource, tag)} />) }
-    </div>;
-}
-
-// Только свои блокировки: кто заблокировал меня, здесь не видно (спека 26)
-async function BlockedTab({ userId }: { userId: number }){
-  const list = (await db.select({ id: users.id, name: users.name, avatarKey: users.avatarKey })
-    .from(userBlocks)
-    .innerJoin(users, eq(users.id, userBlocks.blockedId))
-    .where(eq(userBlocks.userId, userId)))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-
-  return list.length === 0
-    ? <Empty {...TABS.blocked.empty} />
-    : <div className="ui-rows">
-      { list.map(row => <UserBlockRow key={row.id} row={resource(userBlockRowResource, row)} />) }
-    </div>;
+  return <TagFollowList tags={resource(tagRowListResource, tags)} />;
 }
 
 function Empty({ title, text, link }: EmptyText){

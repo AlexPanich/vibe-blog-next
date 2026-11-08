@@ -36,7 +36,9 @@ export default function MessageComposer({ recipientId, onSent }: MessageComposer
       <Textarea
         className="ui-composer__field"
         aria-label="Сообщение"
-        placeholder="Сообщение… Enter — отправить, Shift+Enter — перенос"
+        placeholder="Сообщение…"
+        title="Enter — отправить, Shift+Enter — перенос строки"
+        radius="xl"
         autosize
         minRows={1}
         maxRows={8}
@@ -51,7 +53,7 @@ export default function MessageComposer({ recipientId, onSent }: MessageComposer
         }}
         error={fieldError(send.result.validationErrors, 'content')}
       />
-      <ActionIcon type="submit" size="lg" aria-label="Отправить" loading={send.isPending} disabled={content.trim() === ''}>
+      <ActionIcon type="submit" className="ui-composer__send" size={44} radius="xl" aria-label="Отправить" loading={send.isPending} disabled={content.trim() === ''}>
         <IconSend size={18} />
       </ActionIcon>
       { send.result.serverError && <Text size="sm" c="red" className="ui-composer__error">{ send.result.serverError.message }</Text> }

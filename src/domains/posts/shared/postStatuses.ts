@@ -55,3 +55,13 @@ export const POST_STATUS_LABELS: Record<PostStatus, string> = {
   hidden: 'В архиве',
   blocked: 'Заблокирован',
 };
+
+// Подписи вкладок по статусу — во множественном числе: «Черновики 2», «Опубликованы 9»
+export const POST_STATUS_TAB_LABELS: Record<PostStatus, string> = {
+  draft: 'Черновики',
+  moderating: 'На проверке',
+  published: 'Опубликованы',
+  rejected: 'Отклонённые',
+  hidden: 'В архиве',
+  blocked: 'Заблокированные',
+};

@@ -2,14 +2,10 @@ import { FEED_PAGE, PostFeedFilterDto } from "@/domains/posts/dto/postFeedReques
 
 /*
   URL ленты по условиям: порядок параметров фиксирован, значения по умолчанию не пишутся.
-  С follow — «Моя лента» в кабинете, режим authors там по умолчанию
+  С follow — «Моя лента» в кабинете
 */
 export function feedUrl(filter: Partial<PostFeedFilterDto>){
   const params = new URLSearchParams();
-
-  if(filter.follow && filter.follow !== 'authors'){
-    params.set('follow', filter.follow);
-  }
 
   if(filter.search){
     params.set('search', filter.search);

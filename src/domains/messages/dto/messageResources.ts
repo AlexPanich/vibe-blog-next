@@ -20,6 +20,14 @@ export const messagePeerResource = z.object({
 
 export type MessagePeerResource = z.infer<typeof messagePeerResource>
 
+// Собеседник в шапке диалога: «Автор · 14 постов» — по роли и опубликованным постам
+export const dialogPeerResource = messagePeerResource.extend({
+  author: z.boolean(),
+  posts: z.number()
+})
+
+export type DialogPeerResource = z.infer<typeof dialogPeerResource>
+
 /*
   Строка списка: собеседник, обрезок последнего сообщения, непрочитанные входящие
 */
@@ -43,7 +51,7 @@ export type DialogRowResource = z.infer<typeof dialogRowResource>
 export const dialogViewResource = z.object({
   id: z.number().nullable(),
   meId: z.number(),
-  peer: messagePeerResource,
+  peer: dialogPeerResource,
   messages: z.array(messageItemResource),
   hasMore: z.boolean(),
   blockReason: z.string().nullable(),

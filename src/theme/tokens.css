@@ -1,62 +1,83 @@
 /* ==========================================================================
    Токены дизайн-системы: цвета и шрифты для ручной вёрстки.
    Палитра Mantine — в ./theme.ts; тёмная схема здесь ссылается на неё,
-   чтобы компоненты и ручной CSS не расходились.
+   чтобы компоненты и ручной CSS не расходились. Макет — спека 30.
    ========================================================================== */
 
 :root {
-  /* Поверхности */
-  --paper: #fefcf8;
+  /* Поверхности: фон страницы, карточки и панели, полосы и подложки, поля */
+  --paper: #ffffff;
   --surface: #ffffff;
-  --paper-tint: #faf6ef;
+  --paper-tint: var(--mantine-color-gray-1);
+  --field: #ffffff;
 
   /* Текст */
-  --ink: #09324b;
-  --ink-soft: #436075;
-  --ink-faint: #8196a2;
+  --ink: var(--mantine-color-gray-9);
+  --ink-soft: var(--mantine-color-gray-6);
+  --ink-faint: var(--mantine-color-gray-5);
 
   /* Линии */
-  --rule: #e6e2dc;
-  --line: #ece9e3;
-  --input-line: #dad5cc;
+  --rule: var(--mantine-color-gray-2);
+  --line: #ecedf1;
+  /* Пустая звезда оценки — цвета линии, как в макете */
+  --star-empty: var(--line);
+  --input-line: #d9dae2;
 
-  /* Акцент */
-  --accent: #ffb923;
-  --accent-bright: #ffd079;
-  --accent-soft: #fff1d2;
-  --accent-ink: #765412;   /* читаемый акцентный текст на фоне */
+  /* Акцент — коралл */
+  --accent: var(--mantine-color-coral-5);
+  --accent-bright: var(--mantine-color-coral-2);
+  --accent-soft: var(--mantine-color-coral-1);
+  --accent-ink: var(--mantine-color-coral-7);   /* читаемый акцентный текст на фоне */
 
-  /* Ссылки и фокус */
-  --link: #43479c;
-  --link-soft: #e0e5ff;
+  /* Ссылки и фокус — фиолетовый */
+  --link: var(--mantine-color-plum-6);
+  --link-soft: var(--mantine-color-plum-1);
+
+  /* Тёмная кнопка: почти чёрная на светлом, светлая на тёмном */
+  --btn: var(--mantine-color-gray-9);
+  --btn-ink: #ffffff;
+
+  /* Цвета типов постов и рубрик: насыщенный и мягкая подложка */
+  --sun: var(--mantine-color-sun-5);
+  --sun-soft: var(--mantine-color-sun-1);
+  --on-sun: #231f2e;   /* текст на солнечном — тёмный в обеих схемах */
+  --stage-sun: #f7c548;   /* сцена первого экрана главной — светлая в обеих схемах */
+  --mint: var(--mantine-color-mint-6);
+  --mint-soft: var(--mantine-color-mint-1);
+  --plum: var(--mantine-color-plum-6);
+  --plum-soft: var(--mantine-color-plum-1);
 
   /* Состояния */
-  --success: #1c7a52;
-  --success-soft: #e3f4ea;
-  --danger: #c22f4a;
-  --danger-soft: #fdeaee;
+  --success: var(--mantine-color-mint-7);
+  --success-soft: var(--mantine-color-mint-1);
+  --danger: var(--mantine-color-rose-6);
+  --danger-soft: var(--mantine-color-rose-0);
 
   /* Клетка доски (см. .ui-board) */
   --sq-size: 34px;
-  --sq-color: rgba(9, 50, 75, 0.055);
+  --sq-color: rgba(35, 31, 46, 0.04);
 
-  /* Тени: карточка, карточка под курсором, большая панель */
-  --shadow-card: 0 1px 2px rgba(9, 50, 75, 0.05), 0 10px 24px -18px rgba(9, 50, 75, 0.5);
-  --shadow-hover: 0 2px 4px rgba(9, 50, 75, 0.06), 0 20px 36px -22px rgba(118, 84, 18, 0.5);
-  --shadow-panel: 0 35px 75px rgba(9, 50, 75, 0.2);
+  /* Тени мягкие и широкие: карточка, карточка под курсором, большая панель */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.04), 0 16px 36px rgba(35, 31, 46, 0.1);
+  --shadow-panel: 0 30px 70px rgba(35, 31, 46, 0.16);
 
-  /* Низкое солнце над страницей: тёплая подсветка сверху */
-  --page-wash:
-    radial-gradient(56rem 34rem at 6% -12%, rgba(255, 185, 35, 0.18), transparent 62%),
-    radial-gradient(48rem 32rem at 96% -8%, rgba(67, 71, 156, 0.08), transparent 58%);
+  /* Подсветки фона нет: страница белая, цвет дают плашки и картинки */
+  --page-wash: none;
+
+  /* Скругления: контрол, карточка, большая сцена, пилюля */
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-stage: 36px;
+  --radius-pill: 999px;
 
   /* Ширины: колонка чтения и внешний контейнер */
-  --measure: 40rem;
-  --shell: 74rem;
+  --measure: 42.5rem;
+  --shell: 80rem;
 
-  /* Шрифты: одно семейство в трёх ролях. --font-inter задаёт next/font. */
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: var(--font-sans);
+  /* Шрифты: Unbounded — заголовки, Golos Text — всё остальное. Переменные задаёт next/font. */
+  --font-sans: var(--font-golos), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-unbounded), var(--font-sans);
   --font-body: var(--font-sans);
   --font-label: var(--font-sans);
 }
@@ -66,7 +87,8 @@
 
   --paper: var(--mantine-color-dark-7);
   --surface: var(--mantine-color-dark-6);
-  --paper-tint: var(--mantine-color-dark-8);
+  --paper-tint: var(--mantine-color-dark-6);
+  --field: var(--mantine-color-dark-6);
 
   --ink: var(--mantine-color-dark-0);
   --ink-soft: var(--mantine-color-dark-2);
@@ -74,43 +96,45 @@
 
   --rule: var(--mantine-color-dark-4);
   --line: var(--mantine-color-dark-5);
-  --input-line: var(--mantine-color-dark-4);
+  /* Линия в тёмной схеме сливается с поверхностью — звезда на шаг светлее */
+  --star-empty: var(--mantine-color-dark-4);
+  --input-line: #3a3546;
 
-  /* В тёмной схеме soft — тёмная заливка под светлым текстом, bright — тоже тёмный. */
-  --accent: var(--mantine-color-emerald-5);
-  --accent-bright: #0e4926;
-  --accent-soft: #10301b;
-  --accent-ink: var(--mantine-color-emerald-3);
+  /* В тёмной схеме soft — тёмная подложка под светлым текстом, bright — тоже тёмный. */
+  --accent: var(--mantine-color-coral-4);
+  --accent-bright: #5a2a22;
+  --accent-soft: #3b221f;
+  --accent-ink: #ff8d78;
 
-  --link: #76bbe2;
-  --link-soft: #143141;
+  --link: var(--mantine-color-plum-4);
+  --link-soft: #29234a;
 
-  --success: #5dd0a9;
-  --success-soft: #0b3326;
+  --btn: var(--mantine-color-dark-0);
+  --btn-ink: var(--mantine-color-dark-7);
+
+  --sun-soft: #3a311c;
+  --mint: var(--mantine-color-mint-4);
+  --mint-soft: #16332d;
+  --plum: var(--mantine-color-plum-4);
+  --plum-soft: #29234a;
+
+  --success: var(--mantine-color-mint-4);
+  --success-soft: #16332d;
   --danger: #fa878c;
   --danger-soft: #4b1d20;
 
-  --sq-color: rgba(150, 230, 180, 0.05);
+  --sq-color: rgba(243, 240, 247, 0.035);
 
-  /* На чёрном глубину дают граница и подъём поверхности, поэтому тени плотные и короткие */
+  /* На тёмном глубину дают граница и подъём поверхности, поэтому тени плотные и короткие */
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 24px -18px rgba(0, 0, 0, 0.95);
-  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.55), 0 20px 36px -22px rgba(64, 185, 108, 0.55);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.55), 0 20px 36px -22px rgba(242, 106, 82, 0.4);
   --shadow-panel: 0 35px 75px rgba(0, 0, 0, 0.6);
-
-  --page-wash:
-    radial-gradient(56rem 34rem at 6% -12%, rgba(64, 185, 108, 0.16), transparent 62%),
-    radial-gradient(48rem 32rem at 96% -8%, rgba(118, 187, 226, 0.07), transparent 58%);
 }
 
 /* Mantine пишет свой `:root[data-mantine-color-scheme="dark"]` позже и с той же
-   специфичностью; двойной :root выигрывает без !important.
-   autoContrast для virtualColor берёт светлый акцент, поэтому контраст для
-   изумруда задаём явно — белый на нём нечитаем. */
+   специфичностью; двойной :root выигрывает без !important. */
 :root:root[data-mantine-color-scheme='dark'] {
-  --mantine-primary-color-contrast: #071009;
-  --mantine-color-amber-contrast: #071009;
-
-  /* Mantine красит ошибки полей в red-8 — на чёрном это не читается. */
+  /* Mantine красит ошибки полей в red-8 — на тёмном это не читается. */
   --mantine-color-error: var(--danger);
 }
 
@@ -124,6 +148,11 @@ body {
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
+}
+
+/* Unbounded широкий: заголовкам нужна отрицательная разрядка. */
+:where(h1, h2, h3, h4) {
+  letter-spacing: -0.02em;
 }
 
 a {
