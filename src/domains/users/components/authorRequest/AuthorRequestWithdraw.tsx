@@ -2,7 +2,7 @@
 
 import 'client-only';
 import { withdrawAuthorRequestAction } from "@/domains/users/actions/authorRequestActions";
-import { Button, Group, Text } from "@mantine/core";
+import { Button, Text } from "@mantine/core";
 import { IconArrowBackUp } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 
@@ -12,17 +12,17 @@ export default function AuthorRequestWithdraw() {
   const serverError = action.result.serverError?.message;
 
   return (
-    <Group gap="sm">
+    <>
+      { serverError && <Text c="red" size="sm">{ serverError }</Text> }
       <Button
-        size="compact-sm"
+        radius="xl"
         variant="default"
-        leftSection={<IconArrowBackUp size={14} />}
+        leftSection={<IconArrowBackUp size={16} />}
         loading={action.isPending}
         onClick={() => action.execute()}
       >
-        Отозвать
+        Отозвать заявку
       </Button>
-      { serverError && <Text c="red" size="sm">{ serverError }</Text> }
-    </Group>
+    </>
   );
 }

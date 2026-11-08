@@ -2,27 +2,32 @@
 
 import 'client-only';
 import LocalDate from "@/components/general/LocalDate";
+import { plural } from "@/core/plural";
 import { StrictResource } from "@/core/resource";
 import { deleteMessageAction, loadMessagesAction, readDialogAction } from "@/domains/messages/actions/messageActions";
 import MessageComposer from "@/domains/messages/components/MessageComposer";
-import MessagePeerControls from "@/domains/messages/components/MessagePeerControls";
-import { messageItemResource, type DialogViewResource, type MessageItemResource } from "@/domains/messages/dto/messageResources";
+import MessagePeerMenu from "@/domains/messages/components/MessagePeerMenu";
+import { messageItemResource, type DialogPeerResource, type DialogViewResource, type MessageItemResource } from "@/domains/messages/dto/messageResources";
+import { dayLabel, sameDay } from "@/domains/messages/shared/messageDates";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
+import useHydrated from "@/hooks/useHydrated";
 import useLiveEvent from "@/hooks/useLiveEvent";
 import { Anchor, Button, Group, Text } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconChevronLeft, IconUser } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 type DialogViewProps<T extends DialogViewResource> = {
   dialog: StrictResource<T, DialogViewResource>
 }
 
 /*
-  Диалог: свои справа, чужие слева. Новые приходят по SSE; после переподключения догружаются
-  сообщения новее последнего. Без id — новый диалог: его создаст первое сообщение
+  Диалог — правая колонка «Сообщений»: свои справа, чужие слева, между днями — разделитель
+  (после гидрации: день считается по часам браузера). Новые приходят по SSE; после
+  переподключения догружаются сообщения новее последнего. Без id — новый диалог: его создаст
+  первое сообщение
 */
 export default function DialogView<T extends DialogViewResource>({ dialog }: DialogViewProps<T>) {
   const router = useRouter();
@@ -31,6 +36,7 @@ export default function DialogView<T extends DialogViewResource>({ dialog }: Dia
   const [ hasMore, setHasMore ] = useState(dialog.hasMore);
   const listRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
+  const hydrated = useHydrated();
 
   const read = useAction(readDialogAction.bind(null, dialogId ?? 0));
   const older = useAction(loadMessagesAction.bind(null, dialogId ?? 0), {
@@ -119,13 +125,18 @@ export default function DialogView<T extends DialogViewResource>({ dialog }: Dia
   return (
     <section className="ui-dialog">
       <div className="ui-dialog__head">
-        <Link href="/office/messages" className="ui-backlink"><IconArrowLeft size={15} />Сообщения</Link>
-        <div className="ui-dialog__peer">
-          <Link href={`/authors/${dialog.peer.id}`} className="ui-follow-row">
-            <UserAvatar name={dialog.peer.name} avatarKey={dialog.peer.avatarKey} size={36} />{ dialog.peer.name }
-          </Link>
-          <MessagePeerControls peerId={dialog.peer.id} ignored={dialog.ignored} restricted={dialog.restricted} />
-        </div>
+        <Link href="/office/messages" className="ui-dialog__back" aria-label="К сообщениям"><IconChevronLeft size={22} stroke={2} /></Link>
+        <Link href={`/authors/${dialog.peer.id}`} className="ui-dialog__peer">
+          <UserAvatar name={dialog.peer.name} avatarKey={dialog.peer.avatarKey} size={40} />
+          <span className="ui-dialog__who">
+            <span className="ui-dialog__name">{ dialog.peer.name }</span>
+            <span className="ui-dialog__sub">{ peerLine(dialog.peer) }</span>
+          </span>
+        </Link>
+        <Link href={`/authors/${dialog.peer.id}`} className="ui-dialog__icon ui-dialog__icon--profile" aria-label="Страница автора" title="Страница автора">
+          <IconUser size={17} stroke={1.8} />
+        </Link>
+        <MessagePeerMenu peerId={dialog.peer.id} ignored={dialog.ignored} restricted={dialog.restricted} />
       </div>
 
       <div className="ui-dialog__list" ref={listRef}>
@@ -135,12 +146,14 @@ export default function DialogView<T extends DialogViewResource>({ dialog }: Dia
           </Button>
         </div> }
         { items.length === 0 && <p className="ui-dialog__empty">Сообщений пока нет — напишите первым.</p> }
-        { items.map(message => <MessageBubble
-          key={message.id}
-          message={message}
-          mine={message.userId === dialog.meId}
-          onDeleted={dialogDeleted => dialogDeleted ? router.replace('/office/messages') : setItems(prev => prev.filter(m => m.id !== message.id))}
-        />) }
+        { items.map((message, i) => <Fragment key={message.id}>
+          { hydrated && (i === 0 || !sameDay(items[i - 1].createdAt, message.createdAt)) && <p className="ui-dialog__day">{ dayLabel(message.createdAt) }</p> }
+          <MessageBubble
+            message={message}
+            mine={message.userId === dialog.meId}
+            onDeleted={dialogDeleted => dialogDeleted ? router.replace('/office/messages') : setItems(prev => prev.filter(m => m.id !== message.id))}
+          />
+        </Fragment>) }
       </div>
 
       { dialog.blockReason
@@ -148,6 +161,15 @@ export default function DialogView<T extends DialogViewResource>({ dialog }: Dia
         : <MessageComposer recipientId={dialog.peer.id} onSent={sent} /> }
     </section>
   );
+}
+
+// «Автор · 14 постов» под именем; не автор — «Читатель»
+function peerLine(peer: DialogPeerResource): string {
+  if(!peer.author){
+    return 'Читатель';
+  }
+
+  return peer.posts > 0 ? `Автор · ${peer.posts} ${plural(peer.posts, [ 'пост', 'поста', 'постов' ])}` : 'Автор';
 }
 
 type MessageBubbleProps = {
@@ -165,13 +187,13 @@ function MessageBubble({ message, mine, onDeleted }: MessageBubbleProps) {
       <div className="ui-message__bubble">
         <p className="ui-message__text">{ message.content }</p>
         <span className="ui-message__meta">
-          <LocalDate value={message.createdAt} />
-          { mine && !confirming && <Anchor component="button" size="xs" c="dimmed" onClick={() => setConfirming(true)}>Удалить</Anchor> }
+          { mine && !confirming && <Anchor component="button" className="ui-message__delete" onClick={() => setConfirming(true)}>Удалить</Anchor> }
+          <LocalDate value={message.createdAt} options={{ timeStyle: 'short' }} />
         </span>
         { confirming && <Group gap="xs" mt={4} justify="flex-end">
           <Text size="xs">Удалить у обоих?</Text>
           <Button size="compact-xs" color="red" loading={remove.isPending} onClick={() => remove.execute()}>Удалить</Button>
-          <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setConfirming(false)}>Отмена</Button>
+          <Button size="compact-xs" variant={mine ? 'white' : 'subtle'} color="gray" onClick={() => setConfirming(false)}>Отмена</Button>
         </Group> }
         { remove.result.serverError && <Text size="xs" c="red">{ remove.result.serverError.message }</Text> }
       </div>

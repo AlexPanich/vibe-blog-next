@@ -113,7 +113,7 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
     <Popover opened={opened} onChange={setOpened} position="bottom-end" width={360} shadow="md" withinPortal>
       <PopoverTarget>
         <Indicator label={unread && unread > 99 ? '99+' : unread} disabled={!unread} size={16} offset={4} color="red">
-          <ActionIcon variant="subtle" color="gray" size="lg" radius="sm" aria-label={label} title={label} onClick={toggle}>
+          <ActionIcon variant="subtle" color="gray" size={40} radius="xl" aria-label={label} title={label} onClick={toggle}>
             <IconBell size={18} />
           </ActionIcon>
         </Indicator>

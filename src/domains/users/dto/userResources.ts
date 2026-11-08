@@ -1,23 +1,11 @@
 import z from "zod"
-import { AUTHOR_REQUEST_STATUSES, USER_ROLES } from "@/database/schema"
+import { USER_ROLES } from "@/database/schema"
 
 export const authorResource = z.object({
   name: z.string(),
   avatarKey: z.string().nullable(),
   createdAt: z.date()
 })
-
-/*
-  Карточка на странице авторов: число опубликованных постов
-*/
-export const authorCardResource = authorResource.extend({
-  id: z.number(),
-  postsCount: z.number(),
-  // Взвешенная средняя по опубликованным постам; null — оценок нет
-  ratingAverage: z.number().nullable()
-})
-
-export type AuthorCardResource = z.infer<typeof authorCardResource>
 
 export type AuthorResource = z.infer<typeof authorResource>
 
@@ -52,47 +40,33 @@ export const userBanFormResource = z.object({
 export type UserBanFormResource = z.infer<typeof userBanFormResource>
 
 /*
-  Строка списков подписок в кабинете: following — подписан ли я, friend — подписка взаимная
+  Человек в списках «Подписок» (спека 42): «о себе», опубликованные посты и средняя оценка
+  строкой («4,8»), null — оценок нет
 */
-export const userFollowRowResource = z.object({
+const followPersonResource = z.object({
   id: z.number(),
   name: z.string(),
   avatarKey: z.string().nullable(),
+  bio: z.string().nullable(),
+  postsCount: z.number(),
+  rating: z.string().nullable()
+})
+
+/*
+  Строка «Подписок» и «Подписчиков»: following — подписан ли я, friend — подписка взаимная
+*/
+export const userFollowRowResource = followPersonResource.extend({
   following: z.boolean(),
   friend: z.boolean()
 })
 
 export type UserFollowRowResource = z.infer<typeof userFollowRowResource>
 
+export const userFollowRowListResource = z.array(userFollowRowResource)
+
+export type UserFollowRowListResource = z.infer<typeof userFollowRowListResource>
+
 // Строка «Заблокированных» (спека 26)
-export const userBlockRowResource = z.object({
-  id: z.number(),
-  name: z.string(),
-  avatarKey: z.string().nullable()
-})
+export const userBlockRowResource = followPersonResource
 
 export type UserBlockRowResource = z.infer<typeof userBlockRowResource>
-
-/*
-  Строка заявки на роль автора в админке (спека 28): заявитель с тем, по чему решают, —
-  дата регистрации и число комментариев; у рассмотренной — решение
-*/
-export const authorRequestRowResource = z.object({
-  id: z.number(),
-  text: z.string(),
-  status: z.enum(AUTHOR_REQUEST_STATUSES),
-  reason: z.string().nullable(),
-  createdAt: z.date(),
-  decidedAt: z.date().nullable(),
-  deciderName: z.string().nullable(),
-  user: z.object({
-    id: z.number(),
-    name: z.string(),
-    avatarKey: z.string().nullable(),
-    createdAt: z.date(),
-    banned: z.boolean(),
-    commentsCount: z.number()
-  })
-})
-
-export type AuthorRequestRowResource = z.infer<typeof authorRequestRowResource>

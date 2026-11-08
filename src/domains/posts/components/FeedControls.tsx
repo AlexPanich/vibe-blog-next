@@ -5,20 +5,17 @@ import { StrictResource } from "@/core/resource";
 import { FeedAuthorsResource } from "@/domains/posts/dto/postResources";
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedUrl } from "@/domains/posts/shared/feedUrl";
-import { Select, SimpleGrid } from "@mantine/core";
+import { POST_TYPE_TABS } from "@/domains/posts/shared/postTypes";
+import { Select } from "@mantine/core";
 import { useRouter } from "next/navigation";
 
 type FeedControlsProps<T extends FeedAuthorsResource> = {
   filter: PostFeedFilterDto,
-  authors: StrictResource<T, FeedAuthorsResource>
+  // Без авторов списка «Автор» нет: в «Моей ленте» автора выбирают чипы подписок
+  authors?: StrictResource<T, FeedAuthorsResource>
 }
 
-const SORTS = [
-  { value: 'new', label: 'Новые' },
-  { value: 'old', label: 'Старые' },
-  { value: 'rating', label: 'По рейтингу' },
-  { value: 'author', label: 'По автору' },
-];
+const TYPES = POST_TYPE_TABS.map(({ type, label }) => ({ value: type ?? '', label: type ? label : 'Любой тип' }));
 
 const PERIODS = [
   { value: '', label: 'Всё время' },
@@ -27,36 +24,40 @@ const PERIODS = [
   { value: 'year', label: 'За год' },
 ];
 
-// Сортировка, автор и период. Выбор сразу ведёт на новый URL без limit — список начинается заново.
+/*
+  Тип, автор и период — компактные списки-пилюли рядом с поиском, подписи в aria-label.
+  Выбор сразу ведёт на новый URL без limit — список начинается заново
+*/
 export default function FeedControls<T extends FeedAuthorsResource>({ filter, authors }: FeedControlsProps<T>) {
   const router = useRouter();
   const go = (patch: Partial<PostFeedFilterDto>) => router.push(feedUrl({ ...filter, ...patch, limit: undefined }));
-  const authorOptions = [ { value: '', label: 'Все авторы' }, ...authors.map(a => ({ value: String(a.id), label: a.name })) ];
+  const authorOptions = authors && [ { value: '', label: 'Все авторы' }, ...authors.map(a => ({ value: String(a.id), label: a.name })) ];
+  const common = { size: 'sm', radius: 'xl', allowDeselect: false, className: 'ui-feed-select', comboboxProps: { width: 'max-content' } } as const;
 
   return (
-    <SimpleGrid className="ui-feed-controls" cols={{ base: 1, sm: 3 }} spacing="sm">
+    <div className="ui-feed-controls">
       <Select
-        label="Сортировка"
-        data={SORTS}
-        value={filter.sort}
-        allowDeselect={false}
-        onChange={value => go({ sort: (value ?? 'new') as PostFeedFilterDto['sort'] })}
+        {...common}
+        aria-label="Тип поста"
+        data={TYPES}
+        value={filter.type ?? ''}
+        onChange={value => go({ type: (value || undefined) as PostFeedFilterDto['type'] })}
       />
-      <Select
-        label="Автор"
+      { authorOptions && <Select
+        {...common}
+        aria-label="Автор"
         data={authorOptions}
         value={filter.author ? String(filter.author) : ''}
-        allowDeselect={false}
         searchable
         onChange={value => go({ author: value ? Number(value) : undefined })}
-      />
+      /> }
       <Select
-        label="Период"
+        {...common}
+        aria-label="Период"
         data={PERIODS}
         value={filter.period ?? ''}
-        allowDeselect={false}
         onChange={value => go({ period: (value || undefined) as PostFeedFilterDto['period'] })}
       />
-    </SimpleGrid>
+    </div>
   );
 }

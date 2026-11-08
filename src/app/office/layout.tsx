@@ -1,9 +1,10 @@
 import ClientSideInitializer from "@/components/general/ClientSideInitializer";
 import SiteHeader from "@/components/layout/SiteHeader";
 import OfficeDesk from "@/components/layout/OfficeDesk";
+import MobileTabBar from "@/components/navigation/MobileTabBar";
 import { getAuthUser } from "@/shared/auth";
 import { countUnread } from "@/domains/notifications/exports/countUnread";
-import { inter } from "@/theme/fonts";
+import { fontVariables } from "@/theme/fonts";
 import { defaultColorScheme } from "@/theme/colorScheme";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import type { Metadata } from "next";
@@ -30,7 +31,7 @@ export default async function RootLayout({ children }: LayoutProps<"/office">) {
   }
 
   return (
-    <html lang="ru" {...mantineHtmlProps} className={inter.variable}>
+    <html lang="ru" {...mantineHtmlProps} className={fontVariables}>
       <head>
         <ColorSchemeScript defaultColorScheme={defaultColorScheme} />
       </head>
@@ -42,6 +43,7 @@ export default async function RootLayout({ children }: LayoutProps<"/office">) {
               {children}
             </OfficeDesk>
           </main>
+          <MobileTabBar />
         </ClientSideInitializer>
       </body>
     </html>

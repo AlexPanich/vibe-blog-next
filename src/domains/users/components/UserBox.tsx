@@ -5,7 +5,7 @@ import UserGate from "@/components/general/UserGate";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import useLogout from "@/domains/users/hooks/useLogout";
 import { Button, Group, Menu, MenuDivider, MenuDropdown, MenuItem, MenuLabel, MenuTarget, UnstyledButton } from "@mantine/core";
-import { IconChevronDown, IconLayoutGrid, IconLogin, IconLogout, IconUserCircle, IconUserPlus } from "@tabler/icons-react";
+import { IconChevronDown, IconLayoutGrid, IconLogin, IconLogout, IconPencil, IconUserCircle } from "@tabler/icons-react";
 import Link from "@/components/general/Link";
 
 // Правый край шапки: гостю — вход и регистрация, вошедшему — меню под аватаром.
@@ -30,10 +30,11 @@ export default function UserBox() {
             component={Link}
             href="/auth/signup"
             size="sm"
-            leftSection={<IconUserPlus size={16} />}
+            className="ui-ink-button"
+            leftSection={<IconPencil size={16} />}
             visibleFrom="sm"
           >
-            Регистрация
+            Писать в Vibe
           </Button>
         </Group>
       }

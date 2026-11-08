@@ -29,6 +29,8 @@ export const postCoverResource = z.object({
   height: z.number()
 })
 
+export type PostCoverResource = z.infer<typeof postCoverResource>
+
 /*
   Картинка галереи; commentsCount — для значка на превью
 */
@@ -46,6 +48,8 @@ export type PostGalleryResource = z.infer<typeof postGalleryResource>
 
 export const postResource = z.object({
   id: z.number(),
+  // Ссылка на профиль автора
+  userId: z.number(),
   title: z.string(),
   createdAt: z.date(),
   // null — пост ещё не публиковался (избранное может пережить уход в черновик)
@@ -54,6 +58,10 @@ export const postResource = z.object({
   tags: z.array(tagResource),
   rating: postRatingResource,
   cover: postCoverResource.nullable(),
+  // Считаются из текста (postCards.withCardData), не хранятся
+  excerpt: z.string(),
+  readingMinutes: z.number(),
+  commentsCount: z.number(),
   ...postDetailsResource.shape
 })
 
@@ -62,6 +70,16 @@ export type PostResource = z.infer<typeof postResource>
 export const postListResource = z.array(postResource);
 
 export type PostListResource = z.infer<typeof postListResource>
+
+/*
+  Избранное в кабинете: карточка и когда её отложили
+*/
+export const postFavoriteListResource = z.array(z.object({
+  addedAt: z.date(),
+  post: postResource
+}));
+
+export type PostFavoriteListResource = z.infer<typeof postFavoriteListResource>
 
 /*
   Ссылка на пост в таблице постов автора

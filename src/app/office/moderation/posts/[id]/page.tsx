@@ -2,29 +2,29 @@ import { CONTAINER } from "@/globals/container";
 import { db } from "@/globals/db";
 import { PostStatus, posts, postModerations } from "@/database/schema";
 import { adminPosts, decidePostModeration, moderatePosts } from "@/domains/posts/policy";
-import PostReviewControls from "@/domains/posts/components/PostReviewControls";
 import { requireAuthUser } from "@/shared/auth";
 import type { AuthUser } from "@/shared/authUser";
-import PostStatusTag from "@/domains/posts/components/PostStatusTag";
-import TagChips from "@/domains/tags/exports/TagChips";
-import PostTypeMeta from "@/domains/posts/components/PostTypeMeta";
-import PostGallery from "@/domains/posts/components/PostGallery";
 import { getPostImages } from "@/domains/posts/shared/postImages";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
-import PostModerationForm from "@/domains/posts/components/PostModerationForm";
+import { POST_STATUS_LABELS } from "@/domains/posts/shared/postStatuses";
+import PostReviewPreview from "@/domains/posts/components/PostReviewPreview";
+import PostReviewDecision from "@/domains/posts/components/PostReviewDecision";
 import PostBlockingForm from "@/domains/posts/components/PostBlockingForm";
 import PostModerationHistory from "@/domains/posts/components/PostModerationHistory";
 import { postModerateResource } from "@/domains/posts/dto/postResources";
 import { POST_MODERATION_TABS } from "@/domains/posts/dto/postModerationRequests";
+import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
+import Link from "@/components/general/Link";
 import { resource } from "@/core/resource";
 import { idOrFail } from "@/shared/params";
-import LocalDate from "@/components/general/LocalDate";
 import { desc, eq } from "drizzle-orm";
-import Link from "@/components/general/Link";
-import PostMarkdown from "@/domains/posts/components/PostMarkdown";
 import { notFound } from "next/navigation";
-import { IconArrowLeft, IconCalendar, IconLink, IconUser } from "@tabler/icons-react";
+import { IconChevronLeft } from "@tabler/icons-react";
 
+/*
+  Ревью поста (спека 42, шаг 14): слева пост глазами читателя, справа карточка решения и
+  история модерации. На телефоне решение — шторка снизу, история — сворачиваемая строка
+*/
 export default async function ModerationPostsItem({ params }: PageProps<'/office/moderation/posts/[id]'>) {
   const id = idOrFail((await params).id);
   await CONTAINER.boucerService.breakIfCant(moderatePosts);
@@ -48,78 +48,71 @@ export default async function ModerationPostsItem({ params }: PageProps<'/office
   }
 
   const me = await requireAuthUser();
+  const images = await getPostImages(post.id);
+  const back = backlink(post.status);
+  const reviewer = post.status === 'moderating' && post.reviewer && post.reviewStartedAt
+    ? { name: post.reviewer.name, mine: post.reviewerId === me.id, startedAt: post.reviewStartedAt }
+    : undefined;
 
   return (
-    <article className="ui-article">
-      <Link href={backlink(post.status)} className="ui-backlink">
-        <IconArrowLeft size={15} />Модерация
+    <div className="ui-review-page">
+      <OfficeCrumbs items={[
+        { label: 'Модерация', href: back.href },
+        { label: post.status === 'moderating' ? 'На ревью' : POST_STATUS_LABELS[post.status] }
+      ]} />
+      <Link href={back.href} className="ui-backlink ui-review-page__back">
+        <IconChevronLeft size={16} stroke={2} />{ back.label }
       </Link>
 
-      <h1 className="ui-title ui-title--lg">{ post.title }</h1>
+      <div className="ui-review-page__columns">
+        <PostReviewPreview post={post} author={post.author} tags={pickTags(post)} images={images} />
 
-      <div className="ui-meta">
-        <PostStatusTag status={post.status} />
-        <span className="ui-meta__item">
-          <IconUser size={14} stroke={1.8} />{ post.author.name }
-        </span>
-        <span className="ui-meta__item">
-          <IconLink size={14} stroke={1.8} />/{ post.url }
-        </span>
-        <span className="ui-meta__item">
-          <IconCalendar size={14} stroke={1.8} />
-          <LocalDate value={post.createdAt} />
-        </span>
-        <PostTypeMeta post={post} />
-        <TagChips tags={pickTags(post)} />
+        <aside className="ui-review-page__aside">
+          <Decision post={post} me={me} />
+          <PostModerationHistory post={post} moderations={post.moderations} review={reviewer} />
+        </aside>
       </div>
-
-      <div className="ui-article__body"><PostMarkdown content={post.content} /></div>
-
-      <PostGallery postId={post.id} title={post.title} images={await getPostImages(post.id)} />
-
-      <div className="ui-actions">
-        <div style={{ flex: 1 }}>
-          { post.status === 'moderating' && <PostReviewControls
-            id={post.id}
-            state={post.reviewerId === null ? 'free' : post.reviewerId === me.id ? 'mine' : 'other'}
-            reviewer={post.reviewer && post.reviewStartedAt ? { name: post.reviewer.name, startedAt: post.reviewStartedAt } : undefined}
-            canTakeover={adminPosts(me)}
-          /> }
-          <ModerationControls post={post} me={me} />
-        </div>
-      </div>
-
-      <div className="ui-actions">
-        <div style={{ flex: 1 }}>
-          <p className="ui-kicker">История модерации</p>
-          <PostModerationHistory moderations={post.moderations} />
-        </div>
-      </div>
-    </article>
+    </div>
   );
 }
 
-function ModerationControls({ post, me }: { post: { id: number, status: PostStatus, reviewerId: number | null }, me: AuthUser }) {
+type DecisionPost = {
+  id: number,
+  status: PostStatus,
+  reviewerId: number | null,
+  reviewStartedAt: Date | null,
+  reviewer: { name: string } | null
+}
+
+function Decision({ post, me }: { post: DecisionPost, me: AuthUser }) {
   const target = resource(postModerateResource, post);
 
   if(post.status === 'moderating'){
-    // Чужое ревью: форму решения не показываем — action всё равно откажет
-    return decidePostModeration(me, post) ? <PostModerationForm post={target} /> : null;
+    return <PostReviewDecision
+      id={post.id}
+      review={post.reviewerId === null ? 'free' : post.reviewerId === me.id ? 'mine' : 'other'}
+      reviewer={post.reviewer && post.reviewStartedAt ? { name: post.reviewer.name, startedAt: post.reviewStartedAt } : undefined}
+      // Чужое ревью: формы решения нет — action всё равно откажет
+      canDecide={decidePostModeration(me, post)}
+      canTakeover={adminPosts(me)}
+    />;
   }
   else if(post.status === 'published' || post.status === 'hidden'){
     // key: после смены статуса страница рендерится заново, и без него форма унесла бы введённый текст
-    return <PostBlockingForm key="block" post={target} mode="block" />;
+    return <section className="ui-decision"><PostBlockingForm key="block" post={target} mode="block" /></section>;
   }
   else if(post.status === 'blocked'){
-    return <PostBlockingForm key="unblock" post={target} mode="unblock" />;
+    return <section className="ui-decision"><PostBlockingForm key="unblock" post={target} mode="unblock" /></section>;
   }
 
-  return <p className="ui-meta">Пост уже не на модерации.</p>;
+  return <section className="ui-decision"><p className="ui-decision__note">Пост уже не на модерации.</p></section>;
 }
 
 // Вкладка модерации, в которой лежит пост; для остальных статусов — очередь
 function backlink(status: PostStatus){
   const tab = POST_MODERATION_TABS.find(t => t === status);
 
-  return tab && tab !== 'moderating' ? `/office/moderation/posts?status=${tab}` as const : '/office/moderation/posts';
+  return tab && tab !== 'moderating'
+    ? { href: `/office/moderation/posts?status=${tab}` as const, label: 'Модерация' }
+    : { href: '/office/moderation/posts' as const, label: 'Очередь' };
 }

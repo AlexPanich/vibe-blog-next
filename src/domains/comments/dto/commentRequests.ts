@@ -29,9 +29,26 @@ export const commentReactDto = z.object({
 
 export type CommentReactDto = z.infer<typeof commentReactDto>
 
-// Порция «К моим постам»: строки старше beforeId
-export const receivedCommentsPageDto = z.object({
+export const OFFICE_COMMENT_TABS = [ 'received', 'mine' ] as const;
+
+export type OfficeCommentTab = typeof OFFICE_COMMENT_TABS[number]
+
+// Порция вкладки кабинета: строки старше beforeId
+export const officeCommentsPageDto = z.object({
+  tab: z.enum(OFFICE_COMMENT_TABS),
   beforeId: z.int().positive()
 })
 
-export type ReceivedCommentsPageDto = z.infer<typeof receivedCommentsPageDto>
+export type OfficeCommentsPageDto = z.infer<typeof officeCommentsPageDto>
+
+export const COMMENT_REPORT_TABS = [ 'open', 'resolved' ] as const;
+
+export type CommentReportTab = typeof COMMENT_REPORT_TABS[number]
+
+// Очередь жалоб: ?tab=resolved&page=N; мусор в url — первая страница открытых
+export const commentReportFilterDto = z.object({
+  tab: z.enum(COMMENT_REPORT_TABS).catch('open').default('open'),
+  page: z.coerce.number().int().positive().catch(1).default(1)
+})
+
+export type CommentReportFilterDto = z.infer<typeof commentReportFilterDto>

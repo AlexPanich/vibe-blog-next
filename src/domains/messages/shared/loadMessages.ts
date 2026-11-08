@@ -1,18 +1,20 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { dialogs, messageIgnores, messages, users } from "@/database/schema";
+import { dialogs, messageIgnores, messageRestrictions, messages, posts, users } from "@/database/schema";
 import type { DialogPageDto, MessagePageDto } from "@/domains/messages/dto/messageRequests";
-import type { DialogRowResource, DialogViewResource, MessageItemResource } from "@/domains/messages/dto/messageResources";
+import type { DialogRowResource, DialogViewResource, MessageItemResource, MessagePeerResource } from "@/domains/messages/dto/messageResources";
 import { isIgnored, isRestricted, MESSAGE_PAGE_SIZE, writeBlockReason, type DBTransaction } from "@/domains/messages/shared/messageAccess";
 import type { AuthUser } from "@/shared/authUser";
 import { messageSnippet } from "@/domains/messages/shared/messageSnippet";
+import { escapeLike } from "@/shared/escapeLike";
 import { and, asc, count, desc, eq, exists, gt, isNull, lt, ne, not, or, sql } from "drizzle-orm";
 
 export const DIALOG_PAGE_SIZE = 20;
 
 /*
   Мои диалоги без скрытых собеседников, свежие сверху. Курсор — (lastMessageAt, id): пока
-  листаешь, новые сообщения поднимают диалоги наверх и не сдвигают уже показанные порции
+  листаешь, новые сообщения поднимают диалоги наверх и не сдвигают уже показанные порции.
+  q — подстрока имени собеседника без регистра (lower() в SQLite кириллицу не понижает — lower_ru)
 */
 export function loadDialogRows(userId: number, cursor: DialogPageDto = {}): { items: DialogRowResource[], hasMore: boolean } {
   const peerId = sql<number>`CASE WHEN ${dialogs.userLowId} = ${userId} THEN ${dialogs.userHighId} ELSE ${dialogs.userLowId} END`;
@@ -33,7 +35,8 @@ export function loadDialogRows(userId: number, cursor: DialogPageDto = {}): { it
       not(exists(db.select().from(messageIgnores).where(and(eq(messageIgnores.userId, userId), eq(messageIgnores.ignoredId, users.id))))),
       cursor.beforeAt !== undefined && cursor.beforeId !== undefined
         ? sql`(${dialogs.lastMessageAt}, ${dialogs.id}) < (${cursor.beforeAt}, ${cursor.beforeId})`
-        : undefined
+        : undefined,
+      cursor.q ? sql`lower_ru(${users.name}) LIKE ${`%${escapeLike(cursor.q.toLocaleLowerCase('ru'))}%`} ESCAPE '\\'` : undefined
     ))
     .orderBy(desc(dialogs.lastMessageAt), desc(dialogs.id))
     .limit(DIALOG_PAGE_SIZE + 1)
@@ -73,6 +76,19 @@ export function loadMessages(tx: DBTransaction, dialogId: number, page: MessageP
   return { items: rows.slice(0, MESSAGE_PAGE_SIZE).reverse(), hasMore: rows.length > MESSAGE_PAGE_SIZE };
 }
 
+/*
+  Вкладки «Скрытые» (чью переписку я убрал из списка) и «Ограниченные» (кому запретил писать),
+  по алфавиту. Списки короткие — без порций
+*/
+export function loadMessagePeople(userId: number, kind: 'ignored' | 'restricted'): MessagePeerResource[] {
+  const columns = { id: users.id, name: users.name, avatarKey: users.avatarKey };
+  const rows = kind === 'ignored'
+    ? db.select(columns).from(messageIgnores).innerJoin(users, eq(users.id, messageIgnores.ignoredId)).where(eq(messageIgnores.userId, userId)).all()
+    : db.select(columns).from(messageRestrictions).innerJoin(users, eq(users.id, messageRestrictions.restrictedId)).where(eq(messageRestrictions.userId, userId)).all();
+
+  return rows.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+}
+
 // Непрочитанные входящие во всех диалогах, кроме скрытых, — счётчик пункта меню
 export function countUnreadMessages(userId: number){
   return db.select({ n: count() })
@@ -87,23 +103,25 @@ export function countUnreadMessages(userId: number){
     .get()?.n ?? 0;
 }
 
-
 /*
   Всё для страницы диалога; dialogId = null — новый диалог (страница new). Собеседника нет — undefined
 */
 export function loadDialogView(tx: DBTransaction, me: Pick<AuthUser, 'id' | 'roles'>, peerId: number, dialogId: number | null): DialogViewResource | undefined {
-  const peer = tx.select({ id: users.id, name: users.name, avatarKey: users.avatarKey }).from(users).where(eq(users.id, peerId)).get();
+  const peer = tx.select({ id: users.id, name: users.name, avatarKey: users.avatarKey, roles: users.roles }).from(users).where(eq(users.id, peerId)).get();
 
   if(!peer){
     return undefined;
   }
+
+  const published = tx.select({ n: count() }).from(posts).where(and(eq(posts.userId, peerId), eq(posts.status, 'published'))).get()?.n ?? 0;
 
   const history = dialogId === null ? { items: [], hasMore: false } : loadMessages(tx, dialogId);
 
   return {
     id: dialogId,
     meId: me.id,
-    peer,
+    // roles — JSON-массив строкой; парсер ролей живёт в домене users
+    peer: { id: peer.id, name: peer.name, avatarKey: peer.avatarKey, author: peer.roles.includes('"author"'), posts: published },
     messages: history.items,
     hasMore: history.hasMore,
     blockReason: writeBlockReason(tx, me, peerId),

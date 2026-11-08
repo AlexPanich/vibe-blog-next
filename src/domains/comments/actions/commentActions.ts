@@ -5,14 +5,14 @@ import { actionAuthClient, actionClient, actionError } from "@/globals/actionCli
 import { db } from "@/globals/db";
 import { rateLimiters } from "@/globals/rateLimiter";
 import { commentModerations, commentReactions, commentReports, comments, postImages, posts } from "@/database/schema";
-import { aiIdSchema, commentCreateDto, commentDto, commentReactDto, receivedCommentsPageDto } from "@/domains/comments/dto/commentRequests";
-import { commentListResource, receivedCommentListResource, type CommentViewer } from "@/domains/comments/dto/commentResources";
+import { aiIdSchema, commentCreateDto, commentDto, commentReactDto, officeCommentsPageDto } from "@/domains/comments/dto/commentRequests";
+import { commentListResource, officeCommentListResource, type CommentViewer } from "@/domains/comments/dto/commentResources";
 import { moderateComments, reactComment, replyComment } from "@/domains/comments/policy";
 import { commentState } from "@/domains/comments/shared/commentState";
 import { ensurePostPublished, findCommentOrStale, removeComment } from "@/domains/comments/shared/commentGuards";
 import { branchOf, loadComments, reactionCounts } from "@/domains/comments/shared/loadComments";
 import { notifyCommentCreated } from "@/domains/comments/shared/commentNotifications";
-import { loadReceivedComments } from "@/domains/comments/shared/loadReceivedComments";
+import { loadOfficeComments } from "@/domains/comments/shared/loadOfficeComments";
 import { publishCommentReactions, publishCommentsChanged } from "@/domains/comments/shared/publishComments";
 import { resource } from "@/core/resource";
 import { blockedAmong, blockingAmong, isBlockedBetween } from "@/domains/users/exports/userBlocks";
@@ -251,14 +251,14 @@ export const loadCommentViewerAction = actionAuthClient
   });
 
 /*
-  «Показать ещё» во вкладке «К моим постам»: чужого тут нет — выборка по auth.id
+  «Показать ещё» во вкладках кабинета «Мои» / «К моим постам»: чужого тут нет — выборка по auth.id
 */
-export const loadReceivedCommentsAction = actionAuthClient
-  .inputSchema(receivedCommentsPageDto)
-  .action(async ({ parsedInput: { beforeId }, ctx: { auth } }) => {
-    const { items, hasMore } = await loadReceivedComments(auth.id, beforeId);
+export const loadOfficeCommentsAction = actionAuthClient
+  .inputSchema(officeCommentsPageDto)
+  .action(async ({ parsedInput: { tab, beforeId }, ctx: { auth } }) => {
+    const { items, hasMore } = await loadOfficeComments(auth.id, tab, beforeId);
 
-    return { items: resource(receivedCommentListResource, items), hasMore };
+    return { items: resource(officeCommentListResource, items), hasMore };
   });
 
 function revalidatePost(){

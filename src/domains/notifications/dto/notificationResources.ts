@@ -22,10 +22,11 @@ export const notificationItemResource = z.object({
 
 export type NotificationItemResource = z.infer<typeof notificationItemResource>
 
-// Первая порция истории (office/notifications)
+// Первая порция истории (office/notifications) и число непрочитанных для подзаголовка
 export const notificationPageResource = z.object({
   items: z.array(notificationItemResource),
-  hasMore: z.boolean()
+  hasMore: z.boolean(),
+  unread: z.number()
 })
 
 export type NotificationPageResource = z.infer<typeof notificationPageResource>

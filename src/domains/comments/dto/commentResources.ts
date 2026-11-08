@@ -1,5 +1,6 @@
 import z from "zod";
 import { COMMENT_STATES } from "@/domains/comments/shared/commentState";
+import { COMMENT_REPORT_RESOLUTIONS } from "@/database/schema";
 
 /*
   Комментарий для всех: у скрытого и удалённого текста нет — он не должен попасть в HTML
@@ -42,15 +43,16 @@ export type CommentViewer = {
 export type CommentReportState = 'sent' | 'resolved'
 
 /*
-  Строка очереди жалоб: жалобы на один комментарий — одна строка со списком жалобщиков.
-  У родителя текст только видимого — модератору нужен контекст, а не скрытое
+  Карточка жалоб (спека 18, вид — спека 42): жалобы на один комментарий — одна карточка со
+  списком жалобщиков. У родителя текст только видимого — модератору нужен контекст, а не
+  скрытое. Рассмотренные — та же карточка с итогом; у удалённого автором текста нет
 */
 export const commentReportRowResource = z.object({
   commentId: z.number(),
   postId: z.number(),
   postTitle: z.string(),
   imageId: z.number().nullable(),
-  content: z.string(),
+  content: z.string().nullable(),
   author: z.object({ id: z.number(), name: z.string(), avatarKey: z.string().nullable() }),
   parent: z.object({
     authorName: z.string(),
@@ -59,7 +61,12 @@ export const commentReportRowResource = z.object({
   }).nullable(),
   reporters: z.array(z.object({ id: z.number(), name: z.string() })),
   firstAt: z.date(),
-  lastAt: z.date()
+  lastAt: z.date(),
+  resolution: z.object({
+    kind: z.enum(COMMENT_REPORT_RESOLUTIONS),
+    by: z.string().nullable(),
+    at: z.date()
+  }).nullable()
 })
 
 export type CommentReportRowResource = z.infer<typeof commentReportRowResource>
@@ -69,12 +76,14 @@ export const commentReportListResource = z.array(commentReportRowResource);
 export type CommentReportListResource = z.infer<typeof commentReportListResource>
 
 /*
-  Строка «К моим постам» в кабинете (спека 23). У скрытого текста нет — только заглушка
+  Карточка комментария в кабинете (спека 23, вид — спека 42): вкладки «Мои» и «К моим постам».
+  У чужого скрытого текста и причины нет — только пометка; своему скрытому приходят оба
 */
-export const receivedCommentResource = z.object({
+export const officeCommentResource = z.object({
   id: z.number(),
   content: z.string().nullable(),
   hidden: z.boolean(),
+  hideReason: z.string().nullable(),
   createdAt: z.date(),
   editedAt: z.date().nullable(),
   editedByModerator: z.boolean(),
@@ -85,8 +94,8 @@ export const receivedCommentResource = z.object({
   author: z.object({ name: z.string(), avatarKey: z.string().nullable() })
 })
 
-export type ReceivedCommentResource = z.infer<typeof receivedCommentResource>
+export type OfficeCommentResource = z.infer<typeof officeCommentResource>
 
-export const receivedCommentListResource = z.array(receivedCommentResource);
+export const officeCommentListResource = z.array(officeCommentResource);
 
-export type ReceivedCommentListResource = z.infer<typeof receivedCommentListResource>
+export type OfficeCommentListResource = z.infer<typeof officeCommentListResource>

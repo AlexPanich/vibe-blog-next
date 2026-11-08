@@ -4,70 +4,39 @@ import 'client-only';
 import type { Role } from "@/database/schema";
 import { StrictResource } from "@/core/resource";
 import { OfficeMenuResource } from "@/components/navigation/officeMenuResource";
-import MessagesMenuCount from "@/domains/messages/exports/MessagesMenuCount";
-import NotificationsMenuCount from "@/domains/notifications/exports/NotificationsMenuCount";
-import { IconArticle, IconBell, IconBookmark, IconChecklist, IconFiles, IconFlag, IconHome, IconMessage, IconMessages, IconNews, IconPencilPlus, IconTags, IconUserCheck, IconUserCircle, IconUsers, IconUsersGroup, type Icon } from "@tabler/icons-react";
-import type { Route } from "next";
+import { activeMenuItem, visibleGroups } from "@/components/navigation/officeMenuItems";
+import OfficeMenuCount from "@/components/navigation/OfficeMenuCount";
+import UserAvatar from "@/domains/users/exports/UserAvatar";
+import { IconArrowRight } from "@tabler/icons-react";
 import Link from "@/components/general/Link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 
-// roles — пункт виден, если у пользователя есть хотя бы одна из ролей; count — бейдж из menu.counts;
-// exact — активен только на своём url (у «Начала» под /office лежит весь кабинет)
-type MenuItem = { label: string, href: Route, icon: Icon, roles?: Role[], count?: keyof OfficeMenuResource['counts'], exact?: boolean }
+const ROLE_LABELS: Record<Role, string> = { author: 'автор', moderator: 'модератор', admin: 'администратор' };
 
-const groups: { label: string, items: MenuItem[] }[] = [
-  {
-    label: 'Кабинет',
-    items: [
-      { label: 'Начало', href: '/office', icon: IconHome, exact: true },
-      { label: 'Мои посты', href: '/office/posts', icon: IconArticle, roles: [ 'author' ] },
-      { label: 'Новый пост', href: '/office/posts/create', icon: IconPencilPlus, roles: [ 'author' ] },
-      { label: 'Сообщения', href: '/office/messages', icon: IconMessages, count: 'messages' },
-      { label: 'Уведомления', href: '/office/notifications', icon: IconBell, count: 'notifications' },
-      { label: 'Моя лента', href: '/office/feed', icon: IconNews },
-      { label: 'Подписки', href: '/office/follows', icon: IconUsersGroup },
-      { label: 'Избранное', href: '/office/favorites', icon: IconBookmark },
-      { label: 'Комментарии', href: '/office/comments', icon: IconMessage },
-    ]
-  },
-  {
-    label: 'Модерация',
-    items: [
-      { label: 'Очередь', href: '/office/moderation/posts', icon: IconChecklist, roles: [ 'moderator', 'admin' ] },
-      { label: 'Жалобы', href: '/office/moderation/comments', icon: IconFlag, roles: [ 'moderator', 'admin' ], count: 'reports' },
-      { label: 'Рубрики', href: '/office/moderation/tags', icon: IconTags, roles: [ 'moderator', 'admin' ] },
-    ]
-  },
-  {
-    label: 'Администрирование',
-    items: [
-      { label: 'Все посты', href: '/office/admin/posts', icon: IconFiles, roles: [ 'admin' ] },
-      { label: 'Пользователи', href: '/office/admin/users', icon: IconUsers, roles: [ 'admin' ] },
-      { label: 'Заявки', href: '/office/admin/author-requests', icon: IconUserCheck, roles: [ 'admin' ], count: 'authorRequests' },
-    ]
-  },
-  {
-    label: 'Аккаунт',
-    items: [
-      { label: 'Профиль', href: '/office/profile', icon: IconUserCircle },
-    ]
-  },
-];
-
-const allItems = groups.flatMap(group => group.items);
-
-// Левое меню кабинета. Активен самый длинный пункт, под который подходит url:
-// на /office/posts/5 горит «Мои посты», на /office/posts/create — «Новый пост».
+/*
+  Левое меню кабинета (спека 42): карточка пользователя, группы пунктов, бейджи.
+  На телефоне спрятано CSS — там чипы разделов на «Начале» и ссылка «‹ Кабинет»
+*/
 export default function OfficeMenu<T extends OfficeMenuResource>({ menu }: { menu: StrictResource<T, OfficeMenuResource> }) {
-  const active = activeHref(usePathname());
-  const visible = groups
-    .map(group => ({ ...group, items: group.items.filter(item => allowed(item, menu.roles)) }))
-    .filter(group => group.items.length > 0);
+  const active = activeMenuItem(usePathname());
 
   return (
-    <nav className="ui-desk__side">
-      { visible.map(group => (
+    <nav className="ui-desk__side" aria-label="Кабинет">
+      <div className="ui-desk__me">
+        <div className="ui-desk__me-top">
+          <UserAvatar name={menu.name} avatarKey={menu.avatarKey} size={52} />
+          <div className="ui-desk__me-text">
+            <span className="ui-desk__me-name">{ menu.name }</span>
+            <span className="ui-desk__me-roles">{ rolesLine(menu.roles) }</span>
+          </div>
+        </div>
+        { menu.roles.includes('author') && <Link href={`/authors/${menu.id}`} className="ui-desk__me-link">
+          Моя страница автора<IconArrowRight size={15} stroke={2} />
+        </Link> }
+      </div>
+
+      { visibleGroups(menu.roles).map(group => (
         <Fragment key={group.label}>
           <p className="ui-desk__label">{ group.label }</p>
           { group.items.map(item => (
@@ -75,13 +44,11 @@ export default function OfficeMenu<T extends OfficeMenuResource>({ menu }: { men
               key={item.href}
               href={item.href}
               className="ui-desk__link"
-              data-active={item.href === active}
+              data-active={item.href === active?.href}
             >
               <item.icon size={18} stroke={1.7} />
               { item.label }
-              { item.count === 'messages' && <MessagesMenuCount initial={menu.counts.messages} /> }
-              { item.count === 'notifications' && <NotificationsMenuCount initial={menu.counts.notifications} /> }
-              { (item.count === 'reports' || item.count === 'authorRequests') && menu.counts[item.count] > 0 && <span className="ui-desk__count">{ menu.counts[item.count] }</span> }
+              { item.count && <OfficeMenuCount kind={item.count} counts={menu.counts} /> }
             </Link>
           )) }
         </Fragment>
@@ -90,20 +57,9 @@ export default function OfficeMenu<T extends OfficeMenuResource>({ menu }: { men
   );
 }
 
-function activeHref(pathname: string): string | null {
-  let best: string | null = null;
+// «Автор · модератор»; без ролей — «Читатель»
+function rolesLine(roles: Role[]){
+  const line = roles.length > 0 ? roles.map(role => ROLE_LABELS[role]).join(' · ') : 'читатель';
 
-  for(const { href, exact } of allItems){
-    const matches = pathname === href || (!exact && pathname.startsWith(`${href}/`));
-
-    if(matches && (best === null || href.length > best.length)){
-      best = href;
-    }
-  }
-
-  return best;
-}
-
-function allowed(item: MenuItem, roles: Role[]) {
-  return !item.roles || item.roles.some(role => roles.includes(role));
+  return line.charAt(0).toUpperCase() + line.slice(1);
 }

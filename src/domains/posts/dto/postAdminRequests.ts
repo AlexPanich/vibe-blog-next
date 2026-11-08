@@ -2,10 +2,12 @@ import z from "zod";
 import { POST_STATUSES } from "@/database/schema";
 
 /*
-  Фильтр списка постов в админке, из searchParams: неизвестный статус — без фильтра
+  Фильтр «Всех постов» в админке из searchParams (спека 42, шаг 17): вкладка статуса и номер
+  страницы. Мусор в URL — значение по умолчанию, а не 404. Поиск — спека 44
 */
 export const postAdminFilterDto = z.object({
-  status: z.enum(POST_STATUSES).optional().catch(undefined)
+  status: z.enum(POST_STATUSES).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).catch(1).default(1),
 })
 
 export type PostAdminFilterDto = z.infer<typeof postAdminFilterDto>

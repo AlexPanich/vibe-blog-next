@@ -23,9 +23,14 @@ export const postDetailsDto = z.discriminatedUnion('type', [
 
 export type PostDetailsDto = z.infer<typeof postDetailsDto>
 
+// Пределы нужны и форме: счётчик символов у заголовка (спека 42)
+export const POST_URL_MAX = 16;
+
+export const POST_TITLE_MAX = 16;
+
 export const postOwnCreateDto = z.object({
-  url: z.string().min(5).max(16),
-  title: z.string().min(5).max(16),
+  url: z.string().min(5).max(POST_URL_MAX),
+  title: z.string().min(5).max(POST_TITLE_MAX),
   content: z.string().min(5),
   tagIds: z.array(z.int().positive())
     .max(TAGS_PER_POST, `Не больше ${TAGS_PER_POST} рубрик`)
@@ -34,6 +39,16 @@ export const postOwnCreateDto = z.object({
 })
 
 export type PostOwnCreateDto = z.infer<typeof postOwnCreateDto>
+
+/*
+  Редактор (спека 42): «Сохранить черновик» и «Отправить на проверку» — один запрос,
+  submit после записи делает переход draft → moderating
+*/
+export const postEditorDto = postOwnCreateDto.extend({
+  submit: z.boolean().default(false)
+})
+
+export type PostEditorDto = z.input<typeof postEditorDto>
 
 /*
   «Изменить» вне черновика: статус, который видел автор. По нему выбирается переход — если

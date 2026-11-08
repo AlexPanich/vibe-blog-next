@@ -3,11 +3,10 @@
 import 'client-only';
 import { StrictResource } from "@/core/resource";
 import { blockUserAction } from "@/domains/users/actions/userBlockActions";
-import UserAvatar from "@/domains/users/components/UserAvatar";
+import FollowPerson from "@/domains/users/components/follows/FollowPerson";
 import type { UserBlockRowResource } from "@/domains/users/dto/userResources";
-import { Button, Text } from "@mantine/core";
+import { IconLockOpen } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
-import Link from "@/components/general/Link";
 
 type UserBlockRowProps<T extends UserBlockRowResource> = {
   row: StrictResource<T, UserBlockRowResource>
@@ -18,18 +17,19 @@ export default function UserBlockRow<T extends UserBlockRowResource>({ row }: Us
   const unblock = useAction(blockUserAction.bind(null, row.id));
 
   return (
-    <div className="ui-row ui-row--static">
-      <div className="ui-row__body">
-        <Link href={`/authors/${row.id}`} className="ui-follow-row">
-          <UserAvatar name={row.name} avatarKey={row.avatarKey} size={32} />{ row.name }
-        </Link>
-        { unblock.result.serverError && <Text size="sm" c="red">{ unblock.result.serverError.message }</Text> }
-      </div>
-      <div className="ui-row__aside ui-row__aside--inline">
-        <Button size="compact-sm" variant="default" loading={unblock.isPending} onClick={() => unblock.execute({ block: false })}>
-          Разблокировать
-        </Button>
-      </div>
-    </div>
+    <FollowPerson
+      person={row}
+      error={unblock.result.serverError?.message}
+      action={
+        <button
+          type="button"
+          className="ui-pill ui-pill--outline ui-follow-person__button"
+          disabled={unblock.isPending}
+          onClick={() => unblock.execute({ block: false })}
+        >
+          <IconLockOpen size={15} stroke={1.8} /><span className="ui-pill__label">Разблокировать</span>
+        </button>
+      }
+    />
   );
 }

@@ -9,7 +9,7 @@ import useLiveEvent from "@/hooks/useLiveEvent";
 import useLiveTopic from "@/hooks/useLiveTopic";
 import useUser from "@/hooks/useUser";
 import { postTopic } from "@/shared/liveEvents";
-import { Anchor, Group, Rating, Text } from "@mantine/core";
+import { Anchor, Rating, Text } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
 import { useEffect, useRef, useState } from "react";
@@ -50,28 +50,34 @@ export default function PostRatingBlock<T extends PostRatingBlockResource>({ pos
     }
   }, [ ready, user, own, loadMine ]);
 
+  const canRate = ready && !!user && !own;
+  const summary = stats.count > 0 && stats.average !== null
+    ? `${formatRating(stats.average)} · ${ratingsCountLabel(stats.count)}`
+    : 'Оценок пока нет';
+
   return (
     <div className="ui-rating">
-      <p className="ui-kicker">Оценка</p>
-      <Group gap="md" align="center">
-        { ready && user && !own && <Rating
-          value={mine}
-          onChange={value => rate.execute({ value })}
-          readOnly={rate.isPending}
-          aria-label="Ваша оценка"
-        /> }
-        <Text size="sm" c="dimmed">
-          { stats.count > 0 && stats.average !== null
-            ? `${formatRating(stats.average)} · ${ratingsCountLabel(stats.count)}`
-            : 'Нет оценок' }
-        </Text>
-        { ready && user && !own && mine > 0 && <Anchor component="button" size="sm" onClick={() => rate.execute({ value: 0 })}>
+      <p className="ui-rating__label">{ canRate ? 'Оцените историю' : 'Оценка читателей' }</p>
+      <div className="ui-rating__row">
+        {/* Своя оценка — тем, кто может оценить; остальным звёзды показывают среднюю */}
+        <Rating
+          className="ui-rating__stars"
+          size="lg"
+          color="sun"
+          value={canRate ? mine : stats.average ?? 0}
+          fractions={canRate ? 1 : 10}
+          onChange={canRate ? value => rate.execute({ value }) : undefined}
+          readOnly={!canRate || rate.isPending}
+          aria-label={canRate ? 'Ваша оценка' : 'Средняя оценка'}
+        />
+        <span className="ui-rating__summary">{ summary }</span>
+        { canRate && mine > 0 && <Anchor component="button" size="sm" c="dimmed" onClick={() => rate.execute({ value: 0 })}>
           Снять оценку
         </Anchor> }
-      </Group>
-      { ready && !user && <Text size="sm" mt={6}><Link href="/auth/login">Войдите</Link>, чтобы оценить пост.</Text> }
-      { ready && own && <Text size="sm" c="dimmed" mt={6}>Свой пост оценить нельзя.</Text> }
-      { rate.result.serverError && <Text size="sm" c="red" mt={6}>{ rate.result.serverError.message }</Text> }
+      </div>
+      { ready && !user && <Text size="sm" c="dimmed"><Link href="/auth/login">Войдите</Link>, чтобы оценить пост.</Text> }
+      { ready && own && <Text size="sm" c="dimmed">Свой пост оценить нельзя.</Text> }
+      { rate.result.serverError && <Text size="sm" c="red">{ rate.result.serverError.message }</Text> }
     </div>
   );
 }

@@ -22,6 +22,8 @@ type CommentsBlockProps<T extends CommentListResource> = {
   // Ветка картинки галереи; без него — комментарии к посту
   imageId?: number | null,
   postAuthorId: number,
+  // Заголовок блока: у фото — «Комментарии к фото»
+  title?: string,
   comments: StrictResource<T, CommentListResource>
 }
 
@@ -36,7 +38,7 @@ const RELOAD_DELAY_MS = 300;
   Живая (спека 29): по post.comments.changed ветка и «своё» перечитываются, по
   comment.reactions меняются счётчики
 */
-export default function CommentsBlock<T extends CommentListResource>({ postId, imageId = null, postAuthorId, comments }: CommentsBlockProps<T>) {
+export default function CommentsBlock<T extends CommentListResource>({ postId, imageId = null, postAuthorId, title = 'Комментарии', comments }: CommentsBlockProps<T>) {
   const { user, ready } = useUser();
   const [ viewer, setViewer ] = useState<CommentViewer>(EMPTY_VIEWER);
   /*
@@ -128,11 +130,13 @@ export default function CommentsBlock<T extends CommentListResource>({ postId, i
   return (
     <CommentsContext value={context}>
       <section className="ui-comments" aria-label="Комментарии">
-        <p className="ui-kicker">Комментарии{ count > 0 ? ` · ${count}` : '' }</p>
+        <h2 className="ui-comments__title">
+          { title }{ count > 0 && <span className="ui-comments__count">{ count }</span> }
+        </h2>
 
         { ready && user && (viewer.blockedWith.includes(postAuthorId)
           ? <Text size="sm" c="dimmed">Комментировать нельзя: между вами и автором поста блокировка.</Text>
-          : <CommentForm target={{ postId, imageId }} submitLabel="Отправить" placeholder="Ваш комментарий" />) }
+          : <CommentForm target={{ postId, imageId }} submitLabel="Отправить" placeholder="Поделитесь мыслями — автор читает всё" composer={user} />) }
         { ready && !user && <Text size="sm"><Link href="/auth/login">Войдите</Link>, чтобы комментировать.</Text> }
 
         { tree.length === 0

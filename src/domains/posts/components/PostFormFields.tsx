@@ -1,54 +1,59 @@
 'use client'
 
 import 'client-only';
-import { POST_TYPES } from "@/database/schema";
-import { PostForm, PostFormState } from "@/domains/posts/hooks/usePostForm";
-import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
+import { PostForm } from "@/domains/posts/hooks/usePostForm";
+import { POST_TITLE_MAX, POST_URL_MAX } from "@/domains/posts/dto/postRequests";
 import { fieldError, FieldErrorProps } from "@/components/general/FieldError";
 import { StrictResource } from "@/core/resource";
 import TagPicker from "@/domains/tags/exports/TagPicker";
 import { TagListResource } from "@/domains/tags/exports/tagResources";
 import PostContentEditor from "@/domains/posts/components/editor/PostContentEditor";
+import PostTypeCards from "@/domains/posts/components/editor/PostTypeCards";
+import PostFieldLabel from "@/domains/posts/components/editor/PostFieldLabel";
 import PostLocationPicker from "@/domains/posts/components/map/PostLocationPicker";
-import { Input, NumberInput, SegmentedControl, SimpleGrid, Stack, TextInput } from "@mantine/core";
+import { Input, NumberInput, SimpleGrid, Stack, TextInput } from "@mantine/core";
+import type { ReactNode } from "react";
 
 type PostFormFieldsProps<T extends TagListResource> = {
   form: PostForm,
   tagOptions: StrictResource<T, TagListResource>,
-  errors?: FieldErrorProps['errors']
+  errors?: FieldErrorProps['errors'],
+  // Поле обложки: у черновика — загрузка в галерею, до первого сохранения — подсказка
+  cover: ReactNode
 }
 
-const typeOptions = POST_TYPES.map(type => ({ value: type, label: POST_TYPE_LABELS[type] }));
-
+/*
+  Поля редактора поста (спека 42): тип карточками, крупный заголовок со счётчиком, slug с
+  префиксом, поля типа, рубрики-чипы, обложка, текст
+*/
 export default function PostFormFields<T extends TagListResource>({
   form: { nv, update, data },
   tagOptions,
-  errors
+  errors,
+  cover
 }: PostFormFieldsProps<T>) {
 
   return (
     <>
-      <Input.Wrapper label="Тип поста">
-        <SegmentedControl
-          display="flex"
-          mt={4}
-          data={typeOptions}
-          value={data.type}
-          onChange={value => update('type', value as PostFormState['type'])}
-        />
-      </Input.Wrapper>
+      <PostTypeCards value={data.type} onChange={type => update('type', type)} />
       <TextInput
-        label="URL (slug)"
-        placeholder="my-first-post"
-        {...nv('url')}
-        onChange={e => update('url', e.target.value)}
-        error={fieldError(errors, 'url')}
-      />
-      <TextInput
-        label="Заголовок"
+        label={<PostFieldLabel hint={`${data.title.length} / ${POST_TITLE_MAX}`}>Заголовок</PostFieldLabel>}
+        classNames={{ input: 'ui-title-input' }}
+        maxLength={POST_TITLE_MAX}
+        placeholder="Короткий и честный"
         {...nv('title')}
         onChange={e => update('title', e.target.value)}
         error={fieldError(errors, 'title')}
+      />
+      <TextInput
+        label="URL (slug)"
+        placeholder="my-first-post"
+        leftSection={<span className="ui-slug-prefix">/</span>}
+        leftSectionWidth={28}
+        maxLength={POST_URL_MAX}
+        {...nv('url')}
+        onChange={e => update('url', e.target.value)}
+        error={fieldError(errors, 'url')}
       />
       { data.type === 'translate' && <TextInput
         label="Ссылка на оригинал"
@@ -88,16 +93,17 @@ export default function PostFormFields<T extends TagListResource>({
           />
         </Stack>
       </Input.Wrapper> }
-      <PostContentEditor
-        value={data.content}
-        onChange={value => update('content', value)}
-        error={fieldError(errors, 'content')}
-      />
       <TagPicker
         options={tagOptions}
         value={data.tagIds}
         onChange={ids => update('tagIds', ids)}
         error={fieldError(errors, 'tagIds')}
+      />
+      { cover }
+      <PostContentEditor
+        value={data.content}
+        onChange={value => update('content', value)}
+        error={fieldError(errors, 'content')}
       />
     </>
   );

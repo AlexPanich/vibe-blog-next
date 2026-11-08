@@ -10,7 +10,6 @@ export const metadata = { title: 'Уведомления' };
 
 export default async function OfficeNotifications() {
   const user = await requireAuthUser();
-  const { items, hasMore } = loadNotificationPage(user.id);
 
-  return <NotificationList page={resource(notificationPageResource, { items, hasMore })} />;
+  return <NotificationList page={resource(notificationPageResource, loadNotificationPage(user.id))} />;
 }

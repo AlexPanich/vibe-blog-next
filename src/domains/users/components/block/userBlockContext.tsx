@@ -10,7 +10,10 @@ export type UserBlockContextValue = {
   authorName: string,
   // null — ещё не пришло, гость или своя страница: всё видно, кнопки нет
   state: UserBlockState | null,
-  setState: (state: UserBlockState) => void
+  setState: (state: UserBlockState) => void,
+  // Окно «Заблокировать?» — открывает и пункт меню «…», и кнопка «Заблокировать в ответ»
+  confirming: boolean,
+  setConfirming: (confirming: boolean) => void
 }
 
 export const UserBlockContext = createContext<UserBlockContextValue | null>(null);

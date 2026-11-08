@@ -23,10 +23,14 @@ export const authorRequestRejectDto = z.object({
 export type AuthorRequestRejectDto = z.infer<typeof authorRequestRejectDto>
 
 /*
-  Вкладка списка в админке из searchParams: неизвестное значение — «Ожидают»
+  Вкладка и страница списка в админке из searchParams: неизвестная вкладка — «Ожидают»,
+  мусор в page — первая. Страницы — только у «Рассмотренных»
 */
 export const authorRequestAdminFilterDto = z.object({
-  tab: z.enum([ 'pending', 'decided' ]).catch('pending').default('pending')
+  tab: z.enum([ 'pending', 'decided' ]).catch('pending').default('pending'),
+  page: z.coerce.number().int().min(1).catch(1).default(1),
 })
+
+export type AuthorRequestAdminFilterDto = z.infer<typeof authorRequestAdminFilterDto>
 
 export const authorRequestIdSchema = z.int().positive();

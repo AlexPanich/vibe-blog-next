@@ -15,7 +15,8 @@ import { CommentNode, INDENT_LEVELS, INDENT_LEVELS_SM } from "@/domains/comments
 import { Anchor, Button, Group, Text, TextInput } from "@mantine/core";
 import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
-import { useState } from "react";
+import { plural } from "@/core/plural";
+import { useEffect, useRef, useState } from "react";
 
 type CommentItemProps = {
   node: CommentNode,
@@ -27,6 +28,9 @@ type CommentItemProps = {
 }
 
 type Mode = 'view' | 'reply' | 'edit' | 'delete' | 'hide'
+
+// Сколько ответов ветки видно сразу; остальные — по «Показать ещё N ответов»
+const REPLIES_SHOWN = 3;
 
 // Комментарий и его ветка. Действия — по policy домена, сервер проверяет их ещё раз.
 export default function CommentItem({ node, depth, ancestorAuthorIds, parentName }: CommentItemProps) {
@@ -49,16 +53,60 @@ export default function CommentItem({ node, depth, ancestorAuthorIds, parentName
   const canReport = !!user && viewerLoaded && reportComment(user, facts, { postAuthorId, ancestorAuthorIds });
   const replyAncestors = node.state === 'deleted' ? ancestorAuthorIds : [ ...ancestorAuthorIds, node.userId ];
   const error = remove.result.serverError ?? hide.result.serverError ?? unhide.result.serverError ?? report.result.serverError;
+  const [ allReplies, setAllReplies ] = useState(false);
+  const folded = allReplies ? 0 : Math.max(0, node.replies.length - REPLIES_SHOWN);
+  const replies = folded > 0 ? node.replies.slice(0, REPLIES_SHOWN) : node.replies;
+
+  // Ссылка из уведомления (#comment-N) или «Ответить» из кабинета (#reply-N) на свёрнутый ответ:
+  // раскрыть ветку и докрутить до него
+  useEffect(() => {
+    const id = Number(window.location.hash.match(/^#(?:comment|reply)-(\d+)$/)?.[1]);
+
+    if(!id || !node.replies.slice(REPLIES_SHOWN).some(reply => containsComment(reply, id))){
+      return;
+    }
+
+    // Раскрыть — кадром позже (не setState в теле эффекта), докрутить — когда ответ уже нарисован
+    const frame = requestAnimationFrame(() => {
+      setAllReplies(true);
+      requestAnimationFrame(() => document.getElementById(`comment-${id}`)?.scrollIntoView({ block: 'center' }));
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [ node.replies ]);
+
+  // «Ответить» из кабинета (#reply-N): открыть форму ответа, когда известны пользователь и
+  // блокировки — права те же, что у кнопки. Один раз: потом хеш остаётся, а форму уже закрывали
+  const replyOpened = useRef(false);
+  const canReply = !!user && viewerLoaded && !blockedWith && replyComment(facts);
+
+  useEffect(() => {
+    if(replyOpened.current || !canReply || window.location.hash !== `#reply-${node.id}`){
+      return;
+    }
+
+    replyOpened.current = true;
+
+    const frame = requestAnimationFrame(() => {
+      setMode('reply');
+      requestAnimationFrame(() => document.getElementById(`comment-${node.id}`)?.scrollIntoView({ block: 'center' }));
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [ canReply, node.id ]);
 
   return (
     <div className="ui-comment" id={`comment-${node.id}`}>
       { blocking ? <p className="ui-comment__stub">Комментарий скрыт — вы заблокировали автора</p> : <>
+        { node.state === 'deleted'
+          ? <span className="ui-comment__avatar ui-avatar" aria-hidden />
+          : <Link href={`/authors/${node.userId}`} className="ui-comment__avatar" tabIndex={-1} aria-hidden>
+            <UserAvatar name={node.authorName} avatarKey={node.authorAvatarKey} size={36} />
+          </Link> }
         <div className="ui-comment__head">
           { node.state === 'deleted'
             ? <span className="ui-comment__author">—</span>
-            : <Link href={`/authors/${node.userId}`} className="ui-comment__author">
-              <UserAvatar name={node.authorName} avatarKey={node.authorAvatarKey} size={24} />{ node.authorName }
-            </Link> }
+            : <Link href={`/authors/${node.userId}`} className="ui-comment__author">{ node.authorName }</Link> }
           { depth > INDENT_LEVELS_SM && parentName && <span className="ui-comment__to" data-from={depth > INDENT_LEVELS ? 'all' : 'sm'}>→ { parentName }</span> }
           <LocalDate value={node.createdAt} options={{ dateStyle: 'medium', timeStyle: 'short' }} />
           { node.editedAt && node.state === 'visible' && <span className="ui-comment__edited">{ node.editedByModerator ? 'изменён модератором' : 'изменён' }</span> }
@@ -116,7 +164,8 @@ export default function CommentItem({ node, depth, ancestorAuthorIds, parentName
         submitLabel="Ответить"
         placeholder={`Ответ для ${node.authorName}`}
         autoFocus
-        onDone={close}
+        // Свой ответ встаёт в конец ветки — она не должна оставаться свёрнутой
+        onDone={() => { setAllReplies(true); close() }}
         onCancel={close}
       /> }
 
@@ -125,7 +174,10 @@ export default function CommentItem({ node, depth, ancestorAuthorIds, parentName
         data-flat={depth + 1 > INDENT_LEVELS || undefined}
         data-flat-sm={depth + 1 > INDENT_LEVELS_SM || undefined}
       >
-        { node.replies.map(reply => <CommentItem key={reply.id} node={reply} depth={depth + 1} ancestorAuthorIds={replyAncestors} parentName={node.state === 'deleted' ? undefined : node.authorName} />) }
+        { replies.map(reply => <CommentItem key={reply.id} node={reply} depth={depth + 1} ancestorAuthorIds={replyAncestors} parentName={node.state === 'deleted' ? undefined : node.authorName} />) }
+        { folded > 0 && <button type="button" className="ui-comment__more" onClick={() => setAllReplies(true)}>
+          Показать ещё { folded } { plural(folded, [ 'ответ', 'ответа', 'ответов' ]) }
+        </button> }
       </div> }
     </div>
   );
@@ -154,4 +206,8 @@ function Body({ node, hiddenText, own }: BodyProps){
   }
 
   return <p className="ui-comment__text">{ node.content }</p>
+}
+
+function containsComment(node: CommentNode, id: number): boolean {
+  return node.id === id || node.replies.some(reply => containsComment(reply, id));
 }

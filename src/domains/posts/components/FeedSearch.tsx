@@ -13,11 +13,10 @@ export default function FeedSearch({ filter }: { filter: PostFeedFilterDto }) {
         type="search"
         name="search"
         defaultValue={filter.search ?? ''}
-        placeholder="Поиск по заголовку и тексту"
+        placeholder={filter.follow ? 'Поиск в ленте' : 'Поиск по заголовку и тексту'}
         aria-label="Поиск по постам"
         className="ui-search__input"
       />
-      { filter.follow && filter.follow !== 'authors' && <input type="hidden" name="follow" value={filter.follow} /> }
       { filter.type && <input type="hidden" name="type" value={filter.type} /> }
       { filter.sort !== 'new' && <input type="hidden" name="sort" value={filter.sort} /> }
       { filter.author && <input type="hidden" name="author" value={filter.author} /> }

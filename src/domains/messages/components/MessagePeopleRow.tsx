@@ -1,7 +1,6 @@
 'use client'
 
 import 'client-only';
-import { StrictResource } from "@/core/resource";
 import { ignoreMessagesAction, restrictMessagesAction } from "@/domains/messages/actions/messageSettingsActions";
 import type { MessagePeerResource } from "@/domains/messages/dto/messageResources";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
@@ -10,13 +9,14 @@ import { useAction } from "next-safe-action/hooks";
 import Link from "@/components/general/Link";
 import { useRouter } from "next/navigation";
 
-type MessagePeopleRowProps<T extends MessagePeerResource> = {
-  peer: StrictResource<T, MessagePeerResource>,
+type MessagePeopleRowProps = {
+  // Из списка MessengerSide — уже отфильтрован ресурсом в layout
+  peer: MessagePeerResource,
   kind: 'ignored' | 'restricted'
 }
 
-// Строка вкладок «Скрытые» и «Ограниченные»: возврат снимает связь, строка уходит из списка
-export default function MessagePeopleRow<T extends MessagePeerResource>({ peer, kind }: MessagePeopleRowProps<T>) {
+// Строка вкладок «Скрытые» и «Ограниченные»: возврат снимает связь, layout перечитывает списки
+export default function MessagePeopleRow({ peer, kind }: MessagePeopleRowProps) {
   const router = useRouter();
   const done = { onSuccess: () => router.refresh() };
   const unignore = useAction(ignoreMessagesAction.bind(null, peer.id), done);
@@ -24,23 +24,21 @@ export default function MessagePeopleRow<T extends MessagePeerResource>({ peer, 
   const action = kind === 'ignored' ? unignore : unrestrict;
 
   return (
-    <div className="ui-row ui-row--static">
-      <div className="ui-row__body">
-        <Link href={`/authors/${peer.id}`} className="ui-follow-row">
-          <UserAvatar name={peer.name} avatarKey={peer.avatarKey} size={32} />{ peer.name }
-        </Link>
-        { action.result.serverError && <Text size="sm" c="red">{ action.result.serverError.message }</Text> }
-      </div>
-      <div className="ui-row__aside ui-row__aside--inline">
-        <Button
-          size="compact-sm"
-          variant="default"
-          loading={action.isPending}
-          onClick={() => kind === 'ignored' ? unignore.execute({ ignore: false }) : unrestrict.execute({ restrict: false })}
-        >
-          { kind === 'ignored' ? 'Вернуть в список' : 'Разрешить писать' }
-        </Button>
-      </div>
+    <div className="ui-chat-row ui-chat-row--static">
+      <UserAvatar name={peer.name} avatarKey={peer.avatarKey} size={44} />
+      <span className="ui-chat-row__body">
+        <Link href={`/authors/${peer.id}`} className="ui-chat-row__name">{ peer.name }</Link>
+        { action.result.serverError && <Text size="xs" c="red">{ action.result.serverError.message }</Text> }
+      </span>
+      <Button
+        size="compact-sm"
+        variant="default"
+        radius="xl"
+        loading={action.isPending}
+        onClick={() => kind === 'ignored' ? unignore.execute({ ignore: false }) : unrestrict.execute({ restrict: false })}
+      >
+        { kind === 'ignored' ? 'Вернуть' : 'Разрешить' }
+      </Button>
     </div>
   );
 }

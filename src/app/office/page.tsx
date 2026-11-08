@@ -1,51 +1,133 @@
 import { db } from "@/globals/db";
-import { posts, tagFollows, userFollows, users } from "@/database/schema";
+import { notifications, posts, tagFollows, userFollows, users } from "@/database/schema";
 import { requireAuthUser } from "@/shared/auth";
+import { resource } from "@/core/resource";
+import { plural } from "@/core/plural";
 import ButtonLink from "@/components/general/ButtonLink";
 import LocalDate from "@/components/general/LocalDate";
-import PostRow from "@/domains/posts/components/PostRow";
+import OfficeSectionChips from "@/components/navigation/OfficeSectionChips";
+import OfficeStaffLine from "@/components/office/OfficeStaffLine";
+import OfficeStartSteps, { type OfficeStep } from "@/components/office/OfficeStartSteps";
+import OfficeStatTiles from "@/components/office/OfficeStatTiles";
+import { getOfficeMenu } from "@/components/navigation/getOfficeMenu";
+import RecentPosts, { RECENT_POST_TABS } from "@/domains/posts/components/RecentPosts";
+import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
+import { withRowData } from "@/domains/posts/shared/postRows";
+import { authorStats } from "@/domains/posts/shared/authorStats";
 import { createPost, moderatePosts } from "@/domains/posts/policy";
-import { countOpenCommentReports, moderateComments } from "@/domains/comments/exports/countOpenCommentReports";
+import { moderateComments } from "@/domains/comments/exports/countOpenCommentReports";
+import { manageUsers } from "@/domains/users/exports/authorRequests";
 import { authorRequestState } from "@/domains/users/shared/authorRequests";
-import { count, desc, eq } from "drizzle-orm";
-import Link from "@/components/general/Link";
-import type { ReactNode } from "react";
-import { IconHourglass, IconLock, IconPencilPlus, IconUserCircle, IconUsersGroup, type Icon } from "@tabler/icons-react";
+import { followerStats } from "@/domains/users/shared/followerStats";
+import NotificationDigest from "@/domains/notifications/components/NotificationDigest";
+import { notificationItemResource } from "@/domains/notifications/dto/notificationResources";
+import { loadNotificationRows, toNotificationItem } from "@/domains/notifications/shared/loadNotifications";
+import DialogDigest from "@/domains/messages/components/DialogDigest";
+import { loadDialogRows } from "@/domains/messages/shared/loadMessages";
+import { and, count, desc, eq } from "drizzle-orm";
+import { IconHourglass, IconLock, IconNews, IconPencilPlus, IconUserCircle, IconUsersGroup } from "@tabler/icons-react";
+import z from "zod";
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Начало' };
 
-type Step = { key: string, icon: Icon, title: string, text: ReactNode, action: ReactNode }
+const RECENT_POSTS = 4;
+const RECENT_NOTIFICATIONS = 4;
+const RECENT_DIALOGS = 3;
 
-const RECENT_POSTS = 3;
+const startDto = z.object({ posts: z.enum(RECENT_POST_TABS).optional().catch(undefined) });
 
 /*
-  «С чего начать» (спека 27). Шаг виден, пока не сделан по факту — флага «уже показывали»
-  нет: появился первый пост, подписка, аватар с «о себе» — карточка уходит сама
+  «Начало» кабинета (спека 42, шаг 2): приветствие, строка модерации для staff, плитки цифр
+  автора, «С чего начать» (спека 27), последние посты и справа уведомления с сообщениями
 */
-export default async function OfficeStart() {
+export default async function OfficeStart({ searchParams }: PageProps<'/office'>) {
   const user = await requireAuthUser();
+  const { posts: tab } = startDto.parse(await searchParams);
+  const menu = await getOfficeMenu();
   const isAuthor = createPost(user);
-  const [ { total: postsTotal } ] = await db.select({ total: count() }).from(posts).where(eq(posts.userId, user.id));
-  const [ { total: authorsTotal } ] = await db.select({ total: count() }).from(userFollows).where(eq(userFollows.followerId, user.id));
-  const [ { total: tagsTotal } ] = await db.select({ total: count() }).from(tagFollows).where(eq(tagFollows.userId, user.id));
-  const profile = await db.query.users.findFirst({ where: eq(users.id, user.id), columns: { bio: true, avatarKey: true } });
-  const recent = isAuthor && postsTotal > 0
-    ? await db.query.posts.findMany({ where: eq(posts.userId, user.id), orderBy: desc(posts.createdAt), limit: RECENT_POSTS })
+  const isStaff = moderatePosts(user) || manageUsers(user);
+  const stats = isAuthor ? authorStats(user.id) : null;
+  const followers = isAuthor ? followerStats(user.id) : null;
+  const hasPosts = (stats?.total ?? 0) > 0;
+  const recent = hasPosts
+    ? await withRowData(await db.query.posts.findMany({
+      where: and(eq(posts.userId, user.id), tab ? eq(posts.status, tab) : undefined),
+      orderBy: desc(posts.createdAt),
+      limit: RECENT_POSTS,
+      with: POST_TAGS_WITH
+    }))
     : [];
-  const steps: Step[] = [];
+  const notificationItems = loadNotificationRows(eq(notifications.userId, user.id), RECENT_NOTIFICATIONS).map(toNotificationItem);
+  const dialogs = loadDialogRows(user.id).items.slice(0, RECENT_DIALOGS);
+  const steps = await startSteps(user.id, isAuthor, stats?.total ?? 0);
+
+  return (
+    <>
+      <div className="ui-start-hello">
+        <div>
+          <p className="ui-start-hello__date"><LocalDate value={new Date()} options={{ weekday: 'long', day: 'numeric', month: 'long' }} /></p>
+          <h1 className="ui-start-hello__title">Привет, { user.name.split(' ')[0] }!</h1>
+          { followers && stats && <p className="ui-start-hello__sub">{ weekSummary(followers.week, stats.comments.week) }</p> }
+        </div>
+        <div className="ui-start-hello__actions">
+          <ButtonLink href="/office/feed" variant="default" leftSection={<IconNews size={16} />}>Моя лента</ButtonLink>
+          { isAuthor && <ButtonLink href="/office/posts/create" leftSection={<IconPencilPlus size={16} />}>Новый пост</ButtonLink> }
+        </div>
+      </div>
+
+      <OfficeSectionChips menu={menu} />
+
+      { isStaff && <OfficeStaffLine
+        moderating={moderatePosts(user) ? menu.counts.moderating : null}
+        reports={moderateComments(user) ? menu.counts.reports : null}
+        authorRequests={manageUsers(user) ? menu.counts.authorRequests : null}
+      /> }
+
+      { stats && followers && <OfficeStatTiles followers={followers} rating={stats.rating} comments={stats.comments} /> }
+
+      { steps.length > 0 && <OfficeStartSteps steps={steps} /> }
+
+      {/* Без своих постов уведомления и сообщения встают в две колонки на всю ширину */}
+      <div className="ui-start-columns" data-solo={!hasPosts}>
+        { stats && hasPosts && <div className="ui-start-columns__main">
+          <RecentPosts
+            posts={recent.map(post => ({ ...post, tags: pickTags(post) }))}
+            statuses={stats.statuses}
+            total={stats.total}
+            tab={tab ?? null}
+          />
+        </div> }
+        <aside className="ui-start-columns__side">
+          <NotificationDigest items={resource(z.array(notificationItemResource), notificationItems)} unread={menu.counts.notifications} />
+          <DialogDigest dialogs={dialogs} unread={menu.counts.messages} />
+        </aside>
+      </div>
+    </>
+  );
+}
+
+/*
+  Шаг виден, пока не сделан по факту — флага «уже показывали» нет: появился первый пост,
+  подписка, аватар с «о себе» — карточка уходит сама (спека 27)
+*/
+async function startSteps(userId: number, isAuthor: boolean, postsTotal: number): Promise<OfficeStep[]> {
+  const [ { total: authorsTotal } ] = await db.select({ total: count() }).from(userFollows).where(eq(userFollows.followerId, userId));
+  const [ { total: tagsTotal } ] = await db.select({ total: count() }).from(tagFollows).where(eq(tagFollows.userId, userId));
+  const profile = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { bio: true, avatarKey: true } });
+  const steps: OfficeStep[] = [];
 
   if(!isAuthor){
-    steps.push(roleStep(user.id));
+    steps.push(roleStep(userId));
   }
   else if(postsTotal === 0){
     steps.push({
       key: 'post',
       icon: IconPencilPlus,
-      title: 'Начните с первого поста',
+      title: 'Первый пост',
       text: 'Пост уходит на проверку модератору — читатели увидят его после публикации.',
-      action: <ButtonLink href="/office/posts/create" size="xs" leftSection={<IconPencilPlus size={14} />}>Написать первый пост</ButtonLink>
+      action: { label: 'Написать', href: '/office/posts/create' }
     });
   }
 
@@ -55,7 +137,7 @@ export default async function OfficeStart() {
       icon: IconUsersGroup,
       title: 'Подпишитесь на авторов',
       text: 'Их новые посты соберутся в «Моей ленте». На рубрику подписываются в общей ленте — под фильтром рубрик.',
-      action: <ButtonLink href="/authors" size="xs" variant="default">К авторам</ButtonLink>
+      action: { label: 'К авторам', href: '/authors' }
     });
   }
 
@@ -65,53 +147,17 @@ export default async function OfficeStart() {
       icon: IconUserCircle,
       title: 'Расскажите о себе',
       text: 'Аватар и пара строк «О себе» видны на вашей странице автора и рядом с комментариями.',
-      action: <ButtonLink href="/office/profile" size="xs" variant="default">В профиль</ButtonLink>
+      action: { label: 'В профиль', href: '/office/profile' }
     });
   }
 
-  return (
-    <>
-      <div className="ui-section-head">
-        <h1 className="ui-title">Начало</h1>
-      </div>
-
-      { moderatePosts(user) && <StaffLine reports={moderateComments(user)} /> }
-
-      { steps.length > 0 && (
-        <section className="ui-steps">
-          <p className="ui-kicker">С чего начать</p>
-          <div className="ui-grid">
-            { steps.map(step => (
-              <div key={step.key} className="ui-card">
-                <h2 className="ui-card__title"><step.icon size={20} stroke={1.7} />{ step.title }</h2>
-                <p className="ui-card__text">{ step.text }</p>
-                <div className="ui-card__foot">{ step.action }</div>
-              </div>
-            )) }
-          </div>
-        </section>
-      ) }
-
-      { recent.length > 0 && <>
-        <div className="ui-section-head">
-          <h2 className="ui-panel__title">Мои посты</h2>
-          <ButtonLink href="/office/posts/create" size="sm" leftSection={<IconPencilPlus size={16} />}>
-            Новый пост
-          </ButtonLink>
-        </div>
-        <div className="ui-rows">
-          { recent.map(post => <PostRow key={post.id} post={post} href={`/office/posts/${post.id}`} />) }
-        </div>
-        { postsTotal > recent.length && <p className="ui-meta"><Link href="/office/posts">Все посты · { postsTotal }</Link></p> }
-      </> }
-    </>
-  );
+  return steps;
 }
 
 // Без роли автора — по состоянию заявки (спека 28)
-function roleStep(userId: number): Step {
+function roleStep(userId: number): OfficeStep {
   const { pending, last, nextAt } = authorRequestState(userId);
-  const open = <ButtonLink href="/office/author-request" size="xs" variant="default">Открыть заявку</ButtonLink>;
+  const open = { label: 'Открыть заявку', href: '/office/author-request' } as const;
 
   if(pending){
     return {
@@ -138,18 +184,20 @@ function roleStep(userId: number): Step {
     icon: IconLock,
     title: 'Писать посты могут авторы',
     text: 'Роль автора выдаёт администратор — расскажите в заявке, о чём хотите писать. Пока можно читать ленту, комментировать и подписываться на авторов.',
-    action: <ButtonLink href="/office/author-request" size="xs">Подать заявку</ButtonLink>
+    action: { label: 'Подать заявку', href: '/office/author-request' }
   };
 }
 
-// Вход в очереди для staff: только числа и ссылки, сами очереди здесь не повторяются
-async function StaffLine({ reports }: { reports: boolean }){
-  const [ { total: moderating } ] = await db.select({ total: count() }).from(posts).where(eq(posts.status, 'moderating'));
+// Подзаголовок приветствия: в макете — просмотры за неделю, их пока нет (спека 43)
+function weekSummary(followers: number, comments: number){
+  if(followers === 0 && comments === 0){
+    return 'За неделю новых подписчиков и комментариев не было';
+  }
 
-  return (
-    <p className="ui-start-line">
-      <Link href="/office/moderation/posts">На проверке: { moderating }</Link>
-      { reports && <Link href="/office/moderation/comments">Жалоб: { await countOpenCommentReports() }</Link> }
-    </p>
-  );
+  const parts = [
+    followers > 0 && `+${followers} ${plural(followers, [ 'подписчик', 'подписчика', 'подписчиков' ])}`,
+    comments > 0 && `${comments} ${plural(comments, [ 'новый комментарий', 'новых комментария', 'новых комментариев' ])}`,
+  ].filter(Boolean);
+
+  return `За неделю: ${parts.join(', ')}`;
 }

@@ -1,111 +1,101 @@
 import { CONTAINER } from "@/globals/container";
-import { db } from "@/globals/db";
-import { userAdminActions, users } from "@/database/schema";
 import { manageUser, manageUsers } from "@/domains/users/policy";
-import UserStatusTags from "@/domains/users/components/UserStatusTags";
-import UserRolesForm from "@/domains/users/components/UserRolesForm";
-import UserBanForm from "@/domains/users/components/UserBanForm";
-import UserAdminHistory from "@/domains/users/components/UserAdminHistory";
-import UserAvatar from "@/domains/users/components/UserAvatar";
-import UserAvatarRemoveForm from "@/domains/users/components/UserAvatarRemoveForm";
+import UserAdminHero from "@/domains/users/components/admin/UserAdminHero";
+import UserAdminCard from "@/domains/users/components/admin/UserAdminCard";
+import UserRolesSwitches from "@/domains/users/components/admin/UserRolesSwitches";
+import UserBanForm from "@/domains/users/components/admin/UserBanForm";
+import UserAdminLog from "@/domains/users/components/admin/UserAdminLog";
+import UserAvatarRemoveForm from "@/domains/users/components/admin/UserAvatarRemoveForm";
 import { userBanFormResource, userRolesFormResource } from "@/domains/users/dto/userResources";
-import { parseRoles } from "@/domains/users/shared/userRoles";
+import { loadAdminUser } from "@/domains/users/shared/loadAdminUser";
+import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
+import LocalDate from "@/components/general/LocalDate";
+import Link from "@/components/general/Link";
 import { resource } from "@/core/resource";
 import { requireAuthUser } from "@/shared/auth";
 import { idOrFail } from "@/shared/params";
-import LocalDate from "@/components/general/LocalDate";
-import { desc, eq } from "drizzle-orm";
-import Link from "@/components/general/Link";
 import { notFound } from "next/navigation";
-import { IconArrowLeft, IconCalendar, IconExternalLink, IconMail } from "@tabler/icons-react";
+import { IconChevronLeft, IconInfoCircle } from "@tabler/icons-react";
 
+export const dynamic = 'force-dynamic';
+
+/*
+  Пользователь в админке (спека 42, шаг 19): шапка с цифрами, слева «Роли» и «Аватар»,
+  справа «Блокировка» и «Последние действия». Себя менять нельзя — вместо карточек
+  управления плашка. На телефоне — одна колонка и «‹ Пользователи» вместо крошек
+*/
 export default async function AdminUsersItem({ params }: PageProps<'/office/admin/users/[id]'>) {
   const id = idOrFail((await params).id);
   await CONTAINER.boucerService.breakIfCant(manageUsers);
 
   const me = await requireAuthUser();
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, id),
-    with: {
-      adminActions: {
-        orderBy: desc(userAdminActions.id),
-        with: { actor: true }
-      }
-    }
-  });
+  const loaded = await loadAdminUser(id);
 
-  if(!user){
+  if(!loaded){
     return notFound();
   }
 
-  const roles = parseRoles(user.roles);
+  const { user, stats, events } = loaded;
+  const back = user.bannedAt ? '/office/admin/users?filter=banned' as const : '/office/admin/users' as const;
+  const manageable = manageUser(me, user);
+  const log = (
+    <UserAdminCard title="Последние действия">
+      <UserAdminLog events={events} year={new Date().getFullYear()} />
+    </UserAdminCard>
+  );
 
   return (
-    <article className="ui-article">
-      <Link href={user.bannedAt ? '/office/admin/users?filter=banned' : '/office/admin/users'} className="ui-backlink">
-        <IconArrowLeft size={15} />Пользователи
+    <div className="ui-user-page">
+      <OfficeCrumbs items={[ { label: 'Пользователи', href: back }, { label: user.name } ]} />
+      <Link href={back} className="ui-backlink ui-user-page__back">
+        <IconChevronLeft size={16} stroke={2} />Пользователи
       </Link>
 
-      <div className="ui-profile">
-        <UserAvatar name={user.name} avatarKey={user.avatarKey} size={72} />
-        <h1 className="ui-title ui-title--lg">{ user.name }</h1>
-      </div>
+      <UserAdminHero user={user} stats={stats} />
 
-      <div className="ui-meta">
-        <UserStatusTags user={user} />
-        <span className="ui-meta__item">
-          <IconMail size={14} stroke={1.8} />{ user.email }
-        </span>
-        <span className="ui-meta__item">
-          <IconCalendar size={14} stroke={1.8} />
-          <LocalDate value={user.createdAt} />
-        </span>
-        <Link href={`/authors/${user.id}`} className="ui-meta__item">
-          <IconExternalLink size={14} stroke={1.8} />Страница автора
-        </Link>
-      </div>
+      { manageable ? (
+        <div className="ui-user-page__columns">
+          <div className="ui-user-page__column">
+            <UserAdminCard title="Роли" hint="Читатель есть у всех. Остальные роли добавляют права">
+              <UserRolesSwitches key={user.roles.join()} user={resource(userRolesFormResource, user)} />
+            </UserAdminCard>
 
-      { user.bannedAt && <div className="ui-note ui-note--danger">
-        <span className="ui-note__label">
-          Заблокирован · <LocalDate value={user.bannedAt} />
-        </span>
-        { user.banReason }
-      </div> }
+            { user.avatarKey && <UserAdminCard
+              title="Аватар"
+              hint="Можно удалить, если нарушает правила — пользователь получит уведомление"
+            >
+              <UserAvatarRemoveForm key={user.avatarKey} id={user.id} name={user.name} avatarKey={user.avatarKey} />
+            </UserAdminCard> }
+          </div>
 
-      { manageUser(me, user) ? <>
-        <div className="ui-actions">
-          <div style={{ flex: 1 }}>
-            <p className="ui-kicker">Роли</p>
-            <UserRolesForm key={roles.join()} user={resource(userRolesFormResource, { id: user.id, roles })} />
+          <div className="ui-user-page__column">
+            { user.bannedAt ? (
+              <UserAdminCard
+                title="Блокировка"
+                hint={<>Заблокирован <LocalDate value={user.bannedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></>}
+              >
+                <p className="ui-user-card__reason">{ user.banReason }</p>
+                { /* key: после смены режима форма не должна унести введённый текст */ }
+                <UserBanForm key="unban" user={resource(userBanFormResource, user)} mode="unban" />
+              </UserAdminCard>
+            ) : (
+              <UserAdminCard
+                title="Блокировка"
+                hint="Заблокированный не может войти, его сессии завершатся сразу. Посты и комментарии остаются"
+              >
+                <UserBanForm key="ban" user={resource(userBanFormResource, user)} mode="ban" />
+              </UserAdminCard>
+            ) }
+
+            { log }
           </div>
         </div>
-
-        <div className="ui-actions">
-          <div style={{ flex: 1 }}>
-            <p className="ui-kicker">Блокировка</p>
-            { /* key: после смены режима форма не должна унести введённый текст */ }
-            { user.bannedAt
-              ? <UserBanForm key="unban" user={resource(userBanFormResource, user)} mode="unban" />
-              : <UserBanForm key="ban" user={resource(userBanFormResource, user)} mode="ban" /> }
-          </div>
-        </div>
-
-        { user.avatarKey && <div className="ui-actions">
-          <div style={{ flex: 1 }}>
-            <p className="ui-kicker">Аватар</p>
-            <UserAvatarRemoveForm key={user.avatarKey} id={user.id} name={user.name} avatarKey={user.avatarKey} />
-          </div>
-        </div> }
-      </> : (
-        <div className="ui-note">Свои роли, блокировку и аватар здесь менять нельзя.</div>
-      ) }
-
-      <div className="ui-actions">
-        <div style={{ flex: 1 }}>
-          <p className="ui-kicker">Журнал</p>
-          <UserAdminHistory actions={user.adminActions} />
-        </div>
-      </div>
-    </article>
+      ) : <>
+        <p className="ui-user-page__self">
+          <IconInfoCircle size={15} stroke={1.8} />Свои роли, блокировку и аватар здесь менять нельзя
+        </p>
+        { log }
+      </> }
+    </div>
   );
 }
