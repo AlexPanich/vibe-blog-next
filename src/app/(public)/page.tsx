@@ -73,7 +73,7 @@ export default async function Home() {
           <Link href="/posts" className="ui-home-section__more">Вся лента<IconArrowRight size={18} /></Link>
         </div>
 
-        <PostFeatured post={resource(postResource, fresh.featured)} picked={fresh.picked} />
+        <PostFeatured post={resource(postResource, fresh.featured)} pick={fresh.pick} />
 
         { fresh.cards.length > 0 && <div className="ui-post-grid ui-home-cards">
           { fresh.cards.map(post => <PostCardBridge key={post.id} post={resource(postResource, post)} />) }

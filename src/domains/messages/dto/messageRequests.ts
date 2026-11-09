@@ -1,4 +1,5 @@
 import z from "zod";
+import { MESSAGES_FROM } from "@/database/schema";
 
 export const aiIdSchema = z.int().positive();
 
@@ -34,7 +35,7 @@ export const messageRestrictDto = z.object({ restrict: z.boolean() })
 
 export const messageIgnoreDto = z.object({ ignore: z.boolean() })
 
-export const messagesFriendsOnlyDto = z.object({ friendsOnly: z.boolean() })
+export const messagesFromDto = z.object({ messagesFrom: z.enum(MESSAGES_FROM) })
 
 // Выбор собеседника (спека 50): запрос из адреса; длинный обрезается, массив — как без запроса
 export const messagePickerDto = z.object({

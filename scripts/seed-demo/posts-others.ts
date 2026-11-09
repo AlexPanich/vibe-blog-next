@@ -94,6 +94,10 @@ export const otherPosts: SeedPost[] = [
   {
     url: 'gde-est-v-erevane',
     author: 'marat',
+    reports: [
+      { by: 'katya', reason: 'other', comment: 'В конце поста — промокод и ссылка на доставку, похоже на скрытую рекламу ресторана.' },
+      { by: 'pavel', reason: 'spam' },
+    ],
     title: 'Где есть в Ереване: от лаваша до толмы',
     lead: 'Четыре дня в городе, где тебя накормят, даже если ты зашёл спросить дорогу. Мой короткий список мест.',
     type: 'travel', lat: 40.1913, lng: 44.5153,
@@ -587,6 +591,8 @@ Raspberry Pi 4 на 4 ГБ, внешний SSD на 1 ТБ через USB, па�
   {
     url: 'gitara-v-35',
     author: 'seva',
+    reports: [ { by: 'artem', reason: 'abuse' } ],
+    reportsResolved: 'kept',
     title: 'Учусь играть на гитаре в 35: полгода спустя',
     lead: 'Гитара с рук, никакого музыкального опыта и «нет слуха» с первого класса. Что получилось за полгода и что оказалось труднее всего.',
     tags: [ 'Музыка' ],
@@ -775,6 +781,8 @@ Raspberry Pi 4 на 4 ГБ, внешний SSD на 1 ТБ через USB, па�
   {
     url: 'pochemu-shakhmaty-uchat-terpeniyu',
     author: 'some',
+    // Пост модератора: в очереди у some — без кнопок, разбирает alice
+    reports: [ { by: 'bob', reason: 'misleading', comment: 'Цитата приписана Капабланке, но это Тарраш.' } ],
     title: 'Почему шахматы учат терпению',
     type: 'translate', source: 'https://example.com/chess-patience',
     tags: [ 'Переводы', 'Заметки' ],
@@ -838,6 +846,8 @@ Raspberry Pi 4 на 4 ГБ, внешний SSD на 1 ТБ через USB, па�
     title: 'Купить подписчиков дёшево и быстро',
     status: 'blocked',
     moderation: 'Спам: продажа подписчиков. Повторное нарушение — бан.',
+    reports: [ { by: 'dan', reason: 'spam' } ],
+    reportsResolved: 'blocked',
     tags: [],
     days: 33,
     photos: [],

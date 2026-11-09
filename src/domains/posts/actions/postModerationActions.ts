@@ -6,9 +6,12 @@ import { actionAuthClient } from "@/globals/actionClient";
 import { postModerations } from "@/database/schema";
 import { aiIdSchema } from "@/domains/posts/dto/postRequests";
 import { postApproveDto, postBlockDto, postRejectDto, postUnblockDto } from "@/domains/posts/dto/postModerationRequests";
-import { transitPost } from "@/domains/posts/policy";
+import { featurePost, transitPost } from "@/domains/posts/policy";
+import { pickForHome, unpickFromHome } from "@/domains/posts/shared/postFeature";
+import { publishNotifications } from "@/domains/notifications/exports/notify";
 import { reviewGuard } from "@/domains/posts/shared/reviewGuard";
 import { changePostStatus } from "@/domains/posts/shared/changePostStatus";
+import { insertBlockModeration } from "@/domains/posts/shared/postBlocking";
 import { redirect } from "next/navigation";
 
 export const approvePostAction = actionAuthClient
@@ -60,14 +63,7 @@ export const blockPostAction = actionAuthClient
     const transition = post.status === 'hidden' ? 'blockArchived' : 'block';
     await CONTAINER.boucerService.breakIfCant(u => transitPost(u, post, transition));
 
-    changePostStatus(post.id, transition, auth.id, tx => {
-      tx.insert(postModerations).values({
-        postId: post.id,
-        userId: auth.id,
-        decision: 'blocked',
-        comment: parsedInput.comment
-      }).run();
-    });
+    changePostStatus(post.id, transition, auth.id, tx => insertBlockModeration(tx, post.id, auth.id, parsedInput.comment));
 
     return redirect(`/office/moderation/posts/${post.id}`);
   });
@@ -89,4 +85,30 @@ export const unblockPostAction = actionAuthClient
     });
 
     return redirect(`/office/moderation/posts/${post.id}`);
+  });
+
+/*
+  Выбор для главной (спека 39). Policy — только роль: статус и «уже выбран» проверяет
+  UPDATE в pickForHome (409 устаревшей странице). Без redirect — кнопка делает router.refresh()
+*/
+export const featurePostAction = actionAuthClient
+  .bindArgsSchemas([ aiIdSchema ])
+  .action(async ({ bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
+    await CONTAINER.postService.findOrFail(id);
+    await CONTAINER.boucerService.breakIfCant(featurePost);
+
+    publishNotifications(pickForHome(id, auth.id));
+
+    return { featured: true };
+  });
+
+export const unfeaturePostAction = actionAuthClient
+  .bindArgsSchemas([ aiIdSchema ])
+  .action(async ({ bindArgsParsedInputs: [ id ] }) => {
+    await CONTAINER.postService.findOrFail(id);
+    await CONTAINER.boucerService.breakIfCant(featurePost);
+
+    unpickFromHome(id);
+
+    return { featured: false };
   });

@@ -4,6 +4,7 @@ import { posts, type PostStatus } from "@/database/schema";
 import type { MyPostsFilterDto } from "@/domains/posts/dto/postOfficeRequests";
 import { POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRowData } from "@/domains/posts/shared/postRows";
+import { postViewTotals } from "@/domains/posts/shared/postViews";
 import { escapeLike } from "@/shared/escapeLike";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
@@ -22,13 +23,16 @@ export async function loadMyPosts(userId: number, filter: MyPostsFilterDto){
   const total = filter.status ? (found[filter.status] ?? 0) : sum(found);
   const pages = Math.max(1, Math.ceil(total / MY_POSTS_PAGE));
   const page = Math.min(filter.page, pages);
-  const rows = total === 0 ? [] : await withRowData(await db.query.posts.findMany({
+  const rowData = total === 0 ? [] : await withRowData(await db.query.posts.findMany({
     where: and(mine, search, filter.status ? eq(posts.status, filter.status) : undefined),
     orderBy: [ desc(posts.createdAt), desc(posts.id) ],
     limit: MY_POSTS_PAGE,
     offset: (page - 1) * MY_POSTS_PAGE,
     with: POST_TAGS_WITH
   }));
+  // Свои посты — просмотры видно (спека 43)
+  const views = postViewTotals(rowData.map(row => row.id));
+  const rows = rowData.map(row => ({ ...row, views: views.get(row.id) ?? 0 }));
 
   return { rows, all, found, foundTotal: sum(found), page, pages };
 }

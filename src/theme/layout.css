@@ -25,7 +25,7 @@
    - заявка в авторы: .ui-request, .ui-request-hero, .ui-request-card, .ui-request-history /
      .ui-request-item; в админке — .ui-request-review, .ui-request-recent, .ui-request-decided;
    - ревью поста: .ui-review-page, .ui-review-post, .ui-decision, .ui-mod-history / .ui-mod-event;
-   - жалобы: .ui-report-cards / .ui-report-card, .ui-report-done;
+   - жалобы: .ui-report-cards / .ui-report-card, .ui-report-done, .ui-report-kinds, .ui-post-report;
    - справочник рубрик: .ui-tag-bar, .ui-tag-table;
    - все посты в админке: .ui-admin-posts;
    - пользователи в админке: .ui-admin-users, роли пилюлями .ui-role-pills / .ui-role-pill;
@@ -1726,6 +1726,32 @@ a.ui-tag:hover {
   background: var(--paper-tint);
 }
 
+/* Кнопка выбора для главной в строке — тот же вид, что «Править» (спека 39) */
+.ui-post-row__feature {
+  white-space: nowrap;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ui-post-row__feature:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Метка «На главной» в мете строки — текущий выбор редакции */
+.ui-post-row__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.125rem 0.5625rem;
+  border-radius: var(--radius-pill);
+  background: var(--sun);
+  color: var(--on-sun);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 /* Телефон: миниатюра 64px, цифры — строкой под текстом, «Править» уходит — правка из карточки поста */
 @media (max-width: 720px) {
   .ui-post-row {
@@ -1774,8 +1800,15 @@ a.ui-tag:hover {
   }
 
   .ui-post-row__edit,
-  .ui-post-row__side:not(:has(> span)) {
+  .ui-post-row__side:not(:has(> span, > .ui-post-row__feature)) {
     display: none;
+  }
+
+  /* Выбор для главной на телефоне остаётся: у него нет другого места */
+  .ui-post-row__side .ui-post-row__feature {
+    display: inline-flex;
+    margin-left: auto;
+    padding: 0.375rem 0.75rem;
   }
 }
 
@@ -2456,6 +2489,17 @@ a.ui-tag:hover {
 .ui-stats__sub {
   font-size: 0.8125rem;
   color: var(--ink-faint);
+}
+
+/* «N новых» комментариев — ссылка во вкладку «К моим постам» (спека 43) */
+.ui-stats__sub a {
+  font-weight: 700;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
+.ui-stats__sub a:hover {
+  text-decoration: underline;
 }
 
 /* «С чего начать»: рамка, внутри — карточки шагов в ряд */
@@ -5657,6 +5701,29 @@ a.ui-chat-row[data-active='true']:hover {
   color: var(--link);
 }
 
+/* «Выбрать для главной» модератора (спека 39): пункт ряда, цветом ссылки — это действие */
+.ui-post__feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ui-post__feature:hover {
+  text-decoration: underline;
+}
+
+.ui-post__feature:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .ui-post__type {
   display: inline-flex;
   align-items: center;
@@ -5912,6 +5979,12 @@ a.ui-chat-row[data-active='true']:hover {
 .ui-post-actions {
   display: flex;
   gap: 0.625rem;
+}
+
+/* «Пожаловаться» (спека 36) — тихая, в конце ряда: не соперничает с избранным */
+.ui-pill--report {
+  margin-left: auto;
+  color: var(--ink-soft);
 }
 
 /* Нижняя панель поста — только на телефоне, вместо панели вкладок */
@@ -8811,6 +8884,22 @@ span.ui-photo__arrow {
   color: var(--ink);
 }
 
+/* «Новый» (спека 43): комментарий к моему посту позже прежнего открытия вкладки */
+.ui-office-comment[data-new='true'] {
+  border-color: var(--accent);
+}
+
+.ui-office-comment__new {
+  align-self: center;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .ui-office-comment__to {
   flex: 1;
   min-width: 0;
@@ -10367,6 +10456,13 @@ span.ui-photo__arrow {
   color: var(--ink-soft);
 }
 
+.ui-decision__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .ui-decision__release {
   padding: 0;
   border: 0;
@@ -10968,6 +11064,177 @@ span.ui-photo__arrow {
   }
 }
 
+/* ---- Жалобы на посты (спека 36) --------------------------------------------
+   .ui-report-kinds — переключатель «Посты / Комментарии» над вкладками: подчёркнутые
+   ссылки, чтобы не спорить с сегментами вкладок. .ui-post-report — карточка поста поверх
+   .ui-report-card: заголовок, автор со статусом, жалобщики с причиной и комментарием */
+
+.ui-report-kinds {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1.5px solid var(--line);
+}
+
+.ui-report-kinds a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin-bottom: -1.5px;
+  padding: 0 0.125rem 0.625rem;
+  border-bottom: 2.5px solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+
+.ui-report-kinds a:hover {
+  color: var(--ink);
+}
+
+.ui-report-kinds a[data-active='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.ui-report-kinds__count {
+  min-width: 1.375rem;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.ui-report-kinds__count[data-empty='true'] {
+  background: var(--paper-tint);
+  color: var(--ink-soft);
+}
+
+.ui-report-card__outcome[data-kind='blocked'] {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.ui-post-report .ui-report-card__comment {
+  align-items: center;
+  padding-bottom: 0.875rem;
+}
+
+.ui-post-report__title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.ui-post-report__title:hover {
+  color: var(--accent-ink);
+}
+
+.ui-post-report__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.ui-post-report__site {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+
+.ui-post-report__site:hover {
+  color: var(--accent-ink);
+}
+
+.ui-post-report__reporters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.25rem 1.25rem 1rem 4.625rem;
+  list-style: none;
+}
+
+.ui-post-report__reporters li {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--line);
+}
+
+.ui-post-report__reporter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.ui-post-report__reason {
+  padding: 0.0625rem 0.5625rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ui-report-card[data-resolved='true'] .ui-post-report__reason {
+  background: var(--paper-tint);
+  color: var(--ink-soft);
+}
+
+.ui-post-report__at {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.ui-post-report__comment {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 720px) {
+  .ui-report-kinds {
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .ui-post-report .ui-report-card__body {
+    display: flex;
+  }
+
+  .ui-post-report .ui-report-card__comment {
+    display: flex;
+    gap: 0.625rem;
+    padding: 0.875rem 0.875rem 0.625rem;
+  }
+
+  .ui-post-report__title {
+    font-size: 1rem;
+  }
+
+  .ui-post-report__reporters {
+    padding: 0 0.875rem 0.875rem;
+  }
+}
+
 /* ---- Справочник рубрик (модерация) -------------------------------------- */
 
 /* Поиск во всю ширину и пилюля сортировки справа */
@@ -11177,7 +11444,7 @@ span.ui-photo__arrow {
 /* ---- Все посты в админке (спека 42, шаг 17) ------------------------------ */
 
 .ui-admin-posts {
-  --admin-posts-cols: minmax(0, 1fr) 11.25rem 8.125rem 5.5rem 2rem;
+  --admin-posts-cols: minmax(0, 1fr) 11.25rem 8.125rem 5.5rem 5.5rem 2rem;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
@@ -11265,6 +11532,16 @@ span.ui-photo__arrow {
   white-space: nowrap;
 }
 
+/* Просмотры (спека 43): у published и hidden — число, у остальных — «—» */
+.ui-admin-posts__views {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ui-admin-posts__acts {
   display: flex;
   justify-content: flex-end;
@@ -11316,6 +11593,7 @@ span.ui-photo__arrow {
   .ui-admin-posts__slug,
   .ui-admin-posts__author,
   .ui-admin-posts__status,
+  .ui-admin-posts__views,
   .ui-admin-posts__date {
     display: none;
   }

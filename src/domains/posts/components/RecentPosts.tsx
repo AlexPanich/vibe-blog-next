@@ -12,7 +12,7 @@ export const RECENT_POST_TABS = [ 'draft', 'moderating', 'published' ] as const 
 export type RecentPostsTab = typeof RECENT_POST_TABS[number]
 
 type RecentPostsProps = {
-  posts: (Pick<Post, 'id' | 'title' | 'status' | 'createdAt' | 'publishedAt'> & Pick<PostRowData, 'cover' | 'rating' | 'commentsCount' | 'note'> & { tags: Pick<Tag, 'id' | 'name'>[] })[],
+  posts: (Pick<Post, 'id' | 'title' | 'status' | 'createdAt' | 'publishedAt'> & Pick<PostRowData, 'cover' | 'rating' | 'commentsCount' | 'note'> & { tags: Pick<Tag, 'id' | 'name'>[], views: number })[],
   statuses: Partial<Record<PostStatus, number>>,
   total: number,
   tab: RecentPostsTab | null
@@ -46,7 +46,7 @@ export default function RecentPosts({ posts, statuses, total, tab }: RecentPosts
       { posts.length === 0
         ? <p className="ui-meta">Здесь пусто — все посты в других статусах.</p>
         : <div className="ui-rows">
-          { posts.map(post => <PostRow key={post.id} post={post} href={`/office/posts/${post.id}`} tags={post.tags} editable />) }
+          { posts.map(post => <PostRow key={post.id} post={post} href={`/office/posts/${post.id}`} tags={post.tags} views={post.views} editable />) }
         </div> }
     </section>
   );

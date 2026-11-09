@@ -4,6 +4,7 @@ import PostStatusTag from "@/domains/posts/components/PostStatusTag";
 import PostAdminMenu from "@/domains/posts/components/admin/PostAdminMenu";
 import type { AdminPostRow } from "@/domains/posts/shared/loadAdminPosts";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
+import { IconEye } from "@tabler/icons-react";
 
 type PostAdminRowProps = {
   post: AdminPostRow,
@@ -13,7 +14,7 @@ type PostAdminRowProps = {
 
 /*
   Строка «Всех постов» (спека 42, шаг 17): заголовок и slug, автор с аватаром, статус, дата
-  создания, «…». Заголовок ведёт в пост в кабинете — admin открывает его как автор
+  создания, просмотры (спека 43; у published и hidden), «…». Заголовок ведёт в пост в кабинете — admin открывает его как автор
   (lifecycle поста). На телефоне статус, автор и дата — строкой под заголовком
 */
 export default function PostAdminRow({ post, year }: PostAdminRowProps) {
@@ -23,6 +24,7 @@ export default function PostAdminRow({ post, year }: PostAdminRowProps) {
       ? { day: 'numeric', month: 'short' }
       : { day: 'numeric', month: 'short', year: 'numeric' }}
   />;
+  const views = post.status === 'published' || post.status === 'hidden' ? post.views : null;
 
   return (
     <div className="ui-admin-posts__row" role="row">
@@ -31,7 +33,7 @@ export default function PostAdminRow({ post, year }: PostAdminRowProps) {
         <span className="ui-admin-posts__slug">/{ post.url }</span>
         <span className="ui-admin-posts__mobile-meta">
           <PostStatusTag status={post.status} />
-          <span>{ post.author.name } · { date }</span>
+          <span>{ post.author.name } · { date }{ views !== null && <> · { views } просм.</> }</span>
         </span>
       </div>
       <span className="ui-admin-posts__author" role="cell">
@@ -39,6 +41,9 @@ export default function PostAdminRow({ post, year }: PostAdminRowProps) {
         <span>{ post.author.name }</span>
       </span>
       <span className="ui-admin-posts__status" role="cell"><PostStatusTag status={post.status} /></span>
+      <span className="ui-admin-posts__views" role="cell">
+        { views === null ? '—' : <><IconEye size={14} stroke={1.8} />{ views }</> }
+      </span>
       <span className="ui-admin-posts__date" role="cell">{ date }</span>
       <div className="ui-admin-posts__acts" role="cell">
         <PostAdminMenu post={{ id: post.id, title: post.title, status: post.status, authorId: post.author.id }} />

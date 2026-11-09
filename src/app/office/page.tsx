@@ -14,6 +14,9 @@ import RecentPosts, { RECENT_POST_TABS } from "@/domains/posts/components/Recent
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRowData } from "@/domains/posts/shared/postRows";
 import { authorStats } from "@/domains/posts/shared/authorStats";
+import { authorViewStats, postViewTotals } from "@/domains/posts/shared/postViews";
+import { commentsSeenAt } from "@/domains/comments/shared/commentsSeen";
+import { countNewComments } from "@/domains/comments/shared/loadOfficeComments";
 import { createPost, moderatePosts } from "@/domains/posts/policy";
 import { moderateComments } from "@/domains/comments/exports/countOpenCommentReports";
 import { manageUsers } from "@/domains/users/exports/authorRequests";
@@ -50,8 +53,10 @@ export default async function OfficeStart({ searchParams }: PageProps<'/office'>
   const isStaff = moderatePosts(user) || manageUsers(user);
   const stats = isAuthor ? authorStats(user.id) : null;
   const followers = isAuthor ? followerStats(user.id) : null;
+  const views = isAuthor ? authorViewStats(user.id) : null;
+  const freshComments = isAuthor ? countNewComments(user.id, commentsSeenAt(user.id)) : 0;
   const hasPosts = (stats?.total ?? 0) > 0;
-  const recent = hasPosts
+  const recentRows = hasPosts
     ? await withRowData(await db.query.posts.findMany({
       where: and(eq(posts.userId, user.id), tab ? eq(posts.status, tab) : undefined),
       orderBy: desc(posts.createdAt),
@@ -59,6 +64,9 @@ export default async function OfficeStart({ searchParams }: PageProps<'/office'>
       with: POST_TAGS_WITH
     }))
     : [];
+  // Свои посты — просмотры видно (спека 43)
+  const recentViews = postViewTotals(recentRows.map(post => post.id));
+  const recent = recentRows.map(post => ({ ...post, views: recentViews.get(post.id) ?? 0 }));
   const notificationItems = loadNotificationRows(eq(notifications.userId, user.id), RECENT_NOTIFICATIONS).map(toNotificationItem);
   const dialogs = loadDialogRows(user.id).items.slice(0, RECENT_DIALOGS);
   const steps = await startSteps(user.id, isAuthor, stats?.total ?? 0);
@@ -69,7 +77,7 @@ export default async function OfficeStart({ searchParams }: PageProps<'/office'>
         <div>
           <p className="ui-start-hello__date"><LocalDate value={new Date()} options={{ weekday: 'long', day: 'numeric', month: 'long' }} /></p>
           <h1 className="ui-start-hello__title">Привет, { user.name.split(' ')[0] }!</h1>
-          { followers && stats && <p className="ui-start-hello__sub">{ weekSummary(followers.week, stats.comments.week) }</p> }
+          { views && followers && stats && <p className="ui-start-hello__sub">{ weekSummary(views.week, followers.week, stats.comments.week) }</p> }
         </div>
         <div className="ui-start-hello__actions">
           <ButtonLink href="/office/feed" variant="default" size="md" leftSection={<IconNews size={16} />}>Моя лента</ButtonLink>
@@ -85,7 +93,12 @@ export default async function OfficeStart({ searchParams }: PageProps<'/office'>
         authorRequests={manageUsers(user) ? menu.counts.authorRequests : null}
       /> }
 
-      { stats && followers && <OfficeStatTiles followers={followers} rating={stats.rating} comments={stats.comments} /> }
+      { stats && followers && views && <OfficeStatTiles
+        views={views}
+        followers={followers}
+        rating={stats.rating}
+        comments={{ ...stats.comments, fresh: freshComments }}
+      /> }
 
       { steps.length > 0 && <OfficeStartSteps steps={steps} /> }
 
@@ -188,13 +201,14 @@ function roleStep(userId: number): OfficeStep {
   };
 }
 
-// Подзаголовок приветствия: в макете — просмотры за неделю, их пока нет (спека 43)
-function weekSummary(followers: number, comments: number){
-  if(followers === 0 && comments === 0){
-    return 'За неделю новых подписчиков и комментариев не было';
+// Подзаголовок приветствия: просмотры, подписчики и комментарии за неделю, как в макете
+function weekSummary(views: number, followers: number, comments: number){
+  if(views === 0 && followers === 0 && comments === 0){
+    return 'За неделю просмотров, новых подписчиков и комментариев не было';
   }
 
   const parts = [
+    views > 0 && `${views} ${plural(views, [ 'просмотр', 'просмотра', 'просмотров' ])}`,
     followers > 0 && `+${followers} ${plural(followers, [ 'подписчик', 'подписчика', 'подписчиков' ])}`,
     comments > 0 && `${comments} ${plural(comments, [ 'новый комментарий', 'новых комментария', 'новых комментариев' ])}`,
   ].filter(Boolean);

@@ -83,7 +83,7 @@ export function adminIds(tx: DBTransaction): number[] {
 
 /*
   Уборка. Уведомления удалённого комментария уходят вместе с ним; задачи — post.submitted и
-  report.created — когда их сделали: это не факты, а работа, которой больше нет
+  report.created, post_report.created — когда их сделали: это не факты, а работа, которой больше нет
 */
 export function deleteCommentNotifications(tx: DBTransaction, commentIds: number[]){
   if(commentIds.length > 0){
@@ -93,6 +93,11 @@ export function deleteCommentNotifications(tx: DBTransaction, commentIds: number
 
 export function deleteReportNotifications(tx: DBTransaction, commentId: number){
   tx.delete(notifications).where(and(eq(notifications.type, 'report.created'), eq(notifications.commentId, commentId))).run();
+}
+
+// Задача «жалоба на пост» — одна на пост у всех staff (спека 36)
+export function deletePostReportNotifications(tx: DBTransaction, postId: number){
+  tx.delete(notifications).where(and(eq(notifications.type, 'post_report.created'), eq(notifications.postId, postId))).run();
 }
 
 export function deleteSubmittedNotifications(tx: DBTransaction, postId: number){

@@ -12,17 +12,18 @@ import { IconArrowBackUp, IconExternalLink, IconEyeOff } from "@tabler/icons-rea
   «Ответить» / «Открыть в посте». Только чтение: ответ и жалоба — на странице поста. Скрытый
   модератором приглушён, с пометкой; свой — с текстом и причиной, чужой — без них
 */
-export default function OfficeCommentCard({ comment }: { comment: OfficeCommentResource }) {
+export default function OfficeCommentCard({ comment, isNew = false }: { comment: OfficeCommentResource, isNew?: boolean }) {
   // Собрана на сервере по тому же правилу, что ссылки уведомлений
   const href = comment.href as Route;
   const replyHref = href.replace(/#comment-(\d+)$/, '#reply-$1') as Route;
 
   return (
-    <article className="ui-office-comment" data-hidden={comment.hidden}>
+    <article className="ui-office-comment" data-hidden={comment.hidden} data-new={isNew}>
       <UserAvatar name={comment.author.name} avatarKey={comment.author.avatarKey} size={40} />
       <div className="ui-office-comment__body">
         <div className="ui-office-comment__top">
           <span className="ui-office-comment__name">{ comment.author.name }</span>
+          { isNew && <span className="ui-office-comment__new">Новый</span> }
           <span className="ui-office-comment__meta">
             <span className="ui-office-comment__to">
               { comment.onImage ? 'к фото поста' : 'к посту' } <Link href={href}>«{ comment.postTitle }»</Link>

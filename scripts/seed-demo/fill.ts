@@ -10,8 +10,8 @@ import type { SeedComment } from "./types.ts";
 /*
   Демо-контент одной транзакцией: пользователи из people.ts (существующие по email
   обновляются, новые создаются с паролем password123), рубрики, посты всех типов и статусов
-  с фото и модерацией, оценки, избранное, ветки комментариев (к постам и к фото, скрытые,
-  удалённые, с жалобами), подписки, блокировка, сообщения, заявки в авторы и уведомления.
+  с фото и модерацией, оценки, просмотры, избранное, ветки комментариев (к постам и к фото, скрытые,
+  удалённые, с жалобами), жалобы на посты, подписки, блокировка, сообщения, заявки в авторы и уведомления.
   Даты — от now. Остальной контент база должна не содержать: сид-dev сначала его стирает,
   прод-сид запускается только на пустой базе
 */
@@ -26,7 +26,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     for(const person of people){
       const createdAt = new Date(person.since);
-      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, avatarKey: files.avatars[person.key], coverKey: files.covers?.[person.key] ?? null, nameGenitive: person.nameGenitive, bannedAt: null, banReason: null, createdAt };
+      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, messagesFrom: person.messagesFrom ?? 'all', avatarKey: files.avatars[person.key], coverKey: files.covers?.[person.key] ?? null, nameGenitive: person.nameGenitive, bannedAt: null, banReason: null, commentsSeenAt: person.key in COMMENTS_SEEN_DAYS ? daysAgo(COMMENTS_SEEN_DAYS[person.key]) : null, createdAt };
       const existing = tx.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, person.email)).get();
 
       if(existing){
@@ -105,11 +105,44 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       }
 
       postIds[post.url] = { id, userId: uid[post.author], createdAt: created, status, images };
+
+      // Жалобы (спека 36): открытые — недавние, с задачей staff; разобранные — через три часа, с итогом жалобщикам
+      for(const [ i, report ] of (post.reports ?? []).entries()){
+        const resolvedAt = post.reportsResolved ? new Date(created + 3 * HOUR) : null;
+        const reportedAt = resolvedAt ? new Date(created + 2 * HOUR + i * 10 * 60_000) : new Date(Math.max(created + HOUR, now - (5 - i) * HOUR));
+
+        tx.insert(schema.postReports).values({
+          postId: id,
+          userId: uid[report.by],
+          reason: report.reason,
+          comment: report.comment ?? null,
+          createdAt: reportedAt,
+          resolvedAt,
+          resolvedBy: resolvedAt ? uid.some : null,
+          resolution: post.reportsResolved ?? null,
+        }).run();
+
+        if(resolvedAt){
+          tx.insert(schema.notifications).values({ userId: uid[report.by], type: 'post_report.resolved', actorId: uid.some, postId: id, readAt: resolvedAt, createdAt: resolvedAt }).run();
+        }
+        else if(i === 0){
+          for(const staff of [ 'some', 'alice' ].filter(k => k !== post.author && k !== report.by)){
+            tx.insert(schema.notifications).values({ userId: uid[staff], type: 'post_report.created', actorId: uid[report.by], postId: id, createdAt: reportedAt }).run();
+          }
+        }
+      }
     }
 
     const publishedPosts = demoPosts.filter(p => (p.status ?? 'published') === 'published');
 
-    // --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — она «Выбор редакции»
+    // --- Ручной «Выбор редакции» (спека 39): два дня назад, автору — прочитанное уведомление.
+    // Сняв выбор, на главной видно автоматику — «Лучшее за неделю»
+    const editorsPick = postIds['velosiped-na-rabotu-god-spustya'];
+
+    tx.update(schema.posts).set({ featuredAt: daysAgo(2), featuredBy: uid.some }).where(eq(schema.posts.id, editorsPick.id)).run();
+    tx.insert(schema.notifications).values({ userId: editorsPick.userId, type: 'post.featured', actorId: uid.some, postId: editorsPick.id, readAt: daysAgo(1.5), createdAt: daysAgo(2) }).run();
+
+    // --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — «Лучшее за неделю», пока нет ручного выбора
     for(const post of publishedPosts){
       const { id, createdAt } = postIds[post.url];
       const base = post.url === 'nedelya-v-gorakh-dagestana' ? 4.85 : 3.6 + random() * 1.2;
@@ -134,6 +167,38 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     // Избранное dan открыто (спека 40): больше 12 закладок — на странице есть «Всё избранное»
     tx.insert(schema.postFavorites).values([ 'teriberka-v-noyabre', 'altay-chuyskiy-trakt', 'kurshskaya-kosa', 'kazan-za-vykhodnye', 'ladozhskie-shkhery', 'vyborg-i-monrepo', 'plov-doma', 'kak-snimat-tuman', 'voskhozhdenie-na-kazbek', 'splav-po-chusovoy' ]
       .map((url, i) => ({ userId: uid.dan, postId: postIds[url].id, createdAt: daysAgo(3 + i * 4) }))).onConflictDoNothing().run();
+
+    // --- Просмотры (спека 43): агрегат по дням за две недели у опубликованных, у старых — пара
+    // давних дней, чтобы «всего» было больше недели; у архивных — только давние. У Бориса эта неделя заметно больше прошлой —
+    // плитка «Начала» показывает рост. Свой генератор: остальные данные не сдвигаются
+    const viewRandom = rng(43);
+
+    for(const post of demoPosts.filter(p => p.status === undefined || p.status === 'published' || p.status === 'hidden')){
+      const { id, createdAt, status } = postIds[post.url];
+      const rows = new Map<string, number>();
+      const add = (daysBack: number, views: number) => {
+        const at = now - daysBack * DAY;
+
+        if(at >= createdAt && views > 0){
+          const day = localDay(new Date(at));
+          rows.set(day, (rows.get(day) ?? 0) + views);
+        }
+      };
+      const fresh = Math.max(0.15, 1 - post.days / 60);
+
+      for(let back = 0; back < (status === 'hidden' ? 0 : 14); back++){
+        const boost = post.author === 'bob' ? (back < 7 ? 1.6 : 0.8) : 1;
+        add(back, Math.round((3 + viewRandom() * 25) * fresh * boost));
+      }
+
+      for(let i = 0; i < 3; i++){
+        add(30 + viewRandom() * 170, Math.round(20 + viewRandom() * 120));
+      }
+
+      if(rows.size > 0){
+        tx.insert(schema.postViewsDaily).values([ ...rows ].map(([ day, views ]) => ({ postId: id, day, views }))).run();
+      }
+    }
 
     // --- Комментарии
     for(const [ url, tree ] of Object.entries(commentTrees)){
@@ -300,9 +365,20 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 // Хеш better-auth (scrypt) для «password123» — у всех демо-учёток один пароль
 const PASSWORD_HASH = '2c5ddde7a24416d978bf9c408a63f70e:9a2eab05d7b39193fd22f60aa9a2683c1fcd4370cc039062421d824be09e045851842dc07d10ca30deb766a4275d0f1de60f1f741836419357e327d13bcbb758';
 
+/*
+  Отметка «К моим постам», дней назад (спека 43): у Ани часть комментариев к её постам —
+  «Новый», часть — нет. У остальных NULL — вкладку не открывали, новые все
+*/
+const COMMENTS_SEEN_DAYS: Record<string, number> = { anya: 3 };
+
 const HOUR = 60 * 60 * 1000;
 
 const DAY = 24 * HOUR;
+
+// День просмотра 'YYYY-MM-DD' по часам сервера — копия viewDay (postViewDay.ts): скрипт не импортирует '@/'
+function localDay(date: Date){
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 function clamp(value: number, min: number, max: number){
   return Math.max(min, Math.min(max, value));

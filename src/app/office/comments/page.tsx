@@ -8,6 +8,7 @@ import OfficeCommentList from "@/domains/comments/components/OfficeCommentList";
 import { officeCommentListResource } from "@/domains/comments/dto/commentResources";
 import { OFFICE_COMMENT_TABS, type OfficeCommentTab } from "@/domains/comments/dto/commentRequests";
 import { countOfficeComments, loadOfficeComments } from "@/domains/comments/shared/loadOfficeComments";
+import { takeCommentsSeen } from "@/domains/comments/shared/commentsSeen";
 import { IconMessage } from "@tabler/icons-react";
 import z from "zod";
 
@@ -23,6 +24,8 @@ export default async function OfficeComments({ searchParams }: PageProps<'/offic
   const user = await requireAuthUser();
   const counts = await countOfficeComments(user.id);
   const { tab = counts.received > 0 ? 'received' : 'mine' } = tabDto.parse(await searchParams);
+  // Отметка — только когда открыта «К моим постам»: всё, что позже прежней, — «Новый» (спека 43)
+  const newSince = tab === 'received' ? takeCommentsSeen(user.id) : undefined;
 
   return (
     <>
@@ -44,7 +47,7 @@ export default async function OfficeComments({ searchParams }: PageProps<'/offic
         >
           { TABS[tab].empty.text }
         </EmptyState>
-      ) : <CommentsTab userId={user.id} tab={tab} /> }
+      ) : <CommentsTab userId={user.id} tab={tab} newSince={newSince === undefined ? undefined : newSince?.getTime() ?? null} /> }
     </>
   );
 }
@@ -62,9 +65,9 @@ const TABS: Record<OfficeCommentTab, { label: string, empty: { title: string, te
 
 const tabDto = z.object({ tab: z.enum(OFFICE_COMMENT_TABS).optional().catch(undefined) });
 
-async function CommentsTab({ userId, tab }: { userId: number, tab: OfficeCommentTab }){
+async function CommentsTab({ userId, tab, newSince }: { userId: number, tab: OfficeCommentTab, newSince?: number | null }){
   const { items, hasMore } = await loadOfficeComments(userId, tab);
 
   // key — новая вкладка начинает список заново, а не дописывает к прежней
-  return <OfficeCommentList key={tab} tab={tab} initial={resource(officeCommentListResource, items)} hasMore={hasMore} />;
+  return <OfficeCommentList key={tab} tab={tab} initial={resource(officeCommentListResource, items)} hasMore={hasMore} newSince={newSince} />;
 }

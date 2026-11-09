@@ -169,6 +169,34 @@
       "when": 1794248701123,
       "tag": "0023_profile_cover_name",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1794251279926,
+      "tag": "0024_profile_name_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1794252776853,
+      "tag": "0025_post_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1794254306955,
+      "tag": "0026_editors_pick",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1794255770205,
+      "tag": "0027_author_stats",
+      "breakpoints": true
     }
   ]
 }

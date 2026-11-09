@@ -25,6 +25,8 @@ export const rateLimiters = {
   commentCreate: memoryLimiter({ keyPrefix: 'comment-create', points: 10, duration: 60 }),
   /* жалобы на комментарии, ключ — id пользователя */
   commentReport: memoryLimiter({ keyPrefix: 'comment-report', points: 30, duration: 60 * 60 }),
+  /* жалобы на посты (спека 36), ключ — id пользователя */
+  postReport: memoryLimiter({ keyPrefix: 'post-report', points: 10, duration: 60 * 60 }),
   /* личные сообщения и новые диалоги, ключ — id пользователя */
   messageSend: memoryLimiter({ keyPrefix: 'message-send', points: 30, duration: 60 }),
   dialogCreate: memoryLimiter({ keyPrefix: 'dialog-create', points: 20, duration: 60 * 60 }),

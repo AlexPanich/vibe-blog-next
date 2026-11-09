@@ -1,4 +1,4 @@
-import type { PostStatus, PostType } from "../../src/database/schema.ts";
+import type { PostReportReason, PostStatus, PostType } from "../../src/database/schema.ts";
 import type { TagName } from "./people.ts";
 
 // [ ключ набора в photos.json, номер фото в наборе, подпись ]
@@ -21,7 +21,11 @@ export type SeedPost = {
   // Сколько дней назад создан и опубликован
   days: number,
   photos: SeedPhoto[],
-  content: string
+  content: string,
+  // Жалобы на пост (спека 36): открытые, если не разобраны (reportsResolved)
+  reports?: { by: string, reason: PostReportReason, comment?: string }[],
+  // Разобраны модератором some: оставил пост или заблокировал его
+  reportsResolved?: 'kept' | 'blocked'
 }
 
 export type SeedComment = {

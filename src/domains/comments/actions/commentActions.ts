@@ -265,5 +265,5 @@ function revalidatePost(){
   revalidatePath('/posts/[id]', 'page');
   revalidatePath('/posts/[id]/images/[imageId]', 'page');
   // Удаление закрывает жалобы
-  revalidatePath('/office/moderation/comments');
+  revalidatePath('/office/moderation/reports/comments');
 }

@@ -5,6 +5,11 @@ export const USER_ROLES = ['author', 'moderator', 'admin'] as const;
 
 export type Role = (typeof USER_ROLES)[number];
 
+// Кто может написать мне первым (спека 45); ответ в своём диалоге можно всегда
+export const MESSAGES_FROM = ['all', 'following', 'nobody'] as const;
+
+export type MessagesFrom = (typeof MESSAGES_FROM)[number];
+
 export const POST_STATUSES = ['draft', 'moderating', 'published', 'rejected', 'hidden', 'blocked'] as const;
 
 export type PostStatus = (typeof POST_STATUSES)[number];
@@ -25,6 +30,16 @@ export const COMMENT_REPORT_RESOLUTIONS = ['hidden', 'kept', 'deleted'] as const
 
 export type CommentReportResolution = (typeof COMMENT_REPORT_RESOLUTIONS)[number];
 
+// Причина жалобы на пост (спека 36); для other комментарий обязателен — в zod
+export const POST_REPORT_REASONS = ['spam', 'abuse', 'copyright', 'misleading', 'other'] as const;
+
+export type PostReportReason = (typeof POST_REPORT_REASONS)[number];
+
+// withdrawn — автор увёл пост в черновик, закрывшего нет
+export const POST_REPORT_RESOLUTIONS = ['blocked', 'kept', 'withdrawn'] as const;
+
+export type PostReportResolution = (typeof POST_REPORT_RESOLUTIONS)[number];
+
 export const AUTHOR_REQUEST_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
 export type AuthorRequestStatus = (typeof AUTHOR_REQUEST_STATUSES)[number];
@@ -35,8 +50,9 @@ export type UserAdminActionType = (typeof USER_ADMIN_ACTIONS)[number];
 
 export const NOTIFICATION_TYPES = [
   'comment.created', 'comment.reply', 'comment.hidden', 'comment.unhidden', 'comment.edited',
-  'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted',
+  'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted', 'post.featured',
   'report.created', 'report.resolved',
+  'post_report.created', 'post_report.resolved',
   'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed', 'user.cover_removed',
   'message.created',
   'author_request.created', 'author_request.rejected',
@@ -64,18 +80,26 @@ export const users = sqliteTable('users', {
   banReason: text('ban_reason'),
   // «О себе» на странице автора; better-auth колонку не знает, пишет updateBioAction
   bio: text('bio'),
-  // Личные сообщения только от друзей (взаимных подписчиков); staff флаг обходит
-  messagesFriendsOnly: integer('messages_friends_only', { mode: 'boolean' }).notNull().default(false),
+  /*
+    Кто может начать со мной переписку (спека 45): все, мои подписки, никто. Staff обходит,
+    ответ в диалоге, где я писал, — всегда. better-auth колонку не знает, пишет updateMessagesFromAction
+  */
+  messagesFrom: text('messages_from', { enum: MESSAGES_FROM }).notNull().default('all'),
   // Избранное видно всем на странице автора (спека 40); better-auth колонку не знает, пишет updateFavoritesPublicAction
   favoritesPublic: integer('favorites_public', { mode: 'boolean' }).notNull().default(false),
   // Своя обложка профиля (спека 41): webp по ширине, COVER_WIDTHS; better-auth колонку не знает, пишет uploadCoverAction
   coverKey: text('cover_key'),
   // «Ещё у Ани» под постом (спека 41): человек пишет сам, без склонения; пишет updateBioAction
   nameGenitive: text('name_genitive'),
+  // Последняя смена имени (спека 45): не чаще раза в сутки; null — не меняли. Пишет updateNameAction
+  nameChangedAt: integer('name_changed_at', { mode: 'timestamp' }),
+  // Когда последний раз открывал «К моим постам» (спека 43): позже — «Новый». null — всё новое
+  commentsSeenAt: integer('comments_seen_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   check('users_name_genitive_check', sql`${t.nameGenitive} IS NULL OR length(${t.nameGenitive}) BETWEEN 1 AND 40`),
+  check('users_messages_from_check', sql`${t.messagesFrom} IN ('all', 'following', 'nobody')`),
 ]);
 
 export const sessions = sqliteTable('sessions', {
@@ -143,6 +167,13 @@ export const posts = sqliteTable('posts', {
     Ставится при первом approve, restore и unblock её не меняют
   */
   publishedAt: integer('published_at', { mode: 'timestamp' }),
+  /*
+    Ручной «Выбор редакции» (спека 39): когда и кто выбрал. Действует 7 дней (editorsPick.ts),
+    ненулевой featuredAt — максимум у одного поста: новый выбор обнуляет прежний, уход из
+    published — тоже (changePostStatus)
+  */
+  featuredAt: integer('featured_at', { mode: 'timestamp' }),
+  featuredBy: integer('featured_by').references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('posts_status_idx').on(t.status),
@@ -155,6 +186,7 @@ export const posts = sqliteTable('posts', {
     (${t.type} = 'travel' AND ${t.source} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL)
   `),
   check('posts_lead_check', sql`${t.lead} IS NULL OR length(${t.lead}) BETWEEN 20 AND 200`),
+  check('posts_featured_check', sql`(${t.featuredAt} IS NULL) = (${t.featuredBy} IS NULL)`),
 ]);
 
 /*
@@ -233,6 +265,31 @@ export const postRatings = sqliteTable('post_ratings', {
 }, t => [
   primaryKey({ columns: [ t.postId, t.userId ] }),
   check('post_ratings_value', sql`${t.value} BETWEEN 1 AND 5`),
+]);
+
+/*
+  Просмотры публичной страницы поста по дням (спека 43): агрегат, а не события. Не чистится —
+  из него же «всего просмотров». День — 'YYYY-MM-DD' по часам сервера (postViewDay.ts)
+*/
+export const postViewsDaily = sqliteTable('post_views_daily', {
+  postId: integer('post_id').notNull().references(() => posts.id),
+  day: text('day').notNull(),
+  views: integer('views').notNull().default(0),
+}, t => [
+  primaryKey({ columns: [ t.postId, t.day ] }),
+]);
+
+/*
+  Дневная уникальность просмотра (спека 43): зритель — `u:<id>` или `g:<sha256>` гостя (соль,
+  IP, UA, день). Хранится сегодня и вчера, старое удаляет запись просмотра (postViews.ts)
+*/
+export const postViewSeen = sqliteTable('post_view_seen', {
+  postId: integer('post_id').notNull().references(() => posts.id),
+  day: text('day').notNull(),
+  viewerHash: text('viewer_hash').notNull(),
+}, t => [
+  primaryKey({ columns: [ t.postId, t.day, t.viewerHash ] }),
+  index('post_view_seen_day_idx').on(t.day),
 ]);
 
 /*
@@ -406,6 +463,33 @@ export const commentReportsRelations = relations(commentReports, ({ one }) => ({
   comment:  one(comments, { fields: [commentReports.commentId], references: [comments.id] }),
   reporter: one(users, { fields: [commentReports.userId], references: [users.id], relationName: 'commentReporter' }),
   resolver: one(users, { fields: [commentReports.resolvedBy], references: [users.id], relationName: 'commentReportResolver' }),
+}));
+
+/*
+  Жалобы на посты (спека 36). Как и у комментариев, при разборе не удаляются — закрываются
+  с итогом; одна на пару пост–пользователь, после разбора тот же человек заново не жалуется
+*/
+export const postReports = sqliteTable('post_reports', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  postId: integer('post_id').notNull().references(() => posts.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  reason: text('reason', { enum: POST_REPORT_REASONS }).notNull(),
+  comment: text('comment'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+  // null у withdrawn: жалобы закрыл уход поста в черновик, а не модератор
+  resolvedBy: integer('resolved_by').references(() => users.id),
+  resolution: text('resolution', { enum: POST_REPORT_RESOLUTIONS }),
+}, t => [
+  uniqueIndex('post_reports_post_user_uq').on(t.postId, t.userId),
+  index('post_reports_open_idx').on(t.resolvedAt, t.createdAt),
+  check('post_reports_resolution', sql`(${t.resolvedAt} IS NULL) = (${t.resolution} IS NULL)`),
+]);
+
+export const postReportsRelations = relations(postReports, ({ one }) => ({
+  post:     one(posts, { fields: [postReports.postId], references: [posts.id] }),
+  reporter: one(users, { fields: [postReports.userId], references: [users.id], relationName: 'postReporter' }),
+  resolver: one(users, { fields: [postReports.resolvedBy], references: [users.id], relationName: 'postReportResolver' }),
 }));
 
 /*

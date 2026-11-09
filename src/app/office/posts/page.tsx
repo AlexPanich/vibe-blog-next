@@ -100,6 +100,7 @@ export default async function OfficePosts({ searchParams }: PageProps<'/office/p
                 post={post}
                 href={`/office/posts/${post.id}`}
                 tags={pickTags(post)}
+                views={post.views}
                 editable
               />) }
             </div>

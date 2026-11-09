@@ -12,6 +12,7 @@ export default function PostAdminTable({ children }: { children: ReactNode }) {
         <span role="columnheader">Пост</span>
         <span role="columnheader">Автор</span>
         <span role="columnheader">Статус</span>
+        <span role="columnheader">Просмотры</span>
         <span role="columnheader">Дата</span>
         <span role="columnheader" aria-label="Действия" />
       </div>

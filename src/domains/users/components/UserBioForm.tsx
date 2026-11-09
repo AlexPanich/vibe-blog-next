@@ -2,37 +2,77 @@
 
 import 'client-only';
 import { useAction } from "next-safe-action/hooks";
-import { updateBioAction } from "@/domains/users/actions/userAccountActions";
+import { useRouter } from "next/navigation";
+import { updateBioAction, updateNameAction } from "@/domains/users/actions/userAccountActions";
+import { USER_NAME_MAX } from "@/domains/users/dto/authRequests";
+import { UserNameStateResource } from "@/domains/users/dto/userResources";
+import { normalizeName } from "@/domains/users/shared/nameChange";
+import { StrictResource } from "@/core/resource";
 import { fieldError } from "@/components/general/FieldError";
+import LocalDate from "@/components/general/LocalDate";
 import useForm from "@/hooks/useForm";
 import { Alert, Button, Stack, Textarea, TextInput } from "@mantine/core";
 import { IconCheck } from "@tabler/icons-react";
 
-type UserBioFormProps = {
-  name: string,
+type UserBioFormProps<T extends UserNameStateResource> = {
+  nameState: StrictResource<T, UserNameStateResource>,
   bio: string,
   nameGenitive: string
 }
 
 /*
-  «Публичная страница»: имя и «О себе» — видно на странице автора. Имя пока только
-  показывается: сменить его нельзя до спеки 45. Имя в родительном падеже для «Ещё у …» под
-  постом (спека 41) человек пишет сам — склонять не пытаемся
+  «Публичная страница»: имя и «О себе» — видно на странице автора. Одна кнопка, два action
+  (спека 45): bio уходит всегда, имя — только если изменилось, и ошибка частоты имени не мешает
+  сохранить «О себе». Пока сутки со смены не прошли, имя readOnly с датой, когда снова можно.
+  Имя в родительном падеже для «Ещё у …» под постом (спека 41) человек пишет сам — склонять
+  не пытаемся
 */
-export default function UserBioForm({ name, bio, nameGenitive }: UserBioFormProps) {
-  const { nv, update, data } = useForm({ bio, nameGenitive });
-  const action = useAction(updateBioAction);
+export default function UserBioForm<T extends UserNameStateResource>({ nameState, bio, nameGenitive }: UserBioFormProps<T>) {
+  const router = useRouter();
+  const { nv, update, data } = useForm({ name: nameState.name, bio, nameGenitive });
+  const bioAction = useAction(updateBioAction);
+  // Новое имя — в шапке и useUser(): пользователь кабинета приходит из layout. По 429 — дата под полем
+  const nameAction = useAction(updateNameAction, {
+    onSuccess: ({ data }) => {
+      update('name', data.name);
+
+      if(data.changed){
+        router.refresh();
+      }
+    },
+    onError: ({ error }) => error.serverError?.code === 429 && router.refresh()
+  });
+  const locked = nameState.nextChangeAt;
+
+  function submit(){
+    bioAction.execute({ bio: data.bio, nameGenitive: data.nameGenitive });
+
+    if(!locked && normalizeName(data.name) !== nameState.name){
+      nameAction.execute({ name: data.name });
+    }
+    else{
+      // Иначе «Новое имя видно везде» осталось бы от прошлого сохранения
+      nameAction.reset();
+    }
+  }
 
   return (
-    <form onSubmit={e => { e.preventDefault(); action.execute(data) }}>
+    <form onSubmit={e => { e.preventDefault(); submit() }}>
       <Stack gap="md">
         <TextInput
           label="Имя"
-          value={name}
-          readOnly
-          variant="filled"
-          description="Задаётся при регистрации, сменить пока нельзя"
-          inputWrapperOrder={[ 'label', 'input', 'description' ]}
+          maxLength={USER_NAME_MAX}
+          readOnly={!!locked}
+          variant={locked ? 'filled' : 'default'}
+          description={locked
+            ? <>Менять можно раз в сутки — снова можно <LocalDate value={locked} /></>
+            : 'Видно на странице автора, у постов и комментариев. Менять можно раз в сутки'}
+          inputWrapperOrder={[ 'label', 'input', 'description', 'error' ]}
+          {...nv('name')}
+          // Заблокированное поле — имя с сервера: после 429 в форме осталось бы несохранённое
+          value={locked ? nameState.name : data.name}
+          onChange={e => update('name', e.target.value)}
+          error={fieldError(nameAction.result.validationErrors, 'name') ?? nameAction.result.serverError?.message}
         />
         <TextInput
           label="Как вас называть в подписях: «Ещё у …»"
@@ -42,7 +82,7 @@ export default function UserBioForm({ name, bio, nameGenitive }: UserBioFormProp
           inputWrapperOrder={[ 'label', 'input', 'description', 'error' ]}
           {...nv('nameGenitive')}
           onChange={e => update('nameGenitive', e.target.value)}
-          error={fieldError(action.result.validationErrors, 'nameGenitive')}
+          error={fieldError(bioAction.result.validationErrors, 'nameGenitive')}
         />
         <Textarea
           label={<span className="ui-account-count">О себе <small>{ data.bio.length } / 500</small></span>}
@@ -51,11 +91,15 @@ export default function UserBioForm({ name, bio, nameGenitive }: UserBioFormProp
           minRows={3}
           {...nv('bio')}
           onChange={e => update('bio', e.target.value)}
-          error={fieldError(action.result.validationErrors, 'bio')}
+          error={fieldError(bioAction.result.validationErrors, 'bio')}
         />
-        { action.result.data?.done && <Alert color="green">Сохранено — видно на вашей странице автора.</Alert> }
+        { bioAction.result.data?.done && (
+          <Alert color="green">
+            { nameAction.result.data?.changed ? 'Сохранено. Новое имя видно везде.' : 'Сохранено — видно на вашей странице автора.' }
+          </Alert>
+        ) }
         <div className="ui-account__save">
-          <Button type="submit" radius="xl" loading={action.isPending} leftSection={<IconCheck size={16} />}>Сохранить</Button>
+          <Button type="submit" radius="xl" loading={bioAction.isPending || nameAction.isPending} leftSection={<IconCheck size={16} />}>Сохранить</Button>
         </div>
       </Stack>
     </form>

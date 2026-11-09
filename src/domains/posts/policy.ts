@@ -21,6 +21,14 @@ export function moderatePosts(user: AuthUser){
   return user.roles.includes('moderator') || user.roles.includes('admin');
 }
 
+/*
+  Выбрать пост для главной и снять с неё (спека 39). Пока то же, что модерация, — отдельное
+  имя для кнопок и actions, если право сузят
+*/
+export function featurePost(user: AuthUser){
+  return moderatePosts(user);
+}
+
 export function adminPosts(user: AuthUser){
   return user.roles.includes('admin');
 }
@@ -44,6 +52,14 @@ export function ownerTransitions(user: AuthUser, post: Pick<Post, 'userId' | 'st
   Оценивать можно только опубликованный и не свой пост: своя рука смещала бы среднюю автора
 */
 export function ratePost(user: AuthUser, post: Pick<Post, 'userId' | 'status'>){
+  return post.status === 'published' && post.userId !== user.id;
+}
+
+/*
+  Пожаловаться на пост (спека 36): любой вошедший, кроме автора, на опубликованный.
+  Блокировка пользователей (спека 26) не мешает — это сигнал модератору, не автору
+*/
+export function reportPost(user: AuthUser, post: Pick<Post, 'userId' | 'status'>){
   return post.status === 'published' && post.userId !== user.id;
 }
 

@@ -1,12 +1,20 @@
 import z from "zod";
+import { normalizeName } from "@/domains/users/shared/nameChange";
+
+export const USER_NAME_MIN = 2;
+export const USER_NAME_MAX = 24;
 
 /* нормализуем до проверки формата: иначе Alice@x.com и alice@x.com — разные ключи rate limit */
 const email = z.string().trim().toLowerCase().pipe(z.email());
 
 const password = z.string().min(8).max(64);
 
+/* Имя (спека 45): одно правило при регистрации и в профиле; пробелы схлопываются до проверки длины */
+const name = z.string().transform(normalizeName)
+  .pipe(z.string().min(USER_NAME_MIN, `Не короче ${USER_NAME_MIN} символов`).max(USER_NAME_MAX, `Не длиннее ${USER_NAME_MAX} символов`));
+
 export const userSignupDto = z.object({
-  name: z.string().min(2).max(16),
+  name,
   email,
   password
 })
@@ -57,6 +65,12 @@ export const userBioDto = z.object({
 })
 
 export type UserBioDto = z.infer<typeof userBioDto>
+
+export const userNameDto = z.object({
+  name
+})
+
+export type UserNameDto = z.infer<typeof userNameDto>
 
 // Загрузка аватара и обложки профиля: файл проверяет readImage в action
 export const imageUploadDto = z.object({
