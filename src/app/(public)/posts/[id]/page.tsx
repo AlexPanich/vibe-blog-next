@@ -72,7 +72,7 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
 
         <div className="ui-post__reactions">
           <PostRatingBlock post={resource(postRatingBlockResource, { ...post, rating })} />
-          <PostActions id={post.id} title={post.title} />
+          <PostActions id={post.id} title={post.title} authorId={post.userId} />
         </div>
 
         <CommentsBlock postId={post.id} postAuthorId={post.userId} comments={resource(commentListResource, comments)} />

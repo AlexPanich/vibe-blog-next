@@ -9,6 +9,7 @@ import { postApproveDto, postBlockDto, postRejectDto, postUnblockDto } from "@/d
 import { transitPost } from "@/domains/posts/policy";
 import { reviewGuard } from "@/domains/posts/shared/reviewGuard";
 import { changePostStatus } from "@/domains/posts/shared/changePostStatus";
+import { insertBlockModeration } from "@/domains/posts/shared/postBlocking";
 import { redirect } from "next/navigation";
 
 export const approvePostAction = actionAuthClient
@@ -60,14 +61,7 @@ export const blockPostAction = actionAuthClient
     const transition = post.status === 'hidden' ? 'blockArchived' : 'block';
     await CONTAINER.boucerService.breakIfCant(u => transitPost(u, post, transition));
 
-    changePostStatus(post.id, transition, auth.id, tx => {
-      tx.insert(postModerations).values({
-        postId: post.id,
-        userId: auth.id,
-        decision: 'blocked',
-        comment: parsedInput.comment
-      }).run();
-    });
+    changePostStatus(post.id, transition, auth.id, tx => insertBlockModeration(tx, post.id, auth.id, parsedInput.comment));
 
     return redirect(`/office/moderation/posts/${post.id}`);
   });

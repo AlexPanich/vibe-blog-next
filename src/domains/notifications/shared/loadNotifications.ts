@@ -1,6 +1,6 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { comments, notifications, posts, users } from "@/database/schema";
+import { comments, notifications, postReports, posts, users } from "@/database/schema";
 import type { NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
 import { describeNotification } from "@/domains/notifications/shared/notificationText";
 import { and, count, desc, eq, inArray, isNull, lt, type SQL } from "drizzle-orm";
@@ -43,12 +43,18 @@ export function loadNotificationRows(where: SQL | undefined, limit?: number){
     postTitle: posts.title,
     postStatus: posts.status,
     postAuthorId: posts.userId,
-    commentImageId: comments.imageId
+    commentImageId: comments.imageId,
+    postReportResolution: postReports.resolution
   })
     .from(notifications)
     .leftJoin(users, eq(users.id, notifications.actorId))
     .leftJoin(posts, eq(posts.id, notifications.postId))
     .leftJoin(comments, eq(comments.id, notifications.commentId))
+    .leftJoin(postReports, and(
+      eq(notifications.type, 'post_report.resolved'),
+      eq(postReports.postId, notifications.postId),
+      eq(postReports.userId, notifications.userId)
+    ))
     .where(where)
     .orderBy(desc(notifications.id));
 

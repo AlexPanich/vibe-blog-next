@@ -1,5 +1,5 @@
 import type { NotificationType } from "@/database/schema";
-import { IconAlertCircle, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconUserCheck, type Icon } from "@tabler/icons-react";
+import { IconAlertCircle, IconFlag, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconUserCheck, type Icon } from "@tabler/icons-react";
 
 export type NotificationTone = 'mint' | 'coral' | 'sun' | 'plum' | 'ink'
 
@@ -39,4 +39,6 @@ const LOOKS: Record<NotificationType, NotificationLook> = {
   'post.submitted': { icon: IconShieldCheck, tone: 'plum', title: 'Пост ждёт модерации', action: 'Проверить' },
   'report.created': { icon: IconShieldCheck, tone: 'plum', title: 'Жалоба на комментарий', action: 'Разобрать' },
   'report.resolved': { icon: IconShieldCheck, tone: 'plum', title: 'Жалоба рассмотрена', action: 'Открыть' },
+  'post_report.created': { icon: IconFlag, tone: 'plum', title: 'Жалоба на пост', action: 'Разобрать' },
+  'post_report.resolved': { icon: IconFlag, tone: 'plum', title: 'Жалоба рассмотрена', action: 'Открыть' },
 };

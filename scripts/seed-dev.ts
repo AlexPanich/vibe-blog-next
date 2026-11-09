@@ -43,7 +43,7 @@ db.transaction(tx => {
   // Порядок неважен: PRAGMA foreign_keys в проекте выключен
   for(const table of [
     schema.notifications, schema.messages, schema.dialogs, schema.messageRestrictions, schema.messageIgnores,
-    schema.commentReports, schema.commentReactions, schema.commentModerations, schema.comments,
+    schema.postReports, schema.commentReports, schema.commentReactions, schema.commentModerations, schema.comments,
     schema.postRatings, schema.postFavorites, schema.postTags, schema.postImages, schema.postModerations, schema.posts,
     schema.tagFollows, schema.tags, schema.userFollows, schema.userBlocks, schema.authorRequests, schema.userAdminActions,
   ]){

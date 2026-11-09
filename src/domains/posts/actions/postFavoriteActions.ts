@@ -51,15 +51,3 @@ export const updateFavoritesPublicAction = actionAuthClient
     return { favoritesPublic };
   });
 
-/*
-  Своё состояние: публичная страница сессию на сервере не читает, клиент спрашивает сам
-*/
-export const myPostFavoriteAction = actionAuthClient
-  .bindArgsSchemas([ aiIdSchema ])
-  .action(async ({ bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
-    const row = await db.query.postFavorites.findFirst({
-      where: and(eq(postFavorites.userId, auth.id), eq(postFavorites.postId, id))
-    });
-
-    return { favorite: !!row };
-  });

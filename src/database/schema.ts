@@ -30,6 +30,16 @@ export const COMMENT_REPORT_RESOLUTIONS = ['hidden', 'kept', 'deleted'] as const
 
 export type CommentReportResolution = (typeof COMMENT_REPORT_RESOLUTIONS)[number];
 
+// Причина жалобы на пост (спека 36); для other комментарий обязателен — в zod
+export const POST_REPORT_REASONS = ['spam', 'abuse', 'copyright', 'misleading', 'other'] as const;
+
+export type PostReportReason = (typeof POST_REPORT_REASONS)[number];
+
+// withdrawn — автор увёл пост в черновик, закрывшего нет
+export const POST_REPORT_RESOLUTIONS = ['blocked', 'kept', 'withdrawn'] as const;
+
+export type PostReportResolution = (typeof POST_REPORT_RESOLUTIONS)[number];
+
 export const AUTHOR_REQUEST_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
 export type AuthorRequestStatus = (typeof AUTHOR_REQUEST_STATUSES)[number];
@@ -42,6 +52,7 @@ export const NOTIFICATION_TYPES = [
   'comment.created', 'comment.reply', 'comment.hidden', 'comment.unhidden', 'comment.edited',
   'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted',
   'report.created', 'report.resolved',
+  'post_report.created', 'post_report.resolved',
   'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed', 'user.cover_removed',
   'message.created',
   'author_request.created', 'author_request.rejected',
@@ -417,6 +428,33 @@ export const commentReportsRelations = relations(commentReports, ({ one }) => ({
   comment:  one(comments, { fields: [commentReports.commentId], references: [comments.id] }),
   reporter: one(users, { fields: [commentReports.userId], references: [users.id], relationName: 'commentReporter' }),
   resolver: one(users, { fields: [commentReports.resolvedBy], references: [users.id], relationName: 'commentReportResolver' }),
+}));
+
+/*
+  Жалобы на посты (спека 36). Как и у комментариев, при разборе не удаляются — закрываются
+  с итогом; одна на пару пост–пользователь, после разбора тот же человек заново не жалуется
+*/
+export const postReports = sqliteTable('post_reports', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  postId: integer('post_id').notNull().references(() => posts.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  reason: text('reason', { enum: POST_REPORT_REASONS }).notNull(),
+  comment: text('comment'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+  // null у withdrawn: жалобы закрыл уход поста в черновик, а не модератор
+  resolvedBy: integer('resolved_by').references(() => users.id),
+  resolution: text('resolution', { enum: POST_REPORT_RESOLUTIONS }),
+}, t => [
+  uniqueIndex('post_reports_post_user_uq').on(t.postId, t.userId),
+  index('post_reports_open_idx').on(t.resolvedAt, t.createdAt),
+  check('post_reports_resolution', sql`(${t.resolvedAt} IS NULL) = (${t.resolution} IS NULL)`),
+]);
+
+export const postReportsRelations = relations(postReports, ({ one }) => ({
+  post:     one(posts, { fields: [postReports.postId], references: [posts.id] }),
+  reporter: one(users, { fields: [postReports.userId], references: [users.id], relationName: 'postReporter' }),
+  resolver: one(users, { fields: [postReports.resolvedBy], references: [users.id], relationName: 'postReportResolver' }),
 }));
 
 /*

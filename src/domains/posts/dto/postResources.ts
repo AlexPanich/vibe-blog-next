@@ -2,7 +2,7 @@ import z from "zod"
 import { authorResource } from "@/domains/users/exports/userResources"
 import { tagResource } from "@/domains/tags/exports/tagResources"
 import { POST_OWNER_TRANSITIONS } from "@/domains/posts/shared/postStatuses"
-import { POST_TYPES } from "@/database/schema"
+import { POST_REPORT_REASONS, POST_REPORT_RESOLUTIONS, POST_STATUSES, POST_TYPES } from "@/database/schema"
 
 export const postRatingResource = z.object({
   average: z.number().nullable(),
@@ -149,3 +149,38 @@ export const postRatingBlockResource = z.object({
 })
 
 export type PostRatingBlockResource = z.infer<typeof postRatingBlockResource>
+
+// Кнопка «Пожаловаться» для вошедшего (спека 36): ещё не жаловался, ждёт разбора, разобрана
+export type PostReportState = 'none' | 'sent' | 'resolved'
+
+/*
+  Карточка жалоб на пост (спека 36): все жалобы на пост одной группой — в открытых одна
+  карточка на пост, в рассмотренных — пост и момент разбора. by — имя закрывшего, у withdrawn
+  его нет
+*/
+export const postReportRowResource = z.object({
+  postId: z.number(),
+  title: z.string(),
+  status: z.enum(POST_STATUSES),
+  author: z.object({ id: z.number(), name: z.string(), avatarKey: z.string().nullable() }),
+  reporters: z.array(z.object({
+    id: z.number(),
+    name: z.string(),
+    reason: z.enum(POST_REPORT_REASONS),
+    comment: z.string().nullable(),
+    at: z.date()
+  })),
+  firstAt: z.date(),
+  lastAt: z.date(),
+  resolution: z.object({
+    kind: z.enum(POST_REPORT_RESOLUTIONS),
+    by: z.string().nullable(),
+    at: z.date()
+  }).nullable()
+})
+
+export type PostReportRowResource = z.infer<typeof postReportRowResource>
+
+export const postReportListResource = z.array(postReportRowResource);
+
+export type PostReportListResource = z.infer<typeof postReportListResource>

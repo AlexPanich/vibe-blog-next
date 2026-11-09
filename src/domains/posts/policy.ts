@@ -48,6 +48,14 @@ export function ratePost(user: AuthUser, post: Pick<Post, 'userId' | 'status'>){
 }
 
 /*
+  Пожаловаться на пост (спека 36): любой вошедший, кроме автора, на опубликованный.
+  Блокировка пользователей (спека 26) не мешает — это сигнал модератору, не автору
+*/
+export function reportPost(user: AuthUser, post: Pick<Post, 'userId' | 'status'>){
+  return post.status === 'published' && post.userId !== user.id;
+}
+
+/*
   Решение по посту в очереди: пост никто не взял на ревью или взял я. admin решает всегда —
   это и есть перехват зависшего ревью
 */

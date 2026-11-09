@@ -6,7 +6,8 @@ import type { Route } from "next";
 /*
   roles — пункт виден, если у пользователя есть хотя бы одна из ролей; count — бейдж из menu.counts;
   exact — активен только на своём url (у «Начала» под /office лежит весь кабинет);
-  parent — куда ведёт «‹ назад» на телефоне, если не в «Кабинет»
+  parent — куда ведёт «‹ назад» на телефоне, если не в «Кабинет»;
+  match — префикс активности, если он шире href (у «Жалоб» — оба подраздела, спека 36)
 */
 export type OfficeMenuItem = {
   label: string,
@@ -15,6 +16,7 @@ export type OfficeMenuItem = {
   roles?: Role[],
   count?: keyof OfficeMenuResource['counts'],
   exact?: boolean,
+  match?: string,
   parent?: { label: string, href: Route }
 }
 
@@ -37,7 +39,7 @@ export const OFFICE_MENU_GROUPS: { label: string, items: OfficeMenuItem[] }[] = 
     label: 'Модерация',
     items: [
       { label: 'Очередь', href: '/office/moderation/posts', icon: IconChecklist, roles: [ 'moderator', 'admin' ], count: 'moderating' },
-      { label: 'Жалобы', href: '/office/moderation/comments', icon: IconFlag, roles: [ 'moderator', 'admin' ], count: 'reports' },
+      { label: 'Жалобы', href: '/office/moderation/reports/posts', match: '/office/moderation/reports', icon: IconFlag, roles: [ 'moderator', 'admin' ], count: 'reports' },
       { label: 'Рубрики', href: '/office/moderation/tags', icon: IconTags, roles: [ 'moderator', 'admin' ] },
     ]
   },
@@ -82,9 +84,10 @@ export function activeMenuItem(pathname: string): OfficeMenuItem | null {
   let best: OfficeMenuItem | null = null;
 
   for(const item of ALL_ITEMS){
-    const matches = pathname === item.href || (!item.exact && pathname.startsWith(`${item.href}/`));
+    const prefix = item.match ?? item.href;
+    const matches = pathname === prefix || (!item.exact && pathname.startsWith(`${prefix}/`));
 
-    if(matches && (best === null || item.href.length > best.href.length)){
+    if(matches && (best === null || prefix.length > (best.match ?? best.href).length)){
       best = item;
     }
   }

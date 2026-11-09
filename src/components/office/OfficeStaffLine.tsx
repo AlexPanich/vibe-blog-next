@@ -24,7 +24,7 @@ export default function OfficeStaffLine({ moderating, reports, authorRequests }:
   }
 
   if(reports !== null){
-    queues.push({ label: 'Жалобы', value: String(reports), href: '/office/moderation/comments' });
+    queues.push({ label: 'Жалобы', value: String(reports), href: '/office/moderation/reports/posts' });
   }
 
   if(authorRequests !== null){

@@ -4,6 +4,7 @@ import { posts } from "@/database/schema";
 import { actionError } from "@/globals/actionClient";
 import { POST_TRANSITIONS, PostTransition } from "@/domains/posts/shared/postStatuses";
 import { notifyPostTransition } from "@/domains/posts/shared/postNotifications";
+import { settlePostReports } from "@/domains/posts/shared/postReports";
 import { publishNotifications } from "@/domains/notifications/exports/notify";
 import { liveBus } from "@/globals/liveBus";
 import { and, eq, isNull, type SQL } from "drizzle-orm";
@@ -13,7 +14,8 @@ type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /*
   Атомарный переход: статус меняется, только если пост всё ещё в статусе from (и выполнено
   guard — например, «ревью ведёт не другой модератор»). also выполняется в той же транзакции
-  (запись в историю модерации). Смена статуса всегда снимает ревьюера: ревью — только внутри
+  (запись в историю модерации). Блокировка и уход в черновик закрывают жалобы на пост
+  (settlePostReports, спека 36). Смена статуса всегда снимает ревьюера: ревью — только внутри
   moderating. Первое одобрение ставит publishedAt — дату в ленте «Новые» (спека 22).
   Уведомления перехода пишутся в той же транзакции, а в браузер уходят после commit, туда же
   — широковещательный post.published. Права проверяет вызывающий.
@@ -36,8 +38,10 @@ export function changePostStatus(postId: number, transition: PostTransition, act
 
     const firstPublished = transition === 'approve' && markFirstPublished(tx, postId);
 
+    const reportNotificationIds = settlePostReports(tx, postId, transition, actorId);
+
     return {
-      notificationIds: notifyPostTransition(tx, postId, transition, actorId, firstPublished),
+      notificationIds: [ ...reportNotificationIds, ...notifyPostTransition(tx, postId, transition, actorId, firstPublished) ],
       authorId: changed.userId,
       firstPublished
     };

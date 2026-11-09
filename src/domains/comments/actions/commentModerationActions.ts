@@ -105,5 +105,5 @@ export const unhideCommentAction = actionAuthClient
 function revalidateBranches(){
   revalidatePath('/posts/[id]', 'page');
   revalidatePath('/posts/[id]/images/[imageId]', 'page');
-  revalidatePath('/office/moderation/comments');
+  revalidatePath('/office/moderation/reports/comments');
 }

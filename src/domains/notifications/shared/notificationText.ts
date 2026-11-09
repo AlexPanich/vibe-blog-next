@@ -1,4 +1,4 @@
-import type { NotificationType, PostStatus, Role } from "@/database/schema";
+import type { NotificationType, PostReportResolution, PostStatus, Role } from "@/database/schema";
 
 type DescribedRow = {
   userId: number,
@@ -10,7 +10,9 @@ type DescribedRow = {
   postTitle: string | null,
   postStatus: PostStatus | null,
   postAuthorId: number | null,
-  commentImageId: number | null
+  commentImageId: number | null,
+  // post_report.resolved: итог жалобы получателя — пара пост–жалобщик уникальна
+  postReportResolution: PostReportResolution | null
 }
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -30,7 +32,9 @@ export function describeNotification(row: DescribedRow): { text: string, href: s
     case 'post.submitted':
       return fixed(`Пост ${post} ждёт модерации`, `/office/moderation/posts/${row.postId}`);
     case 'report.created':
-      return fixed(`Жалоба на комментарий к посту ${post}`, '/office/moderation/comments');
+      return fixed(`Жалоба на комментарий к посту ${post}`, '/office/moderation/reports/comments');
+    case 'post_report.created':
+      return fixed(`Жалоба на пост ${post}`, '/office/moderation/reports/posts');
     case 'user.unbanned':
       return fixed('Ваш аккаунт разблокирован', '/office/profile');
     case 'user.role_granted':
@@ -63,6 +67,7 @@ export function describeNotification(row: DescribedRow): { text: string, href: s
     'post.unblocked': `Пост ${post} разблокирован`,
     'post.published': `Новый пост ${post}`,
     'report.resolved': `Жалоба на комментарий к посту ${post} рассмотрена`,
+    'post_report.resolved': `Жалоба на пост ${post} рассмотрена${resolutionTail(row.postReportResolution)}`,
   }[row.type];
 
   return { text, href, unavailable: href === null };
@@ -70,6 +75,18 @@ export function describeNotification(row: DescribedRow): { text: string, href: s
 
 function fixed(text: string, href: string){
   return { text, href, unavailable: false };
+}
+
+// withdrawn жалобщику не уведомляется, но строка могла остаться от прошлых данных — без итога
+function resolutionTail(resolution: PostReportResolution | null){
+  if(resolution === 'blocked'){
+    return ': пост заблокирован';
+  }
+  else if(resolution === 'kept'){
+    return ': пост оставлен';
+  }
+
+  return '';
 }
 
 function roleLabel(role: Role | null){

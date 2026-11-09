@@ -11,7 +11,7 @@ import type { SeedComment } from "./types.ts";
   Демо-контент одной транзакцией: пользователи из people.ts (существующие по email
   обновляются, новые создаются с паролем password123), рубрики, посты всех типов и статусов
   с фото и модерацией, оценки, избранное, ветки комментариев (к постам и к фото, скрытые,
-  удалённые, с жалобами), подписки, блокировка, сообщения, заявки в авторы и уведомления.
+  удалённые, с жалобами), жалобы на посты, подписки, блокировка, сообщения, заявки в авторы и уведомления.
   Даты — от now. Остальной контент база должна не содержать: сид-dev сначала его стирает,
   прод-сид запускается только на пустой базе
 */
@@ -105,6 +105,32 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       }
 
       postIds[post.url] = { id, userId: uid[post.author], createdAt: created, status, images };
+
+      // Жалобы (спека 36): открытые — недавние, с задачей staff; разобранные — через три часа, с итогом жалобщикам
+      for(const [ i, report ] of (post.reports ?? []).entries()){
+        const resolvedAt = post.reportsResolved ? new Date(created + 3 * HOUR) : null;
+        const reportedAt = resolvedAt ? new Date(created + 2 * HOUR + i * 10 * 60_000) : new Date(Math.max(created + HOUR, now - (5 - i) * HOUR));
+
+        tx.insert(schema.postReports).values({
+          postId: id,
+          userId: uid[report.by],
+          reason: report.reason,
+          comment: report.comment ?? null,
+          createdAt: reportedAt,
+          resolvedAt,
+          resolvedBy: resolvedAt ? uid.some : null,
+          resolution: post.reportsResolved ?? null,
+        }).run();
+
+        if(resolvedAt){
+          tx.insert(schema.notifications).values({ userId: uid[report.by], type: 'post_report.resolved', actorId: uid.some, postId: id, readAt: resolvedAt, createdAt: resolvedAt }).run();
+        }
+        else if(i === 0){
+          for(const staff of [ 'some', 'alice' ].filter(k => k !== post.author && k !== report.by)){
+            tx.insert(schema.notifications).values({ userId: uid[staff], type: 'post_report.created', actorId: uid[report.by], postId: id, createdAt: reportedAt }).run();
+          }
+        }
+      }
     }
 
     const publishedPosts = demoPosts.filter(p => (p.status ?? 'published') === 'published');

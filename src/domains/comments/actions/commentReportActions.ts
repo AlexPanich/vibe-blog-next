@@ -62,7 +62,7 @@ export const reportCommentAction = actionAuthClient
     });
 
     publishNotifications(notificationIds);
-    revalidatePath('/office/moderation/comments');
+    revalidatePath('/office/moderation/reports/comments');
 
     return { state };
   });
@@ -93,7 +93,7 @@ export const keepCommentAction = actionAuthClient
     });
 
     publishNotifications(notificationIds);
-    revalidatePath('/office/moderation/comments');
+    revalidatePath('/office/moderation/reports/comments');
 
     return { done: true };
   });
