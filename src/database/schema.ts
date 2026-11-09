@@ -66,6 +66,8 @@ export const users = sqliteTable('users', {
   bio: text('bio'),
   // Личные сообщения только от друзей (взаимных подписчиков); staff флаг обходит
   messagesFriendsOnly: integer('messages_friends_only', { mode: 'boolean' }).notNull().default(false),
+  // Избранное видно всем на странице автора (спека 40); better-auth колонку не знает, пишет updateFavoritesPublicAction
+  favoritesPublic: integer('favorites_public', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });

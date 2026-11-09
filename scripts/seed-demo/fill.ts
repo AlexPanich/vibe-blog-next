@@ -26,7 +26,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     for(const person of people){
       const createdAt = new Date(person.since);
-      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, avatarKey: files.avatars[person.key], bannedAt: null, banReason: null, createdAt };
+      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, avatarKey: files.avatars[person.key], bannedAt: null, banReason: null, createdAt };
       const existing = tx.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, person.email)).get();
 
       if(existing){
@@ -130,6 +130,10 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     tx.insert(schema.postFavorites).values([ 'nedelya-v-gorakh-dagestana', 'khleb-na-zakvaske', 'peterburg-na-plenku' ]
       .map(url => ({ userId: uid.dan, postId: postIds[url].id, createdAt: daysAgo(0.5) }))).onConflictDoNothing().run();
+
+    // Избранное dan открыто (спека 40): больше 12 закладок — на странице есть «Всё избранное»
+    tx.insert(schema.postFavorites).values([ 'teriberka-v-noyabre', 'altay-chuyskiy-trakt', 'kurshskaya-kosa', 'kazan-za-vykhodnye', 'ladozhskie-shkhery', 'vyborg-i-monrepo', 'plov-doma', 'kak-snimat-tuman', 'voskhozhdenie-na-kazbek', 'splav-po-chusovoy' ]
+      .map((url, i) => ({ userId: uid.dan, postId: postIds[url].id, createdAt: daysAgo(3 + i * 4) }))).onConflictDoNothing().run();
 
     // --- Комментарии
     for(const [ url, tree ] of Object.entries(commentTrees)){

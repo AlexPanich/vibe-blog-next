@@ -6708,6 +6708,14 @@ span.ui-photo__arrow {
   color: var(--ink);
 }
 
+/* Своё закрытое избранное (спека 40): пометка «видно только вам» */
+.ui-author-tabs__own small {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
 .ui-author-posts,
 .ui-author-tabs + .ui-empty {
   margin-top: 2.5rem;
@@ -8907,6 +8915,8 @@ span.ui-photo__arrow {
   gap: 2.5rem;
   padding-block: 1.75rem;
   border-top: 1px solid var(--line);
+  /* Якорь /office/profile#favorites — не под шапкой */
+  scroll-margin-top: 6rem;
 }
 
 .ui-account__section:first-child {

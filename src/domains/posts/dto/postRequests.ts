@@ -76,3 +76,8 @@ export const postEditStartDto = z.object({
 })
 
 export type PostEditStartDto = z.infer<typeof postEditStartDto>
+
+// Избранное на странице автора видно всем (спека 40)
+export const postFavoritesPublicDto = z.object({
+  favoritesPublic: z.boolean()
+})

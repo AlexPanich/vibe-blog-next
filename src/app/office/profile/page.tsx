@@ -10,6 +10,7 @@ import ProfileSection from "@/domains/users/components/profile/ProfileSection";
 import ProfileRoles from "@/domains/users/components/profile/ProfileRoles";
 import ProfileSecurityRow from "@/domains/users/components/profile/ProfileSecurityRow";
 import MessagesFriendsOnlyForm from "@/domains/messages/components/MessagesFriendsOnlyForm";
+import PostFavoritesPublicForm from "@/domains/posts/components/PostFavoritesPublicForm";
 import { db } from "@/globals/db";
 import { accounts, users } from "@/database/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
@@ -25,7 +26,7 @@ export default async function OfficeProfile() {
   const user = await requireAuthUser();
   const profile = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { bio: true, avatarKey: true, messagesFriendsOnly: true, emailVerified: true }
+    columns: { bio: true, avatarKey: true, messagesFriendsOnly: true, favoritesPublic: true, emailVerified: true }
   });
   // Вошедший только через GitHub пароля не имеет — ни смены пароля, ни смены email (там нужен пароль)
   const credential = await db.query.accounts.findFirst({
@@ -61,6 +62,10 @@ export default async function OfficeProfile() {
 
         <ProfileSection title="Личные сообщения" hint="Кто может мне писать" mobileTitle="Кто может мне писать">
           <MessagesFriendsOnlyForm friendsOnly={profile?.messagesFriendsOnly ?? false} />
+        </ProfileSection>
+
+        <ProfileSection id="favorites" title="Избранное" hint="Кто видит ваши закладки" mobileTitle="Кто видит избранное">
+          <PostFavoritesPublicForm favoritesPublic={profile?.favoritesPublic ?? false} />
         </ProfileSection>
 
         <ProfileSection title="Безопасность" hint="Пароль и email для входа">

@@ -7,7 +7,9 @@ export type Person = {
   roles: Role[],
   bio: string,
   // Когда зарегистрировался: «с ГГГГ в Vibe» в профиле
-  since: string
+  since: string,
+  // Избранное видно всем на странице автора (спека 40)
+  favoritesPublic?: boolean
 }
 
 /*
@@ -21,7 +23,7 @@ export const people: Person[] = [
     bio: 'Модератор и переводчик. Играю в шахматы по переписке, перевожу эссе о том, почему медленное — не значит плохое.' },
   { key: 'bob', name: 'Борис Беляев', email: 'bob@example.com', roles: [ 'author' ], since: '2023-06-19',
     bio: 'Пишу о реках, дорогах и о том, что между ними. Байдарка, старая «Нива» и термос на литр.' },
-  { key: 'dan', name: 'Данил Ершов', email: 'dan@example.com', roles: [], since: '2025-09-01',
+  { key: 'dan', name: 'Данил Ершов', email: 'dan@example.com', roles: [], since: '2025-09-01', favoritesPublic: true,
     bio: 'Студент, читаю про путешествия и коплю на первую поездку в горы.' },
   { key: 'eva', name: 'Ева Миронова', email: 'eva@example.com', roles: [], since: '2025-11-20',
     bio: 'Хожу в походы выходного дня под Москвой. Подала заявку в авторы — хочу рассказывать о маршрутах на электричке.' },
@@ -45,7 +47,7 @@ export const people: Person[] = [
   { key: 'seva', name: 'Сева Громов', email: 'seva@example.com', roles: [ 'author' ], since: '2025-01-27',
     bio: 'Учусь играть на гитаре в тридцать пять и собираю винил. Пишу о музыке как любитель, без теории.' },
 
-  { key: 'katya', name: 'Катя Лис', email: 'katya@example.com', roles: [], since: '2024-03-18',
+  { key: 'katya', name: 'Катя Лис', email: 'katya@example.com', roles: [], since: '2024-03-18', favoritesPublic: true,
     bio: 'Читаю Vibe по утрам вместо новостей. Люблю длинные тексты про дороги.' },
   { key: 'pavel', name: 'Павел Орлов', email: 'pavel@example.com', roles: [], since: '2024-07-04',
     bio: 'Фотолюбитель, снимаю на старый Зенит. Задаю много вопросов в комментариях.' },
