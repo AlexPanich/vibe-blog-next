@@ -28,6 +28,9 @@ services:
       # Генерируется при применении blueprint; сессии и так живут до перезапуска базы
       - key: BETTER_AUTH_SECRET
         generateValue: true
+      # Соль хеша гостя для счётчика просмотров (спека 43)
+      - key: VIEW_HASH_SALT
+        generateValue: true
       # Прокси Render дописывает IP клиента в X-Forwarded-For
       - key: TRUSTED_PROXY_HOPS
         value: "1"

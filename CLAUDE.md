@@ -298,6 +298,8 @@ production-сервер не отдаёт файлы, появившиеся т�
   (`src/config/proxy.ts`). Без прокси перед приложением все попадают в один bucket
   rate limiter.
 - Переменные окружения — см. `.env.example`. Читаются только в `src/config/`.
+- `VIEW_HASH_SALT` (необязательная) — соль хеша гостя в счётчике просмотров (спека 43,
+  `config/views.ts`); не задана — берётся `BETTER_AUTH_SECRET`.
 - `CONTACT_EMAIL` / `CONTACT_USER_ID` (необязательные) — карточки на `/contacts`
   (`config/contacts.ts`); не задан ключ — нет карточки.
 

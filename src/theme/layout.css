@@ -2491,6 +2491,17 @@ a.ui-tag:hover {
   color: var(--ink-faint);
 }
 
+/* «N новых» комментариев — ссылка во вкладку «К моим постам» (спека 43) */
+.ui-stats__sub a {
+  font-weight: 700;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+
+.ui-stats__sub a:hover {
+  text-decoration: underline;
+}
+
 /* «С чего начать»: рамка, внутри — карточки шагов в ряд */
 .ui-start-steps {
   padding: 1.5rem;
@@ -8873,6 +8884,22 @@ span.ui-photo__arrow {
   color: var(--ink);
 }
 
+/* «Новый» (спека 43): комментарий к моему посту позже прежнего открытия вкладки */
+.ui-office-comment[data-new='true'] {
+  border-color: var(--accent);
+}
+
+.ui-office-comment__new {
+  align-self: center;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .ui-office-comment__to {
   flex: 1;
   min-width: 0;
@@ -11417,7 +11444,7 @@ span.ui-photo__arrow {
 /* ---- Все посты в админке (спека 42, шаг 17) ------------------------------ */
 
 .ui-admin-posts {
-  --admin-posts-cols: minmax(0, 1fr) 11.25rem 8.125rem 5.5rem 2rem;
+  --admin-posts-cols: minmax(0, 1fr) 11.25rem 8.125rem 5.5rem 5.5rem 2rem;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
@@ -11505,6 +11532,16 @@ span.ui-photo__arrow {
   white-space: nowrap;
 }
 
+/* Просмотры (спека 43): у published и hidden — число, у остальных — «—» */
+.ui-admin-posts__views {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ui-admin-posts__acts {
   display: flex;
   justify-content: flex-end;
@@ -11556,6 +11593,7 @@ span.ui-photo__arrow {
   .ui-admin-posts__slug,
   .ui-admin-posts__author,
   .ui-admin-posts__status,
+  .ui-admin-posts__views,
   .ui-admin-posts__date {
     display: none;
   }

@@ -13,11 +13,16 @@ import { useState } from "react";
 type OfficeCommentListProps<T extends OfficeCommentListResource> = {
   tab: OfficeCommentTab,
   initial: StrictResource<T, OfficeCommentListResource>,
-  hasMore: boolean
+  hasMore: boolean,
+  // Прежняя отметка «К моим постам», мс (спека 43): позже — «Новый», null — новые все; у «Моих» не передаётся
+  newSince?: number | null
 }
 
-// Первая порция — с сервера, следующие — по курсору id последней строки
-export default function OfficeCommentList<T extends OfficeCommentListResource>({ tab, initial, hasMore: initialHasMore }: OfficeCommentListProps<T>) {
+/*
+  Первая порция — с сервера, следующие — по курсору id последней строки. «Новый» считается здесь
+  по прежней отметке: в БД она уже обновлена, а «Показать ещё» размечает порции так же
+*/
+export default function OfficeCommentList<T extends OfficeCommentListResource>({ tab, initial, hasMore: initialHasMore, newSince }: OfficeCommentListProps<T>) {
   const [ items, setItems ] = useState<OfficeCommentListResource>(initial);
   const [ hasMore, setHasMore ] = useState(initialHasMore);
   const load = useAction(loadOfficeCommentsAction, {
@@ -34,7 +39,11 @@ export default function OfficeCommentList<T extends OfficeCommentListResource>({
 
   return <>
     <div className="ui-office-comments">
-      { items.map(comment => <OfficeCommentCard key={comment.id} comment={comment} />) }
+      { items.map(comment => <OfficeCommentCard
+        key={comment.id}
+        comment={comment}
+        isNew={newSince !== undefined && (newSince === null || comment.createdAt.getTime() > newSince)}
+      />) }
     </div>
     { hasMore && <div className="ui-feed-more">
       { failed && !load.isPending && <Text size="sm" c="dimmed">Не удалось загрузить комментарии.</Text> }

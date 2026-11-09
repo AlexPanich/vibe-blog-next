@@ -24,7 +24,9 @@ type PostRowProps<T extends string> = {
   // Метка в конце меты — «На главной» в модерации (спека 39)
   badge?: ReactNode,
   // Кнопка справа поверх растянутой ссылки, как «Править» — выбор для главной (спека 39)
-  side?: ReactNode
+  side?: ReactNode,
+  // Просмотры — только своим постам и admin (спека 43)
+  views?: number
 }
 
 // Без обложки — иконка статуса на подложке цвета рубрики
@@ -42,7 +44,7 @@ const STATUS_ICONS: Record<PostStatus, Icon> = {
   дата), справа цифры опубликованного или «Править» у черновика; у отклонённого — замечание
   модератора. Ссылка — на заголовке и растянута на строку, «Править» и side лежат поверх неё
 */
-export default function PostRow<T extends string>({ post, href, tags = [], author, reviewer, editable = false, badge, side }: PostRowProps<T>) {
+export default function PostRow<T extends string>({ post, href, tags = [], author, reviewer, editable = false, badge, side, views }: PostRowProps<T>) {
   const rubric = tags[0];
   const StatusIcon = STATUS_ICONS[post.status];
   const showStats = post.status === 'published' || post.status === 'hidden';
@@ -74,6 +76,7 @@ export default function PostRow<T extends string>({ post, href, tags = [], autho
 
       <div className="ui-post-row__side">
         { showStats && <>
+          { views !== undefined && <span title="Просмотры"><IconEye size={14} stroke={1.8} />{ views }</span> }
           { post.rating.count > 0 && post.rating.average !== null && <span title={`Средняя оценка, оценок: ${post.rating.count}`}>
             <IconStar size={14} stroke={1.8} />{ formatRating(post.rating.average) }
           </span> }

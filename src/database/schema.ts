@@ -93,6 +93,8 @@ export const users = sqliteTable('users', {
   nameGenitive: text('name_genitive'),
   // Последняя смена имени (спека 45): не чаще раза в сутки; null — не меняли. Пишет updateNameAction
   nameChangedAt: integer('name_changed_at', { mode: 'timestamp' }),
+  // Когда последний раз открывал «К моим постам» (спека 43): позже — «Новый». null — всё новое
+  commentsSeenAt: integer('comments_seen_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
@@ -263,6 +265,31 @@ export const postRatings = sqliteTable('post_ratings', {
 }, t => [
   primaryKey({ columns: [ t.postId, t.userId ] }),
   check('post_ratings_value', sql`${t.value} BETWEEN 1 AND 5`),
+]);
+
+/*
+  Просмотры публичной страницы поста по дням (спека 43): агрегат, а не события. Не чистится —
+  из него же «всего просмотров». День — 'YYYY-MM-DD' по часам сервера (postViewDay.ts)
+*/
+export const postViewsDaily = sqliteTable('post_views_daily', {
+  postId: integer('post_id').notNull().references(() => posts.id),
+  day: text('day').notNull(),
+  views: integer('views').notNull().default(0),
+}, t => [
+  primaryKey({ columns: [ t.postId, t.day ] }),
+]);
+
+/*
+  Дневная уникальность просмотра (спека 43): зритель — `u:<id>` или `g:<sha256>` гостя (соль,
+  IP, UA, день). Хранится сегодня и вчера, старое удаляет запись просмотра (postViews.ts)
+*/
+export const postViewSeen = sqliteTable('post_view_seen', {
+  postId: integer('post_id').notNull().references(() => posts.id),
+  day: text('day').notNull(),
+  viewerHash: text('viewer_hash').notNull(),
+}, t => [
+  primaryKey({ columns: [ t.postId, t.day, t.viewerHash ] }),
+  index('post_view_seen_day_idx').on(t.day),
 ]);
 
 /*

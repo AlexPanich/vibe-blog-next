@@ -4,6 +4,7 @@ import PostActions from "@/domains/posts/components/PostActions";
 import { getPostTags } from "@/domains/posts/shared/getPostTags";
 import TagChips from "@/domains/tags/exports/TagChips";
 import PostRatingBlock from "@/domains/posts/components/PostRatingBlock";
+import PostViewBeacon from "@/domains/posts/components/PostViewBeacon";
 import PostGallery from "@/domains/posts/components/PostGallery";
 import PostCardBridge from "@/domains/posts/components/PostCardBridge";
 import { coverOf, getPostImages } from "@/domains/posts/shared/postImages";
@@ -77,6 +78,8 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
 
         <CommentsBlock postId={post.id} postAuthorId={post.userId} comments={resource(commentListResource, comments)} />
       </div>
+
+      <PostViewBeacon key={post.id} postId={post.id} />
     </article>
 
     { more.length > 0 && <section className="ui-post-more">

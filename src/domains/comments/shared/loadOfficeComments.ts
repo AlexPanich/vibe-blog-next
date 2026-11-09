@@ -3,7 +3,7 @@ import { db } from "@/globals/db";
 import { comments, posts, users, type PostStatus } from "@/database/schema";
 import type { OfficeCommentResource } from "@/domains/comments/dto/commentResources";
 import type { OfficeCommentTab } from "@/domains/comments/dto/commentRequests";
-import { and, count, desc, eq, isNull, lt, ne, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNull, lt, ne, type SQL } from "drizzle-orm";
 
 export const OFFICE_COMMENTS_PAGE = 20;
 
@@ -57,7 +57,19 @@ export async function countOfficeComments(userId: number): Promise<Record<Office
   return { received, mine };
 }
 
-function tabWhere(userId: number, tab: OfficeCommentTab): SQL | undefined {
+/*
+  «N новых» в плитке «Комментарии» на «Начале» (спека 43): то же условие, что у вкладки
+  «К моим постам», и позже последнего открытия вкладки. since null — новые все
+*/
+export function countNewComments(userId: number, since: Date | null){
+  return db.select({ total: count() })
+    .from(comments)
+    .innerJoin(posts, eq(posts.id, comments.postId))
+    .where(and(tabWhere(userId, 'received'), since === null ? undefined : gt(comments.createdAt, since)))
+    .get()?.total ?? 0;
+}
+
+export function tabWhere(userId: number, tab: OfficeCommentTab): SQL | undefined {
   return tab === 'mine'
     ? and(eq(comments.userId, userId), eq(posts.status, 'published'), isNull(comments.deletedAt))
     : and(eq(posts.userId, userId), ne(comments.userId, userId), isNull(comments.deletedAt));
