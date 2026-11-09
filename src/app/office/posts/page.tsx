@@ -43,7 +43,7 @@ export default async function OfficePosts({ searchParams }: PageProps<'/office/p
       <OfficeHead
         title="Мои посты"
         sub={hasPosts ? summary(all) : undefined}
-        action={canCreate && <ButtonLink href="/office/posts/create" leftSection={<IconPencilPlus size={16} />}>
+        action={canCreate && <ButtonLink href="/office/posts/create" size="md" leftSection={<IconPencilPlus size={16} />}>
           Новый пост
         </ButtonLink>}
       />

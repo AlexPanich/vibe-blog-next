@@ -47,6 +47,7 @@ export default function PostPublishCard({ pending, error, onSubmit }: PostPublis
         <Button
           type="button"
           fullWidth
+          size="md"
           leftSection={<IconSend size={16} />}
           loading={pending === 'submit'}
           disabled={pending === 'save'}
@@ -54,7 +55,7 @@ export default function PostPublishCard({ pending, error, onSubmit }: PostPublis
         >
           Отправить на проверку
         </Button>
-        <Button type="submit" fullWidth variant="default" loading={pending === 'save'} disabled={pending === 'submit'}>
+        <Button type="submit" fullWidth size="md" variant="default" loading={pending === 'save'} disabled={pending === 'submit'}>
           Сохранить черновик
         </Button>
       </div>

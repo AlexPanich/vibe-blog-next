@@ -73,7 +73,7 @@ export default function NotificationList<T extends NotificationPageResource>({ p
       <OfficeHead
         title="Уведомления"
         sub={items.length > 0 && (unread > 0 ? `${unread} ${newWord(unread)}` : 'Всё прочитано')}
-        action={unread > 0 && <Button variant="default" leftSection={<IconChecks size={16} />} loading={readAll.isPending} onClick={readEverything}>
+        action={unread > 0 && <Button variant="default" size="md" leftSection={<IconChecks size={16} />} loading={readAll.isPending} onClick={readEverything}>
           Прочитать все
         </Button>}
       />

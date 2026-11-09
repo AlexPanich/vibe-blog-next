@@ -34,7 +34,7 @@ export default async function OfficeFeed({ searchParams }: PageProps<'/office/fe
   };
   const noFollows = follows.authors.length === 0 && follows.tags.length === 0;
   const { posts, total } = noFollows ? { posts: [], total: 0 } : await loadFeed(filter, 0, filter.limit, user.id);
-  const manage = <ButtonLink href="/office/follows" variant="default" leftSection={<IconUsers size={16} />}>Подписки</ButtonLink>;
+  const manage = <ButtonLink href="/office/follows" variant="default" size="md" leftSection={<IconUsers size={16} />}>Подписки</ButtonLink>;
 
   if(noFollows){
     return (

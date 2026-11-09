@@ -169,8 +169,10 @@ export const theme = createTheme({
     },
   },
   components: {
+    // md — главное действие страницы кабинета (макет: 42px, текст 15px; у Mantine md — 16px)
     Button: Button.extend({
       defaultProps: { radius: 'xl' },
+      vars: (_theme, props) => props.size === 'md' ? { root: { '--button-fz': '0.9375rem' } } : { root: {} },
       styles: {
         root: {
           fontWeight: 600,
