@@ -177,6 +177,12 @@ Mantine в серверных компонентах: `component={Link}` пер�
 есть `ButtonLink` (`src/components/general/`), compound-компоненты (`Table.Tr`) — только
 плоскими импортами (`TableTr`).
 
+Страницы о блоге (`/about`, `/rules`, `/moderation`, `/contacts`, спека 31) — папки в группе
+`app/(public)/(about)/` с общим layout (меню раздела). Заголовок, kicker и description — в
+реестре `domains/site-pages/shared/sitePages.ts`, текст — `src/content/<slug>.md` (первый абзац —
+lead), правка — коммитом. Файлы читаются `fs` в рантайме: standalone их не трассирует, `src/content`
+скопирован в рантайм `Dockerfile`.
+
 Карта — Leaflet + `react-leaflet` (`domains/posts/components/map/`). Leaflet трогает
 `window` при импорте: сам компонент карты подключается только через
 `dynamic(..., { ssr: false })` с заглушкой той же высоты. Тайлы — OpenStreetMap без ключа,
@@ -281,6 +287,8 @@ production-сервер не отдаёт файлы, появившиеся т�
   (`src/config/proxy.ts`). Без прокси перед приложением все попадают в один bucket
   rate limiter.
 - Переменные окружения — см. `.env.example`. Читаются только в `src/config/`.
+- `CONTACT_EMAIL` / `CONTACT_USER_ID` (необязательные) — карточки на `/contacts`
+  (`config/contacts.ts`); не задан ключ — нет карточки.
 
 ## Где лежат общие helpers
 

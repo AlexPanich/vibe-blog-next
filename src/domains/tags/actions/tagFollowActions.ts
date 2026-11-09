@@ -53,3 +53,11 @@ export const myTagFollowAction = actionAuthClient
 
     return { following: !!row };
   });
+
+// Все мои подписки на рубрики — одним запросом для страницы /tags
+export const myTagFollowIdsAction = actionAuthClient
+  .action(async ({ ctx: { auth } }) => {
+    const rows = await db.select({ tagId: tagFollows.tagId }).from(tagFollows).where(eq(tagFollows.userId, auth.id));
+
+    return { ids: rows.map(row => row.tagId) };
+  });

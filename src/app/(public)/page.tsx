@@ -68,6 +68,7 @@ export default async function Home() {
                 { tag.name }
               </Link>
             )) }
+            <Link href="/tags" className="ui-home-section__more ui-home-chips__all">Все рубрики<IconArrowRight size={18} /></Link>
           </nav> }
           <Link href="/posts" className="ui-home-section__more">Вся лента<IconArrowRight size={18} /></Link>
         </div>

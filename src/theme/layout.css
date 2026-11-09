@@ -30,7 +30,9 @@
    - все посты в админке: .ui-admin-posts;
    - пользователи в админке: .ui-admin-users, роли пилюлями .ui-role-pills / .ui-role-pill;
    - пользователь в админке: .ui-user-page, .ui-user-hero, .ui-user-card, .ui-user-roles,
-     .ui-user-ban, .ui-user-avatar, .ui-user-log.
+     .ui-user-ban, .ui-user-avatar, .ui-user-log;
+   - рубрики: .ui-tags-head, .ui-tags-section, .ui-tag-tile, .ui-tag-rest, .ui-tag-follow-toggle;
+   - страницы о блоге: .ui-site-pages, .ui-site-nav, .ui-site-page, .ui-site-contacts, .ui-site-cta.
    ========================================================================== */
 
 /* ---- Каркас -------------------------------------------------------------- */
@@ -355,6 +357,29 @@
 
 .ui-footer__links a:hover {
   color: var(--ink);
+}
+
+/* «О блоге» в подвале — только на телефоне: на широком экране он в шапке */
+.ui-footer__links .ui-footer__mobile-only {
+  display: none;
+}
+
+/* На телефоне ссылки строкой сверху, знак с подписью — под ними (спека 31) */
+@media (max-width: 720px) {
+  .ui-footer__row {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-block: 1.75rem;
+  }
+
+  .ui-footer__links {
+    gap: 0.5rem 1.25rem;
+  }
+
+  .ui-footer__links .ui-footer__mobile-only {
+    display: inline;
+  }
 }
 
 /* ---- Кабинет: левое меню и рабочая колонка (спека 42) -------------------- */
@@ -5524,7 +5549,9 @@ a.ui-chat-row[data-active='true']:hover {
 .ui-post__body .ui-prose h2,
 .ui-post__body .ui-prose h3,
 .ui-post__body .ui-prose h4,
-.ui-post__body .ui-prose h5 {
+.ui-post__body .ui-prose h5,
+.ui-site-page__body .ui-prose h2,
+.ui-site-page__body .ui-prose h3 {
   font-family: var(--font-display);
   font-weight: 600;
   line-height: 1.25;
@@ -5540,12 +5567,17 @@ a.ui-chat-row[data-active='true']:hover {
 .ui-post__body .ui-prose p,
 .ui-post__body .ui-prose ul,
 .ui-post__body .ui-prose ol,
-.ui-post__body .ui-prose blockquote {
+.ui-post__body .ui-prose blockquote,
+.ui-site-page__body .ui-prose p,
+.ui-site-page__body .ui-prose ul,
+.ui-site-page__body .ui-prose ol,
+.ui-site-page__body .ui-prose blockquote {
   margin-bottom: 1.5em;
 }
 
 /* Цитата — крупным заголовочным шрифтом за коралловой чертой */
-.ui-post__body .ui-prose blockquote {
+.ui-post__body .ui-prose blockquote,
+.ui-site-page__body .ui-prose blockquote {
   padding: 0.3rem 0 0.3rem 1.75rem;
   border-left: 3px solid var(--accent);
   font-family: var(--font-display);
@@ -5556,11 +5588,13 @@ a.ui-chat-row[data-active='true']:hover {
   color: var(--ink);
 }
 
-.ui-post__body .ui-prose blockquote p {
+.ui-post__body .ui-prose blockquote p,
+.ui-site-page__body .ui-prose blockquote p {
   margin-bottom: 0.5em;
 }
 
-.ui-post__body .ui-prose blockquote > :last-child {
+.ui-post__body .ui-prose blockquote > :last-child,
+.ui-site-page__body .ui-prose blockquote > :last-child {
   margin-bottom: 0;
 }
 
@@ -11648,5 +11682,735 @@ span.ui-photo__arrow {
   .ui-user-card {
     padding: 1.125rem;
     border-radius: 18px;
+  }
+}
+
+/* ---- Рубрики (спека 31) --------------------------------------------------- */
+
+.ui-tags-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.ui-tags-head__sub {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.ui-tags-head + .ui-empty {
+  margin-top: 2rem;
+}
+
+.ui-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.ui-tags-section--rest {
+  gap: 1.25rem;
+  margin-top: 4.5rem;
+}
+
+.ui-tags-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.ui-tags-section__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.ui-tags-section__note {
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+.ui-tags-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+/* Плитка: ссылка-название растянута на всю плитку (::after), кнопка подписки — поверх */
+.ui-tag-tile {
+  --tile-bg: var(--paper-tint);
+  --tile-go: var(--btn);
+  --tile-go-ink: var(--btn-ink);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name follow'
+    'count go';
+  align-content: space-between;
+  gap: 1rem 0.75rem;
+  min-height: 13.75rem;
+  padding: 1.75rem;
+  border-radius: 28px;
+  background: var(--tile-bg);
+}
+
+.ui-tag-tile[data-tone='coral'] { --tile-bg: var(--accent-soft); --tile-go: var(--accent); --tile-go-ink: #ffffff; }
+.ui-tag-tile[data-tone='sun'] { --tile-bg: var(--sun-soft); --tile-go: var(--sun); --tile-go-ink: var(--on-sun); }
+.ui-tag-tile[data-tone='mint'] { --tile-bg: var(--mint-soft); --tile-go: var(--mint); --tile-go-ink: #ffffff; }
+.ui-tag-tile[data-tone='plum'] { --tile-bg: var(--plum-soft); --tile-go: var(--plum); --tile-go-ink: #ffffff; }
+
+.ui-tag-tile__name {
+  grid-area: name;
+  align-self: center;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+  /* Длинное название рядом с пилюлей подписки переносится по слогам, а не посреди буквы */
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+.ui-tag-tile__name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.ui-tag-tile__name:focus-visible {
+  outline: none;
+}
+
+.ui-tag-tile__name:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Колонку справа задаёт пилюля, стрелка под ней прижата к правому краю */
+.ui-tag-tile > .ui-tag-follow-toggle {
+  grid-area: follow;
+  align-self: center;
+  justify-self: end;
+}
+
+.ui-tag-tile__count {
+  grid-area: count;
+  align-self: end;
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.ui-tag-tile__num {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.ui-tag-tile__go {
+  grid-area: go;
+  align-self: end;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--tile-go);
+  color: var(--tile-go-ink);
+  transition: transform 0.15s ease;
+}
+
+.ui-tag-tile:hover .ui-tag-tile__go {
+  transform: translate(2px, -2px);
+}
+
+/* Остальные рубрики: строки в рамке, три колонки */
+.ui-tags-rest {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-tag-rest {
+  --tone-dot: var(--ink-faint);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 4.5rem;
+  padding: 1rem 1rem 1rem 1.25rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+}
+
+.ui-tag-rest[data-tone='coral'] { --tone-dot: var(--accent); }
+.ui-tag-rest[data-tone='sun'] { --tone-dot: var(--sun); }
+.ui-tag-rest[data-tone='mint'] { --tone-dot: var(--mint); }
+.ui-tag-rest[data-tone='plum'] { --tone-dot: var(--plum); }
+
+.ui-tag-rest:hover {
+  border-color: var(--input-line);
+}
+
+.ui-tag-rest__dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--tone-dot);
+}
+
+.ui-tag-rest__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.ui-tag-rest__name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.ui-tag-rest__name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.ui-tag-rest__count {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
+/* Кнопка подписки: пилюля с подписью в плитке, круглая в строке. Подписан — только обводка */
+.ui-tag-follow-toggle {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ui-tag-follow-toggle[data-variant='pill'] {
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ui-tag-follow-toggle[data-variant='round'] {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--paper-tint);
+}
+
+.ui-tag-follow-toggle[data-following] {
+  border-color: var(--ink-faint);
+  background: transparent;
+}
+
+.ui-tag-follow-toggle:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 1000px) {
+  .ui-tags-tiles,
+  .ui-tags-rest {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Телефон: плитки в две колонки, без стрелки — ссылка вся плитка; кнопка подписки круглая внизу */
+@media (max-width: 720px) {
+  .ui-tags-head__more,
+  .ui-tags-section__note {
+    display: none;
+  }
+
+  .ui-tags-section {
+    gap: 1rem;
+    margin-top: 1.75rem;
+  }
+
+  .ui-tags-section--rest {
+    gap: 0.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .ui-tags-section__title {
+    font-size: 1.375rem;
+  }
+
+  .ui-tags-tiles {
+    gap: 0.75rem;
+  }
+
+  .ui-tag-tile {
+    grid-template-areas:
+      'name name'
+      'count follow';
+    gap: 0.5rem;
+    min-height: 9.375rem;
+    padding: 1rem;
+    border-radius: 22px;
+  }
+
+  .ui-tag-tile__name {
+    align-self: start;
+    font-size: 0.9375rem;
+    letter-spacing: -0.015em;
+  }
+
+  .ui-tag-tile > .ui-tag-follow-toggle {
+    align-self: end;
+  }
+
+  .ui-tag-tile__count {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.125rem;
+    font-size: 0.75rem;
+  }
+
+  .ui-tag-tile__num {
+    font-size: 2.75rem;
+  }
+
+  .ui-tag-tile__go,
+  .ui-tag-follow-toggle__label {
+    display: none;
+  }
+
+  .ui-tag-follow-toggle[data-variant='pill'] {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .ui-tags-rest {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .ui-tag-rest {
+    padding: 0.875rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    border-radius: 0;
+  }
+
+  .ui-tag-rest .ui-tag-follow-toggle:not([data-following]) {
+    background: var(--btn);
+    color: var(--btn-ink);
+  }
+}
+
+/* «Все рубрики» последней ссылкой у чипов главной */
+.ui-home-chips .ui-home-chips__all {
+  align-self: center;
+  padding: 0 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .ui-home-chips .ui-home-chips__all {
+    flex-shrink: 0;
+  }
+}
+
+/* ---- Страницы о блоге (спека 31) ------------------------------------------ */
+
+/* Меню раздела слева и колонка текста; на телефоне меню — чипы над текстом */
+.ui-site-pages {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: start;
+  padding-top: 1rem;
+}
+
+.ui-site-nav {
+  position: sticky;
+  top: 6.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ui-site-nav__kicker {
+  margin: 0 0 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+.ui-site-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 14px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.ui-site-nav__icon {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
+
+.ui-site-nav__item:hover,
+.ui-site-nav__item[data-active] {
+  background: var(--paper-tint);
+}
+
+.ui-site-nav__item[data-active] {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-site-nav__item[data-active] .ui-site-nav__icon {
+  color: var(--accent);
+}
+
+.ui-site-page {
+  min-width: 0;
+  max-width: 45rem;
+}
+
+.ui-site-page__kicker {
+  margin: 0 0 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.ui-site-page__title {
+  margin: 0 0 1.125rem;
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.ui-site-page__body {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+/* Lead — первый абзац файла */
+.ui-site-page__body .ui-prose > p:first-child {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.ui-site-page__body .ui-prose h2 {
+  margin-top: 1.75em;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.ui-site-page__body .ui-prose h3 {
+  font-size: 1.2rem;
+}
+
+/* Списки — коралловыми точками, как в макете */
+.ui-site-page__body .ui-prose ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.ui-site-page__body .ui-prose ul > li {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.ui-site-page__body .ui-prose ul > li::before {
+  content: '';
+  position: absolute;
+  top: 0.65em;
+  left: 0.25rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Цитата — текстовым шрифтом, не заголовочным, как в посте */
+.ui-site-page__body .ui-prose blockquote {
+  padding-left: 1.375rem;
+  font-family: var(--font-body);
+  font-size: 1.1875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* Контакты: две карточки в ряд */
+.ui-site-contacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 2.25rem;
+}
+
+.ui-site-contact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.75rem;
+  border-radius: 24px;
+  background: var(--paper-tint);
+}
+
+.ui-site-contact__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.ui-site-contact__icon[data-tone='coral'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.ui-site-contact__icon[data-tone='plum'] {
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+
+.ui-site-contact__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ui-site-contact__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.ui-site-contact__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.ui-site-contact__mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.ui-site-contact__mail:hover {
+  text-decoration: underline;
+}
+
+/* Тёмная кнопка-пилюля: «Написать», призыв «Стать автором» */
+.ui-site-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6875rem 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--btn);
+  color: var(--btn-ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.ui-site-btn:hover {
+  opacity: 0.88;
+}
+
+.ui-site-btn[data-pending] {
+  visibility: hidden;
+}
+
+/* Призыв внизу «О блоге» */
+.ui-site-cta {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: 24px;
+  background: var(--sun-soft);
+}
+
+.ui-site-cta__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ui-site-cta__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.ui-site-cta__sub {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .ui-site-pages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding-top: 0;
+  }
+
+  .ui-site-nav {
+    position: static;
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * clamp(1.25rem, 4vw, 3rem));
+    padding-inline: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  .ui-site-nav__kicker,
+  .ui-site-nav__icon {
+    display: none;
+  }
+
+  .ui-site-nav__item {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-pill);
+    background: var(--paper-tint);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .ui-site-nav__item[data-active] {
+    background: var(--btn);
+    color: var(--btn-ink);
+  }
+
+  .ui-site-page__kicker {
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .ui-site-page__title {
+    margin-bottom: 0.875rem;
+    font-size: 2rem;
+  }
+
+  .ui-site-page__body {
+    font-size: 1rem;
+  }
+
+  .ui-site-page__body .ui-prose > p:first-child {
+    font-size: 1.125rem;
+  }
+
+  .ui-site-page__body .ui-prose h2 {
+    font-size: 1.25rem;
+  }
+
+  .ui-site-page__body .ui-prose blockquote {
+    font-size: 1.0625rem;
+  }
+
+  .ui-site-contacts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.875rem;
+    margin-top: 1.5rem;
+  }
+
+  .ui-site-contact {
+    padding: 1.375rem;
+  }
+
+  .ui-site-cta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.375rem;
   }
 }

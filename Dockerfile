@@ -57,6 +57,8 @@ COPY --chown=node:node queue-runner.ts ./
 COPY --chown=node:node src/config ./src/config
 COPY --chown=node:node src/database ./src/database
 COPY --chown=node:node src/globals/queue.ts ./src/globals/queue.ts
+# Тексты страниц о блоге читаются fs в рантайме, standalone-сборка их не трассирует
+COPY --chown=node:node src/content ./src/content
 COPY --chown=node:node docker/entrypoint.sh ./entrypoint.sh
 COPY --from=seed-images --chown=node:node /app/seed-images ./seed-images
 

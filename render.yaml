@@ -33,3 +33,7 @@ services:
         value: "1"
       - key: SEED_ON_BOOT
         value: "true"
+      # «Написать администрации» на /contacts: Алиса (admin) — первая в seed-demo/people.ts,
+      # а база на стенде всегда свежая, поэтому её id = 1
+      - key: CONTACT_USER_ID
+        value: "1"
