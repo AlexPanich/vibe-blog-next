@@ -5,10 +5,11 @@ import type { AdminUserStats } from "@/domains/users/shared/loadAdminUser";
 import type { User } from "@/database/types";
 import { plural } from "@/core/plural";
 import { formatMonthSince } from "@/domains/users/shared/formatMonthSince";
+import { isBanActive } from "@/shared/userBan";
 import { IconArrowUpRight } from "@tabler/icons-react";
 
 type UserAdminHeroProps = {
-  user: Pick<User, 'id' | 'name' | 'email' | 'emailVerified' | 'avatarKey' | 'bannedAt' | 'createdAt'>,
+  user: Pick<User, 'id' | 'name' | 'email' | 'emailVerified' | 'avatarKey' | 'bannedAt' | 'bannedUntil' | 'createdAt'>,
   stats: AdminUserStats
 }
 
@@ -39,7 +40,7 @@ export default function UserAdminHero({ user, stats }: UserAdminHeroProps) {
           <Link href={`/authors/${user.id}`} className="ui-user-hero__link">
             Страница автора<IconArrowUpRight size={14} stroke={2} />
           </Link>
-          { user.bannedAt && <UserRolePills roles={[]} banned /> }
+          { isBanActive(user) && <UserRolePills roles={[]} banned /> }
         </div>
       </div>
       <dl className="ui-user-hero__stats">

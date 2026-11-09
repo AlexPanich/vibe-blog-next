@@ -9,6 +9,7 @@ import { fieldError } from "@/components/general/FieldError";
 import { signIn } from "@/globals/authClient";
 import { Alert, Button, Divider, PasswordInput, Stack, TextInput } from "@mantine/core";
 import Link from "@/components/general/Link";
+import LocalDate from "@/components/general/LocalDate";
 import { IconBrandGithub, IconLock, IconLogin, IconMail, IconMailForward } from "@tabler/icons-react";
 
 export default function LoginForm() {
@@ -16,6 +17,8 @@ export default function LoginForm() {
   const resend = useAction(resendVerificationAction);
   const errors = action.result.validationErrors ?? resend.result.validationErrors;
   const notVerified = action.result.serverError?.code === 403;
+  // Бан (423): срок форматируется здесь, в часовом поясе браузера (спека 46)
+  const ban = action.result.serverError?.code === 423 ? action.result.serverError.ban : undefined;
   const { nv, update, data } = useForm<UserSigninDto>({
     email: '',
     password: ''
@@ -24,7 +27,9 @@ export default function LoginForm() {
   return (
     <Stack>
       { action.result.serverError && <Alert color="red">
-        { action.result.serverError.message }
+        { ban?.until
+          ? <>Аккаунт заблокирован до <LocalDate value={new Date(ban.until)} options={{ day: 'numeric', month: 'long' }} />: { ban.reason }</>
+          : action.result.serverError.message }
       </Alert> }
       { notVerified && !resend.result.data?.sent && <Button
         type="button"

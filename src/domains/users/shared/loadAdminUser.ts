@@ -29,7 +29,11 @@ export async function loadAdminUser(id: number){
 export type AdminUserEvent = {
   key: string,
   tone: EventTone,
+  // Без исполнителя: срок бана вставляет компонент между текстом и actor (спека 46)
   text: string,
+  actor: string | null,
+  // Только у banned: срок, null — навсегда (и у записей до спеки 46)
+  banUntil?: Date | null,
   comment: string | null,
   at: Date
 }
@@ -65,7 +69,7 @@ function loadStats(id: number){
 /*
   Лента из трёх журналов, свежие сверху: действия admin (user_admin_actions), решения
   модераторов по его постам (post_moderations) и решения по заявкам в авторы. Подписи без
-  рода, как в журнале: «Заблокирован · Alice»
+  рода, как в журнале: «Заблокирован до 16 ноября · Alice»
 */
 function loadEvents(id: number): AdminUserEvent[] {
   const actor = alias(users, 'actor');
@@ -74,6 +78,7 @@ function loadEvents(id: number): AdminUserEvent[] {
     action: userAdminActions.action,
     role: userAdminActions.role,
     comment: userAdminActions.comment,
+    until: userAdminActions.until,
     at: userAdminActions.createdAt,
     actor: actor.name,
   })
@@ -110,21 +115,25 @@ function loadEvents(id: number): AdminUserEvent[] {
     ...admin.map(a => ({
       key: `a${a.id}`,
       tone: ADMIN_TONES[a.action],
-      text: `${USER_ADMIN_ACTION_LABELS[a.action]}${a.role ? ` «${ROLE_LABELS[a.role]}»` : ''} · ${a.actor}`,
+      text: `${USER_ADMIN_ACTION_LABELS[a.action]}${a.role ? ` «${ROLE_LABELS[a.role]}»` : ''}`,
+      actor: a.actor,
+      ...(a.action === 'banned' ? { banUntil: a.until } : {}),
       comment: a.comment,
       at: a.at,
     })),
     ...moderations.map(m => ({
       key: `m${m.id}`,
       tone: DECISIONS[m.decision].tone,
-      text: `${DECISIONS[m.decision].label} пост «${m.title}» · ${m.actor}`,
+      text: `${DECISIONS[m.decision].label} пост «${m.title}»`,
+      actor: m.actor,
       comment: m.comment,
       at: m.at,
     })),
     ...requests.flatMap(r => r.at ? [ {
       key: `r${r.id}`,
       tone: r.status === 'approved' ? 'mint' as const : 'faint' as const,
-      text: `${r.status === 'approved' ? 'Одобрена' : 'Отклонена'} заявка в авторы${r.actor ? ` · ${r.actor}` : ''}`,
+      text: `${r.status === 'approved' ? 'Одобрена' : 'Отклонена'} заявка в авторы`,
+      actor: r.actor,
       comment: r.status === 'rejected' ? r.reason : null,
       at: r.at,
     } ] : []),

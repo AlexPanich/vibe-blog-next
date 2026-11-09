@@ -5,7 +5,12 @@ import { unauthorized } from "next/navigation";
 
 export type ActionServerError = {
   code: number,
-  message: string
+  message: string,
+  /*
+    Бан при входе (код 423, спека 46): форма сама собирает текст со сроком в часовом поясе
+    браузера, message — запасной текст. until — ISO-строка (payload сериализуется), null — навсегда
+  */
+  ban?: { reason: string, until: string | null }
 }
 
 export const actionClient = createSafeActionClient({
@@ -26,6 +31,6 @@ export const actionAuthClient = actionClient.use(async ({ next }) => {
 })
 
 /* returnServerError не проверяет тип, эта обёртка держит его в рамках ActionServerError */
-export function actionError(code: number, message: string): never {
-  return returnServerError<ActionServerError>({ code, message });
+export function actionError(code: number, message: string, extra?: Omit<ActionServerError, 'code' | 'message'>): never {
+  return returnServerError<ActionServerError>({ code, message, ...extra });
 }

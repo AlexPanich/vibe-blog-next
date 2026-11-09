@@ -3,7 +3,8 @@ import { db } from "@/globals/db";
 import { notifications, users } from "@/database/schema";
 import type { NotificationType, Role } from "@/database/schema";
 import { blockedAmong } from "@/domains/users/exports/userBlocks";
-import { and, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
+import { banActiveSql } from "@/shared/userBan";
+import { and, eq, inArray, isNull, like, not, or, sql } from "drizzle-orm";
 
 export type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -67,7 +68,7 @@ export function notify(tx: DBTransaction, type: NotificationType, recipients: nu
 export function staffIds(tx: DBTransaction): number[] {
   return tx.select({ id: users.id })
     .from(users)
-    .where(and(isNull(users.bannedAt), or(like(users.roles, '%"moderator"%'), like(users.roles, '%"admin"%'))))
+    .where(and(not(banActiveSql()), or(like(users.roles, '%"moderator"%'), like(users.roles, '%"admin"%'))))
     .all()
     .map(u => u.id);
 }
@@ -76,7 +77,7 @@ export function staffIds(tx: DBTransaction): number[] {
 export function adminIds(tx: DBTransaction): number[] {
   return tx.select({ id: users.id })
     .from(users)
-    .where(and(isNull(users.bannedAt), like(users.roles, '%"admin"%')))
+    .where(and(not(banActiveSql()), like(users.roles, '%"admin"%')))
     .all()
     .map(u => u.id);
 }

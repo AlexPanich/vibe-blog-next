@@ -3,6 +3,7 @@ import { db } from "@/globals/db";
 import { authorRequests, comments, users } from "@/database/schema";
 import type { AuthorRequestAdminFilterDto } from "@/domains/users/dto/authorRequestRequests";
 import { parseRoles } from "@/domains/users/shared/userRoles";
+import { isBanActive } from "@/shared/userBan";
 import { asc, count, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
@@ -82,6 +83,7 @@ function selectRequests(){
     userRoles: users.roles,
     userCreatedAt: users.createdAt,
     userBannedAt: users.bannedAt,
+    userBannedUntil: users.bannedUntil,
     commentsCount: commentsCount.n,
   })
     .from(authorRequests)
@@ -106,7 +108,7 @@ function toRequest(row: ReturnType<ReturnType<typeof selectRequests>['all']>[num
       avatarKey: row.userAvatarKey,
       roles: parseRoles(row.userRoles),
       createdAt: row.userCreatedAt,
-      banned: row.userBannedAt !== null,
+      banned: isBanActive({ bannedAt: row.userBannedAt, bannedUntil: row.userBannedUntil }),
       commentsCount: row.commentsCount ?? 0,
     },
   };

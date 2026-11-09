@@ -78,6 +78,8 @@ export const users = sqliteTable('users', {
   */
   bannedAt: integer('banned_at', { mode: 'timestamp' }),
   banReason: text('ban_reason'),
+  // Срок бана (спека 46): null при bannedAt — навсегда. Бан истёк — поля чистит хук входа (globals/auth.ts)
+  bannedUntil: integer('banned_until', { mode: 'timestamp' }),
   // «О себе» на странице автора; better-auth колонку не знает, пишет updateBioAction
   bio: text('bio'),
   /*
@@ -217,11 +219,14 @@ export const userAdminActions = sqliteTable('user_admin_actions', {
   action: text('action', { enum: USER_ADMIN_ACTIONS }).notNull(),
   role: text('role', { enum: USER_ROLES }),
   comment: text('comment'),
+  // Срок из записи banned (спека 46): null — навсегда или не бан
+  until: integer('until', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('user_admin_actions_user_created_idx').on(t.userId, t.createdAt),
   check('user_admin_actions_role', sql`(${t.action} IN ('role_granted', 'role_revoked')) = (${t.role} IS NOT NULL)`),
   check('user_admin_actions_ban_comment', sql`${t.action} <> 'banned' OR length(trim(coalesce(${t.comment}, ''))) > 0`),
+  check('user_admin_actions_until', sql`${t.until} IS NULL OR ${t.action} = 'banned'`),
 ]);
 
 export const userAdminActionsRelations = relations(userAdminActions, ({ one }) => ({

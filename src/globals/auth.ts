@@ -4,7 +4,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "@/globals/db";
 import *  as schema from '@/database/schema'
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, isNotNull, like, lte } from "drizzle-orm";
+import { isBanActive } from "@/shared/userBan";
 import { sendToQueue } from "@/globals/queue";
 import { authConfig } from "@/config/auth";
 import { passwordChangedMail, resetPasswordMail } from "@/shared/mails";
@@ -92,16 +93,27 @@ export const auth = betterAuth({
         /*
           Сессия создаётся после проверки пароля и для любого способа входа, поэтому бан
           проверяется здесь: чужой бан по email не раскрыть. Приём — как в плагине better-auth
-          admin, но колонки бана свои, better-auth их не знает — читаем напрямую
+          admin, но колонки бана свои, better-auth их не знает — читаем напрямую.
+          Срок (спека 46): действующий бан уходит в ошибку вместе с until, истёкший здесь же
+          лениво чистится и вход идёт. Это уборка, а не событие — без журнала и уведомления.
+          UPDATE условный: если admin успел забанить заново, новый срок под него не попадёт
         */
         before: async session => {
+          const userId = Number(session.userId);
           const user = await db.query.users.findFirst({
-            where: eq(schema.users.id, Number(session.userId)),
-            columns: { bannedAt: true, banReason: true }
+            where: eq(schema.users.id, userId),
+            columns: { bannedAt: true, banReason: true, bannedUntil: true }
           });
+          const now = new Date();
 
-          if(user?.bannedAt){
-            throw new APIError('FORBIDDEN', { code: USER_BANNED_CODE, message: user.banReason ?? '' });
+          if(user && isBanActive(user, now)){
+            throw new APIError('FORBIDDEN', { code: USER_BANNED_CODE, message: user.banReason ?? '', until: user.bannedUntil?.toISOString() ?? null });
+          }
+          else if(user?.bannedAt){
+            db.update(schema.users)
+              .set({ bannedAt: null, banReason: null, bannedUntil: null })
+              .where(and(eq(schema.users.id, userId), isNotNull(schema.users.bannedUntil), lte(schema.users.bannedUntil, now)))
+              .run();
           }
         }
       }

@@ -136,7 +136,11 @@ function isEmailNotVerified(e: unknown): boolean {
 function throwSigninError(e: unknown, rateLimits: RateLimits): never {
   /* 423, а не 403: по 403 LoginForm предлагает повторное письмо верификации */
   if(isBanned(e)){
-    actionError(423, `Аккаунт заблокирован: ${e.body?.message}`);
+    const reason = e.body?.message ?? '';
+    // until кладёт хук входа в globals/auth.ts (спека 46)
+    const until = typeof e.body?.until === 'string' ? e.body.until : null;
+
+    actionError(423, `Аккаунт заблокирован: ${reason}`, { ban: { reason, until } });
   }
 
   if(e instanceof APIError){

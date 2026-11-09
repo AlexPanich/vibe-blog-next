@@ -13,6 +13,8 @@ import { adminTransaction, staleError } from "@/domains/users/shared/userAdminTr
 import { closePendingAuthorRequest } from "@/domains/users/shared/authorRequests";
 import { notify, publishNotifications } from "@/domains/notifications/exports/notify";
 import { liveBus } from "@/globals/liveBus";
+import { isBanActive } from "@/shared/userBan";
+import { banUntil } from "@/domains/users/shared/banTerms";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -67,14 +69,19 @@ export const banUserAction = actionAuthClient
     await CONTAINER.boucerService.breakIfCant(u => manageUser(u, { id }));
 
     adminTransaction(auth.id, id, (tx, target) => {
-      if(target.bannedAt){
+      const now = new Date();
+
+      // Истёкший бан — как его нет (спека 46): поля просто перезаписываются
+      if(isBanActive(target, now)){
         staleError();
       }
 
-      tx.update(users).set({ bannedAt: new Date(), banReason: parsedInput.comment }).where(eq(users.id, id)).run();
+      const until = banUntil(parsedInput.term, now);
+
+      tx.update(users).set({ bannedAt: now, banReason: parsedInput.comment, bannedUntil: until }).where(eq(users.id, id)).run();
       // Новую сессию не даст хук в globals/auth.ts, а действующие гасим здесь
       tx.delete(sessions).where(eq(sessions.userId, id)).run();
-      tx.insert(userAdminActions).values({ userId: id, actorId: auth.id, action: 'banned', comment: parsedInput.comment }).run();
+      tx.insert(userAdminActions).values({ userId: id, actorId: auth.id, action: 'banned', comment: parsedInput.comment, until }).run();
     });
 
     // Живые потоки уходят вместе с сессиями
@@ -90,11 +97,12 @@ export const unbanUserAction = actionAuthClient
     await CONTAINER.boucerService.breakIfCant(u => manageUser(u, { id }));
 
     const notificationIds = adminTransaction(auth.id, id, (tx, target) => {
-      if(!target.bannedAt){
+      // Истёкший бан снимать нечего: страница уже показывает форму бана
+      if(!isBanActive(target)){
         staleError();
       }
 
-      tx.update(users).set({ bannedAt: null, banReason: null }).where(eq(users.id, id)).run();
+      tx.update(users).set({ bannedAt: null, banReason: null, bannedUntil: null }).where(eq(users.id, id)).run();
       tx.insert(userAdminActions).values({ userId: id, actorId: auth.id, action: 'unbanned', comment: parsedInput.comment || null }).run();
 
       return notify(tx, 'user.unbanned', [ id ], { actorId: auth.id });
