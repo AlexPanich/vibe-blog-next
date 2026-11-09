@@ -5,6 +5,7 @@ import { StrictResource } from "@/core/resource";
 import { FeedAuthorsResource } from "@/domains/posts/dto/postResources";
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedUrl } from "@/domains/posts/shared/feedUrl";
+import { feedPeriod } from "@/domains/posts/shared/feedPeriod";
 import { POST_TYPE_TABS } from "@/domains/posts/shared/postTypes";
 import { Select } from "@mantine/core";
 import { useRouter } from "next/navigation";
@@ -18,14 +19,20 @@ type FeedControlsProps<T extends FeedAuthorsResource> = {
 const TYPES = POST_TYPE_TABS.map(({ type, label }) => ({ value: type ?? '', label: type ? label : 'Любой тип' }));
 
 const PERIODS = [
-  { value: '', label: 'Всё время' },
+  { value: 'all', label: 'Всё время' },
   { value: 'week', label: 'За неделю' },
   { value: 'month', label: 'За месяц' },
   { value: 'year', label: 'За год' },
 ];
 
+// Сортировки не из сегментов: при них ни один сегмент не активен, а вернуться — кликом по сегменту
+const EXTRA_SORTS = [
+  { value: 'old', label: 'Старые' },
+  { value: 'author', label: 'По автору' },
+];
+
 /*
-  Тип, автор и период — компактные списки-пилюли рядом с поиском, подписи в aria-label.
+  Тип, автор, период и сортировка — компактные списки-пилюли рядом с поиском, подписи в aria-label.
   Выбор сразу ведёт на новый URL без limit — список начинается заново
 */
 export default function FeedControls<T extends FeedAuthorsResource>({ filter, authors }: FeedControlsProps<T>) {
@@ -55,8 +62,18 @@ export default function FeedControls<T extends FeedAuthorsResource>({ filter, au
         {...common}
         aria-label="Период"
         data={PERIODS}
-        value={filter.period ?? ''}
+        value={feedPeriod(filter)}
         onChange={value => go({ period: (value || undefined) as PostFeedFilterDto['period'] })}
+      />
+      { /* key: Mantine не очищает поле, когда value становится null (переход на сегмент) */ }
+      <Select
+        {...common}
+        key={filter.sort}
+        aria-label="Сортировка"
+        placeholder="Сортировка"
+        data={EXTRA_SORTS}
+        value={EXTRA_SORTS.some(s => s.value === filter.sort) ? filter.sort : null}
+        onChange={value => value && go({ sort: value as PostFeedFilterDto['sort'] })}
       />
     </div>
   );

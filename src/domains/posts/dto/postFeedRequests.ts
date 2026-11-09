@@ -5,9 +5,9 @@ export const FEED_PAGE = 20;
 
 export const FEED_MAX_LIMIT = 200;
 
-export const FEED_SORTS = [ 'new', 'old', 'rating', 'author' ] as const;
+export const FEED_SORTS = [ 'new', 'popular', 'discussed', 'old', 'author' ] as const;
 
-export const FEED_PERIODS = [ 'week', 'month', 'year' ] as const;
+export const FEED_PERIODS = [ 'all', 'week', 'month', 'year' ] as const;
 
 /*
   Условия ленты из searchParams. У каждого поля свой catch: битое значение не роняет
@@ -16,8 +16,10 @@ export const FEED_PERIODS = [ 'week', 'month', 'year' ] as const;
 export const postFeedFilterDto = z.object({
   search: z.string().trim().max(100).optional().transform(v => v || undefined).catch(undefined),
   type: z.enum(POST_TYPES).optional().catch(undefined),
-  sort: z.enum(FEED_SORTS).catch('new').default('new'),
+  // Старые ссылки «Лучших» (sort=rating) открывают «Популярные» (спека 34, п. 6)
+  sort: z.preprocess(v => v === 'rating' ? 'popular' : v, z.enum(FEED_SORTS)).catch('new').default('new'),
   author: z.coerce.number().int().positive().optional().catch(undefined),
+  // Без периода действует умолчание сортировки — shared/feedPeriod.ts
   period: z.enum(FEED_PERIODS).optional().catch(undefined),
   // «Моя лента» в кабинете: ставит страница, в URL его нет (?follow= отбрасывается)
   follow: z.boolean().optional().catch(undefined),

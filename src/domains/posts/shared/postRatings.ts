@@ -1,7 +1,7 @@
 import 'server-only';
 import { db } from "@/globals/db";
 import { postRatings } from "@/database/schema";
-import { avg, count, eq, inArray } from "drizzle-orm";
+import { avg, count, eq, inArray, sum } from "drizzle-orm";
 
 export type RatingStats = { average: number | null, count: number };
 
@@ -32,10 +32,15 @@ export async function postRatingStats(postId: number): Promise<RatingStats> {
 }
 
 /*
-  Подзапрос агрегатов для сортировки ленты по рейтингу
+  Подзапрос агрегатов оценок по постам: для «Популярных» в ленте и выбора недели
 */
 export function ratingAggregate(){
-  return db.select({ postId: postRatings.postId, average: avg(postRatings.value).as('rating_average'), total: count().as('rating_count') })
+  return db.select({
+    postId: postRatings.postId,
+    average: avg(postRatings.value).as('rating_average'),
+    sum: sum(postRatings.value).as('rating_sum'),
+    total: count().as('rating_count')
+  })
     .from(postRatings)
     .groupBy(postRatings.postId)
     .as('rating_agg');

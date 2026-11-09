@@ -1,7 +1,9 @@
 import { FEED_PAGE, PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
+import { feedPeriodParam } from "@/domains/posts/shared/feedPeriod";
 
 /*
   URL ленты по условиям: порядок параметров фиксирован, значения по умолчанию не пишутся.
+  Период по умолчанию зависит от сортировки (shared/feedPeriod.ts).
   С follow — «Моя лента» в кабинете
 */
 export function feedUrl(filter: Partial<PostFeedFilterDto>){
@@ -23,8 +25,10 @@ export function feedUrl(filter: Partial<PostFeedFilterDto>){
     params.set('author', String(filter.author));
   }
 
-  if(filter.period){
-    params.set('period', filter.period);
+  const period = feedPeriodParam(filter);
+
+  if(period){
+    params.set('period', period);
   }
 
   for(const slug of filter.tag ?? []){
