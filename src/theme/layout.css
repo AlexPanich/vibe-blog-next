@@ -631,9 +631,25 @@
     color: var(--ink-faint);
   }
 
+  /*
+    Чипы разделов не помещаются в строку: прокручивается обёртка, а дорожка с фоном едет вместе с
+    чипами. Обёртка тянется от края до края экрана — при прокрутке чипы уходят за край без отступа;
+    в крайних положениях — обычный отступ страницы (как сегменты ленты)
+  */
+  .ui-desk__sections-scroll {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 calc(-1 * var(--shell-pad)) 1.5rem;
+    padding-inline: var(--shell-pad);
+  }
+
   .ui-desk__sections.ui-tabs {
     display: flex;
-    margin-bottom: 1.5rem;
+    flex: 1 0 auto;
+    max-width: none;
+    margin-bottom: 0;
+    overflow-x: visible;
   }
 
   .ui-desk__sections .ui-desk__count {
@@ -1167,8 +1183,31 @@ a.ui-tag:hover {
   background: var(--mantine-color-dark-4);
 }
 
+/*
+  На телефоне четыре сегмента в строку не помещаются. Прокручивается обёртка, а дорожка с фоном
+  едет вместе с кнопками: обёртка тянется от края до края экрана, при прокрутке фон уходит за край
+  без отступа — видно, что дальше есть ещё. В крайних положениях — скругление с обычным отступом
+  страницы. Только в шапке ленты: в кабинете сегментов три, они помещаются
+*/
+@media (max-width: 720px) {
+  .ui-feed-head .ui-segments-scroll {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--shell-pad));
+    padding-inline: var(--shell-pad);
+  }
+
+  .ui-feed-head .ui-segments {
+    flex-shrink: 0;
+    max-width: none;
+    overflow-x: visible;
+  }
+}
+
 /* В кабинете сегменты стоят отдельной строкой над поиском */
-.ui-segments + .ui-feed-tools {
+.ui-segments-scroll + .ui-feed-tools {
   margin-top: 1rem;
 }
 

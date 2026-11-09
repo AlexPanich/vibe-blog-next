@@ -1,13 +1,16 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { postTags, posts, tagFollows, tags, userFollows, users } from "@/database/schema";
+import { postRatings, postTags, posts, tagFollows, tags, userFollows, users } from "@/database/schema";
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { ratingAggregate } from "@/domains/posts/shared/postRatings";
+import { commentAggregate } from "@/domains/posts/shared/postComments";
+import { feedPeriod } from "@/domains/posts/shared/feedPeriod";
 import { withCardData } from "@/domains/posts/shared/postCards";
 import { blockedWithQueries } from "@/domains/users/exports/userBlocks";
 import { escapeLike } from "@/shared/escapeLike";
 import { and, asc, count, desc, eq, gte, inArray, notInArray, or, sql, type SQL } from "drizzle-orm";
+import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 type FeedConditions = Omit<PostFeedFilterDto, 'limit'>;
 
@@ -19,16 +22,13 @@ type FeedConditions = Omit<PostFeedFilterDto, 'limit'>;
 */
 export async function loadFeed(filter: FeedConditions, offset: number, limit: number, viewerId: number | null = null){
   const where = await feedWhere(filter, viewerId);
-  const ratings = ratingAggregate();
-
-  const ids = (await db.select({ id: posts.id })
+  const query = db.select({ id: posts.id })
     .from(posts)
     .innerJoin(users, eq(users.id, posts.userId))
-    .leftJoin(ratings, eq(ratings.postId, posts.id))
     .where(where)
-    .orderBy(...feedOrder(filter.sort, ratings))
-    .limit(limit)
-    .offset(offset)).map(row => row.id);
+    .$dynamic();
+
+  const ids = (await applyFeedSort(query, filter.sort).limit(limit).offset(offset)).map(row => row.id);
 
   const [ { total } ] = await db.select({ total: count() }).from(posts).where(where);
 
@@ -51,6 +51,9 @@ export async function findFeedTags(slugs: string[]){
 
 const PERIOD_DAYS = { week: 7, month: 30, year: 365 } as const;
 
+// Вес средней по сайту в «Популярных»: столько «средних» оценок добавляется каждому посту
+const BAYES_WEIGHT = 5;
+
 async function feedWhere(filter: FeedConditions, viewerId: number | null): Promise<SQL | undefined> {
   const conditions: (SQL | undefined)[] = [ eq(posts.status, 'published') ];
 
@@ -72,8 +75,10 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
     conditions.push(eq(posts.userId, filter.author));
   }
 
-  if(filter.period){
-    conditions.push(gte(posts.publishedAt, new Date(Date.now() - PERIOD_DAYS[filter.period] * 24 * 60 * 60 * 1000)));
+  const period = feedPeriod(filter);
+
+  if(period !== 'all'){
+    conditions.push(gte(posts.publishedAt, new Date(Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000)));
   }
 
   const tagIds = (await findFeedTags(filter.tag)).map(tag => tag.id);
@@ -113,18 +118,35 @@ function followConditions(viewerId: number | null): (SQL | undefined)[] {
   return conditions;
 }
 
-// Последним всегда id: при равных датах порядок стабилен, и смещение не теряет посты
-function feedOrder(sort: FeedConditions['sort'], ratings: ReturnType<typeof ratingAggregate>): SQL[] {
-  if(sort === 'old'){
-    return [ asc(posts.publishedAt), asc(posts.id) ];
+/*
+  Порядок ленты; агрегат join-ится только своей сортировке. Dynamic-запрос drizzle меняется
+  на месте: join меняет его тип, но не объект — поэтому join отдельной строкой.
+  Последним всегда id: при равных датах порядок стабилен, и смещение не теряет посты
+*/
+function applyFeedSort<T extends SQLiteSelect>(query: T, sort: FeedConditions['sort']): T {
+  if(sort === 'popular'){
+    // Средняя по Байесу (спека 34, п. 2): (C·m + Σ) / (C + n), m — средняя по сайту.
+    // Без оценок — в конце, при равенстве — новее выше
+    const ratings = ratingAggregate();
+    const score = sql`(${BAYES_WEIGHT} * (SELECT avg(${postRatings.value}) FROM ${postRatings}) + ${ratings.sum}) * 1.0 / (${BAYES_WEIGHT} + ${ratings.total})`;
+
+    query.leftJoin(ratings, eq(ratings.postId, posts.id));
+
+    return query.orderBy(asc(sql`${ratings.total} IS NULL`), desc(score), desc(posts.publishedAt), desc(posts.id));
   }
-  else if(sort === 'rating'){
-    // Без оценок — в конце, а не как ноль; при равной средней выше тот, у кого оценок больше
-    return [ asc(sql`${ratings.average} IS NULL`), desc(ratings.average), desc(ratings.total), desc(posts.publishedAt), desc(posts.id) ];
+  else if(sort === 'discussed'){
+    const commentCounts = commentAggregate();
+
+    query.leftJoin(commentCounts, eq(commentCounts.postId, posts.id));
+
+    return query.orderBy(desc(sql`coalesce(${commentCounts.total}, 0)`), desc(posts.publishedAt), desc(posts.id));
+  }
+  else if(sort === 'old'){
+    return query.orderBy(asc(posts.publishedAt), asc(posts.id));
   }
   else if(sort === 'author'){
-    return [ asc(sql`sort_ru(${users.name})`), asc(users.id), desc(posts.publishedAt), desc(posts.id) ];
+    return query.orderBy(asc(sql`sort_ru(${users.name})`), asc(users.id), desc(posts.publishedAt), desc(posts.id));
   }
 
-  return [ desc(posts.publishedAt), desc(posts.id) ];
+  return query.orderBy(desc(posts.publishedAt), desc(posts.id));
 }

@@ -4,7 +4,8 @@ import { comments } from "@/database/schema";
 import { withRatings } from "@/domains/posts/shared/postRatings";
 import { withCovers } from "@/domains/posts/shared/postImages";
 import { postExcerpt, readingMinutes } from "@/domains/posts/shared/postText";
-import { and, count, inArray, isNull } from "drizzle-orm";
+import { visibleComments } from "@/domains/posts/shared/postComments";
+import { and, count, inArray } from "drizzle-orm";
 
 type CardSource = { id: number, content: string, coverImageId: number | null };
 
@@ -25,8 +26,7 @@ export async function withCardData<T extends CardSource>(posts: T[]){
 }
 
 /*
-  Как на странице поста: комментарии к самому посту без удалённых, скрытые модератором
-  считаются — заглушка с причиной видна всем
+  Видимые комментарии, включая комментарии к фото, — как в порядке «Обсуждаемых» (спека 34)
 */
 async function commentCounts(postIds: number[]){
   if(postIds.length === 0){
@@ -35,7 +35,7 @@ async function commentCounts(postIds: number[]){
 
   const rows = await db.select({ postId: comments.postId, n: count() })
     .from(comments)
-    .where(and(inArray(comments.postId, postIds), isNull(comments.imageId), isNull(comments.deletedAt)))
+    .where(and(inArray(comments.postId, postIds), visibleComments()))
     .groupBy(comments.postId);
 
   return new Map(rows.map(row => [ row.postId, row.n ]));
