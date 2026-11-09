@@ -25,3 +25,11 @@ export type TagRowResource = z.infer<typeof tagRowResource>
 export const tagRowListResource = z.array(tagRowResource);
 
 export type TagRowListResource = z.infer<typeof tagRowListResource>
+
+// Страница /tags: топ по числу постов и остальные по алфавиту
+export const tagDirectoryResource = z.object({
+  top: tagRowListResource,
+  rest: tagRowListResource
+})
+
+export type TagDirectoryResource = z.infer<typeof tagDirectoryResource>

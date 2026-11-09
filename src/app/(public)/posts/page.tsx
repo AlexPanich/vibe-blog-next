@@ -15,7 +15,7 @@ import ButtonLink from "@/components/general/ButtonLink";
 import { plural } from "@/core/plural";
 import { db } from "@/globals/db";
 import { posts as postsTable } from "@/database/schema";
-import { IconMoodEmpty } from "@tabler/icons-react";
+import { IconMoodEmpty, IconRss } from "@tabler/icons-react";
 import { eq } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
@@ -58,7 +58,11 @@ export default async function Authros({ searchParams }: PageProps<'/posts'>) {
         selected={filter.tag}
         hrefFor={slugs => feedUrl({ ...filter, tag: slugs, limit: undefined })}
       />
-      { selectedTags.length === 1 && <TagFollowButton tagId={selectedTags[0].id} name={selectedTags[0].name} /> }
+      { selectedTags.length === 1 && <div className="ui-feed-tag-actions">
+        <TagFollowButton tagId={selectedTags[0].id} name={selectedTags[0].name} />
+        {/* <a>, не Link: route handler, мягкая навигация не нужна */}
+        <a className="ui-rss-link" href={`/tags/${encodeURIComponent(selectedTags[0].slug)}/rss.xml`}><IconRss size={16} stroke={1.8} /> RSS рубрики</a>
+      </div> }
 
       { total === 0 ? (
         <div className="ui-empty">

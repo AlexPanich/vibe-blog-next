@@ -134,7 +134,10 @@
 
 Каркас — `src/components/layout/`: `SiteHeader` (бренд, `TopMenu`, тема, `UserBox` из
 `domains/users/exports`) и `OfficeDesk` (левое меню кабинета `OfficeMenu` + колонка).
-Пункты меню — в `src/components/navigation/`.
+Пункты меню — в `src/components/navigation/`. Строку шапки рисует клиентский `HeaderSearch`
+(спека 33): бренд, меню и иконки приходят слотами из серверного `SiteHeader`, поиск
+раскрывается на месте меню (на телефоне — во всю строку), на `/posts` лупа и `/` ставят фокус в
+поле ленты (`FEED_SEARCH_ID`, `shared/feedSearch.ts`).
 
 ## URL кабинета
 
@@ -176,6 +179,20 @@ prefetch выключен по умолчанию. В production Next подгр
 Mantine в серверных компонентах: `component={Link}` передать нельзя — для кнопки-ссылки
 есть `ButtonLink` (`src/components/general/`), compound-компоненты (`Table.Tr`) — только
 плоскими импортами (`TableTr`).
+
+Страницы о блоге (`/about`, `/rules`, `/moderation`, `/contacts`, спека 31) — папки в группе
+`app/(public)/(about)/` с общим layout (меню раздела). Заголовок, kicker и description — в
+реестре `domains/site-pages/shared/sitePages.ts`, текст — `src/content/<slug>.md` (первый абзац —
+lead), правка — коммитом. Файлы читаются `fs` в рантайме: standalone их не трассирует, `src/content`
+скопирован в рантайм `Dockerfile`.
+
+RSS (спека 32) — три ленты: `/rss.xml` (`app/rss.xml/`, вне root layout'ов),
+`/tags/<slug>/rss.xml`, `/authors/<id>/rss.xml`. Загрузка и XML — `domains/posts/shared/postRss.ts`,
+экранирование — `core/escapeXml.ts`, абсолютный адрес — `config/site.ts` (`BETTER_AUTH_URL`).
+Route — `force-dynamic`, готовый XML кэшируется в памяти процесса на 10 минут, а не через
+`revalidate`: статический route пререндерился бы при сборке на пустой базе и с build-time
+адресом. Ссылки на ленты — обычный `<a>`, не `Link` (это route handler). Общая лента в `<head>`
+публичного layout — вручную, не `metadata.alternates` (нет `metadataBase`).
 
 Карта — Leaflet + `react-leaflet` (`domains/posts/components/map/`). Leaflet трогает
 `window` при импорте: сам компонент карты подключается только через
@@ -281,6 +298,8 @@ production-сервер не отдаёт файлы, появившиеся т�
   (`src/config/proxy.ts`). Без прокси перед приложением все попадают в один bucket
   rate limiter.
 - Переменные окружения — см. `.env.example`. Читаются только в `src/config/`.
+- `CONTACT_EMAIL` / `CONTACT_USER_ID` (необязательные) — карточки на `/contacts`
+  (`config/contacts.ts`); не задан ключ — нет карточки.
 
 ## Где лежат общие helpers
 
