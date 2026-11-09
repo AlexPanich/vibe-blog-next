@@ -134,7 +134,10 @@
 
 Каркас — `src/components/layout/`: `SiteHeader` (бренд, `TopMenu`, тема, `UserBox` из
 `domains/users/exports`) и `OfficeDesk` (левое меню кабинета `OfficeMenu` + колонка).
-Пункты меню — в `src/components/navigation/`.
+Пункты меню — в `src/components/navigation/`. Строку шапки рисует клиентский `HeaderSearch`
+(спека 33): бренд, меню и иконки приходят слотами из серверного `SiteHeader`, поиск
+раскрывается на месте меню (на телефоне — во всю строку), на `/posts` лупа и `/` ставят фокус в
+поле ленты (`FEED_SEARCH_ID`, `shared/feedSearch.ts`).
 
 ## URL кабинета
 

@@ -3,7 +3,7 @@
    токенов (./tokens.css), поэтому обе схемы работают без отдельных правил.
 
    Префикс `ui-`. Блоки:
-   - каркас: .ui-shell, .ui-main, .ui-masthead, .ui-nav, .ui-tabbar, .ui-footer;
+   - каркас: .ui-shell, .ui-main, .ui-masthead, .ui-nav, .ui-header-search, .ui-tabbar, .ui-footer;
    - кабинет: .ui-desk — левое меню и рабочая колонка, .ui-office-head, .ui-tabs, .ui-fab,
      .ui-post-row, .ui-filter-bar, .ui-pager;
    - заголовок страницы: .ui-section-head, .ui-title, .ui-kicker, .ui-backlink;
@@ -242,6 +242,50 @@
   color: var(--accent-ink);
 }
 
+/* Поиск в шапке (спека 33): поле встаёт на место меню, средний трек растягивается. */
+.ui-masthead__row[data-search='open'] {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.ui-header-search {
+  justify-self: center;
+  width: 100%;
+  max-width: 32rem;
+  /* Как круглые иконки строки: открытое поле не меняет высоту шапки */
+  box-sizing: border-box;
+  height: 40px;
+  padding-block: 0;
+}
+
+/* Свой крестик закрывает поле, нативный «очистить» у поля type="search" — лишний */
+.ui-header-search .ui-search__input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* Крестик — только на телефоне, где поле закрывает всю строку */
+.ui-header-search__close {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.ui-header-search__close:hover {
+  color: var(--ink);
+}
+
+/* Лупа, пока поле открыто: обводка, как у поля в фокусе */
+.ui-round-icon[aria-expanded='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--input-line);
+}
+
 @media (max-width: 600px) {
   .ui-userbox__name {
     display: none;
@@ -264,6 +308,21 @@
 
   .ui-nav {
     display: none;
+  }
+
+  /* Поиск открыт: поле во всю строку, бренд и иконки прячутся */
+  .ui-masthead__row[data-search='open'] > .ui-brand,
+  .ui-masthead__row[data-search='open'] > .ui-masthead__aside {
+    display: none;
+  }
+
+  .ui-header-search {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+
+  .ui-header-search__close {
+    display: inline-flex;
   }
 
   .ui-brand__mark {

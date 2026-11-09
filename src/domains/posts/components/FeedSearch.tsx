@@ -1,6 +1,7 @@
 import { PostFeedFilterDto } from "@/domains/posts/dto/postFeedRequests";
 import { feedPath, feedUrl } from "@/domains/posts/shared/feedUrl";
 import Link from "@/components/general/Link";
+import { FEED_SEARCH_ID } from "@/shared/feedSearch";
 import { IconSearch, IconX } from "@tabler/icons-react";
 
 // Поиск обычной GET-формой: работает без JS, каждый поиск — запись в истории.
@@ -10,6 +11,7 @@ export default function FeedSearch({ filter }: { filter: PostFeedFilterDto }) {
     <form action={feedPath(filter)} method="get" className="ui-search" role="search">
       <IconSearch size={17} stroke={1.7} className="ui-search__icon" />
       <input
+        id={FEED_SEARCH_ID}
         type="search"
         name="search"
         defaultValue={filter.search ?? ''}
