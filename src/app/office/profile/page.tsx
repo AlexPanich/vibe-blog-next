@@ -32,7 +32,7 @@ export default async function OfficeProfile() {
   const user = await requireAuthUser();
   const profile = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { bio: true, avatarKey: true, coverKey: true, nameGenitive: true, nameChangedAt: true, messagesFrom: true, favoritesPublic: true, emailVerified: true }
+    columns: { bio: true, avatarKey: true, coverKey: true, nameGenitive: true, gender: true, nameChangedAt: true, messagesFrom: true, favoritesPublic: true, emailVerified: true }
   });
   // Вошедший только через GitHub пароля не имеет — ни смены пароля, ни смены email (там нужен пароль)
   const credential = await db.query.accounts.findFirst({
@@ -69,6 +69,7 @@ export default async function OfficeProfile() {
             nameState={resource(userNameStateResource, { name: user.name, nextChangeAt: nextNameChangeAt(profile?.nameChangedAt ?? null) })}
             bio={profile?.bio ?? ''}
             nameGenitive={profile?.nameGenitive ?? ''}
+            gender={profile?.gender ?? null}
           />
         </ProfileSection>
 

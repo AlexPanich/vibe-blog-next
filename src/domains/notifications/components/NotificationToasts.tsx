@@ -25,7 +25,8 @@ export default function NotificationToasts() {
       id: `notification-${item.id}`,
       icon: item.actor ? <UserAvatar name={item.actor.name} avatarKey={item.actor.avatarKey} size={32} /> : <span className="ui-notification__icon"><IconBell size={16} /></span>,
       title: item.actor?.name ?? 'Уведомление',
-      text: item.text,
+      // У группы — свежее событие, а не «и ещё N» (спека 51, реш. 14)
+      text: item.latest?.text ?? item.text,
       href: item.href,
       onOpen: () => readNotificationAction({ id: item.id })
     });

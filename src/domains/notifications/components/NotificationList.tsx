@@ -8,6 +8,7 @@ import { StrictResource } from "@/core/resource";
 import NotificationNotice from "@/domains/notifications/components/NotificationNotice";
 import { loadNotificationsAction, readAllNotificationsAction, readNotificationAction } from "@/domains/notifications/actions/notificationActions";
 import { notificationItemResource, type NotificationItemResource, type NotificationPageResource } from "@/domains/notifications/dto/notificationResources";
+import { isReplacedBy } from "@/domains/notifications/shared/notificationGroup";
 import useHydrated from "@/hooks/useHydrated";
 import useLiveEvent from "@/hooks/useLiveEvent";
 import { dayDiff } from "@/shared/localDays";
@@ -42,7 +43,8 @@ export default function NotificationList<T extends NotificationPageResource>({ p
 
   useLiveEvent('notification.created', data => {
     const item = notificationItemResource.parse(data.notification);
-    setItems(prev => prev.some(i => i.id === item.id) ? prev : [ item, ...prev ]);
+    // Строка группы заменяет прежнюю (спека 51)
+    setItems(prev => prev.some(i => i.id === item.id) ? prev : [ item, ...prev.filter(i => !isReplacedBy(i, item)) ]);
     setUnread(data.unread);
   });
 

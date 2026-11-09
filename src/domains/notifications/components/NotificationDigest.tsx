@@ -38,7 +38,7 @@ export default function NotificationDigest<T extends NotificationItemResource[]>
           <span className="ui-digest__icon" data-tone={tone}><ItemIcon size={15} stroke={2} /></span>
           <span className="ui-digest__body">
             <span className="ui-digest__text" data-read={item.read}>
-              { item.actor && <b>{ item.actor.name }: </b> }{ item.text }
+              { item.actor && <><b>{ item.actor.name }</b>{ item.inline ? ' ' : ': ' }</> }{ item.text }
             </span>
             <span className="ui-digest__meta"><LocalDate value={item.createdAt} relative /></span>
           </span>

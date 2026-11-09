@@ -1,4 +1,4 @@
-import { authorRequests, commentReports, comments, dialogs, messages, notifications, postImages, postModerations, postReports, posts, tags, userAdminActions, users } from './schema';
+import { authorRequests, commentReports, comments, dialogs, messages, notificationThrottles, notifications, postImages, postModerations, postReports, posts, tags, userAdminActions, users } from './schema';
 
 export type User = typeof users.$inferSelect;
 export type Post = typeof posts.$inferSelect;
@@ -16,3 +16,4 @@ export type PostReport = typeof postReports.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Dialog = typeof dialogs.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type NotificationThrottle = typeof notificationThrottles.$inferSelect;

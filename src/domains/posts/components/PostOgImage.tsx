@@ -1,6 +1,6 @@
 import type { PostType } from "@/database/schema";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
-import { cutWords } from "@/domains/posts/shared/postText";
+import { cutWords } from "@/core/text";
 
 type PostOgImageProps = {
   // Обложка data URL (png 480×630) — справа от текста

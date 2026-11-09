@@ -8,6 +8,7 @@ import { aiIdSchema } from "@/domains/posts/dto/postRequests";
 import { postRateDto } from "@/domains/posts/dto/postRatingRequests";
 import { ratePost } from "@/domains/posts/policy";
 import { myRating, postRatingStats } from "@/domains/posts/shared/postRatings";
+import { notifyThrottled, publishNotifications } from "@/domains/notifications/exports/notify";
 import { liveBus } from "@/globals/liveBus";
 import { postTopic } from "@/shared/liveEvents";
 import { and, eq } from "drizzle-orm";
@@ -16,8 +17,11 @@ export const ratePostAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
   .inputSchema(postRateDto)
   .action(async ({ parsedInput: { value }, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
-    // Статус и права — в той же транзакции, что запись: пост мог уйти из ленты, пока жали звезду
-    db.transaction(tx => {
+    /*
+      Статус и права — в той же транзакции, что запись: пост мог уйти из ленты, пока жали звезду.
+      Автору — post.rated о новой и изменённой оценке, не чаще раза в сутки на пару; снятие молчит (спека 51)
+    */
+    const notificationIds = db.transaction(tx => {
       const post = tx.select({ userId: posts.userId, status: posts.status }).from(posts).where(eq(posts.id, id)).get();
 
       if(!post || post.status !== 'published'){
@@ -32,14 +36,19 @@ export const ratePostAction = actionAuthClient
 
       if(value === 0){
         tx.delete(postRatings).where(own).run();
+
+        return [];
       }
-      else{
-        tx.insert(postRatings)
-          .values({ postId: id, userId: auth.id, value })
-          .onConflictDoUpdate({ target: [ postRatings.postId, postRatings.userId ], set: { value, updatedAt: new Date() } })
-          .run();
-      }
+
+      tx.insert(postRatings)
+        .values({ postId: id, userId: auth.id, value })
+        .onConflictDoUpdate({ target: [ postRatings.postId, postRatings.userId ], set: { value, updatedAt: new Date() } })
+        .run();
+
+      return notifyThrottled(tx, 'post.rated', post.userId, { actorId: auth.id, postId: id }, { kind: 'rate', targetId: id });
     });
+
+    publishNotifications(notificationIds);
 
     const stats = await postRatingStats(id);
     // Звёзды у всех, кто смотрит пост (спека 29); своя оценка — только в ответе
