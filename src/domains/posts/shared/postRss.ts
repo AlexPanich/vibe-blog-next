@@ -7,7 +7,7 @@ import { escapeXml } from "@/core/escapeXml";
 import { imageUrl } from "@/core/imageUrl";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withCovers } from "@/domains/posts/shared/postImages";
-import { postExcerpt } from "@/domains/posts/shared/postText";
+import { postSummary } from "@/domains/posts/shared/postText";
 import { and, desc, eq, type SQL } from "drizzle-orm";
 import { stat } from "node:fs/promises";
 
@@ -114,7 +114,7 @@ function renderItem(post: RssPost){
     tag('pubDate', (post.publishedAt ?? post.createdAt).toUTCString()),
     tag('dc:creator', post.author.name),
     ...post.tags.map(t => tag('category', t.name)),
-    tag('description', postExcerpt(post.content))
+    tag('description', postSummary(post))
   ];
 
   if(post.enclosure){

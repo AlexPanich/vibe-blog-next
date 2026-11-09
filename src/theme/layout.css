@@ -5602,6 +5602,17 @@ a.ui-chat-row[data-active='true']:hover {
   text-wrap: balance;
 }
 
+/* Подзаголовок (спека 35): ближе к заголовку, чем общий gap шапки */
+.ui-post__lead {
+  max-width: 46rem;
+  margin: -0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: clamp(1.125rem, 1.9vw, 1.375rem);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
 .ui-post__byline {
   display: flex;
   flex-wrap: wrap;
@@ -5918,6 +5929,10 @@ a.ui-chat-row[data-active='true']:hover {
   .ui-post__crumbs {
     justify-content: flex-start;
     font-size: 0.8125rem;
+  }
+
+  .ui-post__lead {
+    margin-top: -0.25rem;
   }
 
   .ui-post__byline {
@@ -10044,6 +10059,19 @@ span.ui-photo__arrow {
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
+}
+
+.ui-review-post__lead,
+.ui-article__lead {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.125rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ui-article__lead {
+  margin-top: 0.75rem;
 }
 
 .ui-review-post__author {

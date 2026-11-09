@@ -112,6 +112,8 @@ export const posts = sqliteTable('posts', {
   url: text('url').notNull().unique(),
   title: text('title').notNull(),
   content: text('content').notNull(),
+  // Подзаголовок (спека 35): обычный текст, пустой — NULL
+  lead: text('lead'),
   status: text('status', { enum: POST_STATUSES }).notNull().default('draft'),
   /*
     Поля типа хранятся плоско и nullable, согласованность с type держит check ниже
@@ -144,6 +146,7 @@ export const posts = sqliteTable('posts', {
     (${t.type} = 'translate' AND ${t.source} IS NOT NULL AND ${t.lat} IS NULL AND ${t.lng} IS NULL) OR
     (${t.type} = 'travel' AND ${t.source} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL)
   `),
+  check('posts_lead_check', sql`${t.lead} IS NULL OR length(${t.lead}) BETWEEN 20 AND 200`),
 ]);
 
 /*

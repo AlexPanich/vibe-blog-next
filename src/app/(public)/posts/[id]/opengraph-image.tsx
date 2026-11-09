@@ -8,6 +8,7 @@ import { coverOf, getPostImages } from "@/domains/posts/shared/postImages";
 import { uploadPath } from "@/globals/uploads";
 import sharp from "sharp";
 import { idOrFail } from "@/shared/params";
+import { stripMarkdown } from "@/core/markdown";
 import { eq } from "drizzle-orm";
 
 export const size = { width: 1200, height: 630 };
@@ -27,7 +28,7 @@ export default async function PostOpengraphImage({ params }: { params: Promise<{
   const cover = await coverDataUrl(coverOf(post, images)?.fileKey);
 
   return new ImageResponse(
-    <PostOgImage cover={cover} type={post.type} title={post.title} content={post.content} author={author?.name ?? ''} tags={tags.map(t => t.name)} />,
+    <PostOgImage cover={cover} type={post.type} title={post.title} summary={post.lead ?? stripMarkdown(post.content)} author={author?.name ?? ''} tags={tags.map(t => t.name)} />,
     size
   );
 }

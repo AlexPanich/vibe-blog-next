@@ -16,6 +16,7 @@ type PostReviewPreviewProps = {
   post: PostDetailsResource & {
     id: number,
     title: string,
+    lead: string | null,
     url: string,
     content: string,
     status: PostStatus,
@@ -29,8 +30,8 @@ type PostReviewPreviewProps = {
 
 /*
   Пост на ревью так, как его увидит читатель (спека 42, шаг 14): тип и рубрики, заголовок,
-  автор, обложка, текст, галерея. Если фото есть — напоминание проверить авторство. Без
-  'use client' — рендерит серверная страница
+  подзаголовок, автор, обложка, текст, галерея. Если фото есть — напоминание проверить
+  авторство. Без 'use client' — рендерит серверная страница
 */
 export default function PostReviewPreview({ post, author, tags, images }: PostReviewPreviewProps) {
   const cover = coverOf(post, images);
@@ -45,6 +46,7 @@ export default function PostReviewPreview({ post, author, tags, images }: PostRe
       </div>
 
       <h1 className="ui-review-post__title">{ post.title }</h1>
+      { post.lead && <p className="ui-review-post__lead">{ post.lead }</p> }
 
       <div className="ui-review-post__author">
         <UserAvatar name={author.name} avatarKey={author.avatarKey} size={36} />

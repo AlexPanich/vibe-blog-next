@@ -62,9 +62,12 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
   }
 
   if(filter.search){
-    // lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts
+    /*
+      lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts. lead может быть NULL,
+      а конкатенация с NULL даёт NULL — отсюда coalesce (спека 35)
+    */
     const pattern = `%${escapeLike(filter.search.toLocaleLowerCase('ru'))}%`;
-    conditions.push(sql`lower_ru(${posts.title} || ' ' || ${posts.content}) LIKE ${pattern} ESCAPE '\\'`);
+    conditions.push(sql`lower_ru(${posts.title} || ' ' || coalesce(${posts.lead}, '') || ' ' || ${posts.content}) LIKE ${pattern} ESCAPE '\\'`);
   }
 
   if(filter.type){

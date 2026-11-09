@@ -1,13 +1,14 @@
-import { stripMarkdown } from "@/core/markdown";
 import type { PostType } from "@/database/schema";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
+import { cutWords } from "@/domains/posts/shared/postText";
 
 type PostOgImageProps = {
   // Обложка data URL (png 480×630) — справа от текста
   cover: string | null,
   type: PostType,
   title: string,
-  content: string,
+  // Подзаголовок или текст поста без разметки; длинный обрезается здесь по слову
+  summary: string,
   author: string,
   tags: string[]
 }
@@ -17,8 +18,8 @@ type PostOgImageProps = {
   поэтому цвета заданы прямо — тёмная палитра из tokens.css. Шрифт — Geist из комплекта
   next/og: кириллица в нём есть, жирного начертания нет
 */
-export default function PostOgImage({ cover, type, title, content, author, tags }: PostOgImageProps) {
-  const excerpt = stripMarkdown(content);
+export default function PostOgImage({ cover, type, title, summary, author, tags }: PostOgImageProps) {
+  const long = title.length > 60;
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', background: '#0b1110', color: '#e9ecef', fontFamily: 'Geist', borderTop: '14px solid #3ebf6e' }}>
@@ -29,9 +30,9 @@ export default function PostOgImage({ cover, type, title, content, author, tags 
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           { type !== 'simple' && <span style={{ fontSize: 26, letterSpacing: 3, color: '#3ebf6e' }}>{ POST_TYPE_LABELS[type].toUpperCase() }</span> }
-          <div style={{ fontSize: title.length > 40 ? 60 : 76, fontWeight: 700, lineHeight: 1.1 }}>{ title }</div>
-          { excerpt && <div style={{ fontSize: 30, lineHeight: 1.4, color: '#b4bcb8', display: 'block', lineClamp: 2 }}>
-            { excerpt.length > 140 ? `${excerpt.slice(0, 140)}…` : excerpt }
+          <div style={{ fontSize: titleSize(title), fontWeight: 700, lineHeight: 1.1 }}>{ title }</div>
+          { summary && <div style={{ fontSize: 26, lineHeight: 1.4, color: '#b4bcb8', display: 'block', lineClamp: long ? 2 : 3 }}>
+            { cutWords(summary, long ? 75 : 110) }
           </div> }
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 28, color: '#8a948f' }}>
@@ -44,4 +45,20 @@ export default function PostOgImage({ cover, type, title, content, author, tags 
       { cover && <img src={cover} width={480} height={616} style={{ objectFit: 'cover' }} alt="" /> }
     </div>
   );
+}
+
+/*
+  Заголовок и подзаголовок должны поместиться над подвалом: подзаголовок — три строки (~110
+  символов при 26px), под длинным заголовком — мельче заголовок и две строки (~75). Текст
+  режется по слову заранее, lineClamp — подстраховка на широкие буквы
+*/
+function titleSize(title: string){
+  if(title.length > 60){
+    return 50;
+  }
+  else if(title.length > 40){
+    return 60;
+  }
+
+  return 76;
 }

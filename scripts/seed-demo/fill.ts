@@ -64,6 +64,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         userId: uid[post.author],
         url: post.url,
         title: post.title,
+        lead: post.lead ?? null,
         content: post.content,
         status,
         type: post.type ?? 'simple',

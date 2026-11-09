@@ -58,7 +58,7 @@ export const postResource = z.object({
   tags: z.array(tagResource),
   rating: postRatingResource,
   cover: postCoverResource.nullable(),
-  // Считаются из текста (postCards.withCardData), не хранятся
+  // Считаются при выдаче (postCards.withCardData), не хранятся; excerpt — lead или выдержка из текста
   excerpt: z.string(),
   readingMinutes: z.number(),
   commentsCount: z.number(),
@@ -104,6 +104,7 @@ export const postOfficeResource = z.object({
   id: z.number(),
   url: z.string(),
   title: z.string(),
+  lead: z.string().nullable(),
   content: z.string(),
   tagIds: z.array(z.number()),
   ...postDetailsResource.shape
