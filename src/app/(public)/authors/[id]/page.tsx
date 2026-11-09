@@ -17,13 +17,25 @@ import UserBlockProvider from "@/domains/users/components/block/UserBlockProvide
 import UserBlockGate from "@/domains/users/components/block/UserBlockGate";
 import ButtonLink from "@/components/general/ButtonLink";
 import { idOrFail } from "@/shared/params";
-import { IconArticle } from "@tabler/icons-react";
+import { siteConfig } from "@/config/site";
+import { IconArticle, IconRss } from "@tabler/icons-react";
+import type { Metadata } from "next";
 
 const LATEST = 12;
 
-export async function generateMetadata({ params }: PageProps<'/authors/[id]'>) {
+export async function generateMetadata({ params }: PageProps<'/authors/[id]'>): Promise<Metadata> {
   const author = await getAuthor(idOrFail((await params).id));
-  return { title: author.name, description: author.bio ?? undefined };
+
+  return {
+    title: author.name,
+    description: author.bio ?? undefined,
+    // Абсолютный URL: metadataBase нет (план 32, реш. 3)
+    alternates: {
+      types: {
+        'application/rss+xml': [ { url: `${siteConfig.url}/authors/${author.id}/rss.xml`, title: `Vibe — ${author.name}` } ]
+      }
+    }
+  };
 }
 
 export default async function AuthorPage({ params, searchParams }: PageProps<'/authors/[id]'>) {
@@ -66,14 +78,16 @@ export default async function AuthorPage({ params, searchParams }: PageProps<'/a
             <IconArticle size={26} stroke={1.6} />
             <p>Постов пока нет.</p>
           </div>
-        ) : <>
+        ) : (
           <div className="ui-post-grid ui-author-posts">
             { cards.map(post => <PostCardBridge key={post.id} post={resource(postResource, post)} />) }
           </div>
-          { shownCount > LATEST && <div className="ui-author-more">
-            <ButtonLink href={feedUrl({ author: author.id, type })} variant="default">Все посты в ленте</ButtonLink>
-          </div> }
-        </> }
+        ) }
+        <div className="ui-author-more">
+          { shownCount > LATEST && <ButtonLink href={feedUrl({ author: author.id, type })} variant="default">Все посты в ленте</ButtonLink> }
+          {/* <a>, не Link: route handler, мягкая навигация не нужна */}
+          <a className="ui-rss-link" href={`/authors/${author.id}/rss.xml`}><IconRss size={16} stroke={1.8} /> RSS автора</a>
+        </div>
       </UserBlockGate>
     </UserBlockProvider>
   );

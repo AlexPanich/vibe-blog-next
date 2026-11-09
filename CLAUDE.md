@@ -183,6 +183,14 @@ Mantine в серверных компонентах: `component={Link}` пер�
 lead), правка — коммитом. Файлы читаются `fs` в рантайме: standalone их не трассирует, `src/content`
 скопирован в рантайм `Dockerfile`.
 
+RSS (спека 32) — три ленты: `/rss.xml` (`app/rss.xml/`, вне root layout'ов),
+`/tags/<slug>/rss.xml`, `/authors/<id>/rss.xml`. Загрузка и XML — `domains/posts/shared/postRss.ts`,
+экранирование — `core/escapeXml.ts`, абсолютный адрес — `config/site.ts` (`BETTER_AUTH_URL`).
+Route — `force-dynamic`, готовый XML кэшируется в памяти процесса на 10 минут, а не через
+`revalidate`: статический route пререндерился бы при сборке на пустой базе и с build-time
+адресом. Ссылки на ленты — обычный `<a>`, не `Link` (это route handler). Общая лента в `<head>`
+публичного layout — вручную, не `metadata.alternates` (нет `metadataBase`).
+
 Карта — Leaflet + `react-leaflet` (`domains/posts/components/map/`). Leaflet трогает
 `window` при импорте: сам компонент карты подключается только через
 `dynamic(..., { ssr: false })` с заглушкой той же высоты. Тайлы — OpenStreetMap без ключа,

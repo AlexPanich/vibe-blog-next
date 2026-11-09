@@ -359,6 +359,12 @@
   color: var(--ink);
 }
 
+.ui-footer__links .ui-footer__rss {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 /* «О блоге» в подвале — только на телефоне: на широком экране он в шапке */
 .ui-footer__links .ui-footer__mobile-only {
   display: none;
@@ -949,9 +955,31 @@ a.ui-tag {
   margin-top: 0.7rem;
 }
 
-/* Подписка на рубрику — под фильтром ленты. */
-.ui-tag-follow {
+/* Подписка на рубрику и её RSS — под фильтром ленты (спека 32). */
+.ui-feed-tag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
   margin: -0.4rem 0 1.2rem;
+}
+
+.ui-feed-tag-actions .ui-tag-follow {
+  margin: 0;
+}
+
+/* Ссылка на RSS-ленту рядом с кнопками */
+.ui-rss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.ui-rss-link:hover {
+  color: var(--ink);
 }
 
 /* Строка без ссылки на всю строку: внутри кнопки, поэтому без подъёма на hover. */
@@ -6579,7 +6607,10 @@ span.ui-photo__arrow {
 
 .ui-author-more {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+  gap: 1rem 1.5rem;
   margin-top: 3rem;
 }
 

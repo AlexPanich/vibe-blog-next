@@ -6,6 +6,7 @@ import { fontVariables } from "@/theme/fonts";
 import { defaultColorScheme } from "@/theme/colorScheme";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import type { Metadata } from "next";
+import { siteConfig } from "@/config/site";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@/theme/tokens.css";
@@ -13,7 +14,7 @@ import "@/theme/layout.css";
 
 export const metadata: Metadata = {
   title: { template: "%s — Vibe", default: "Vibe" },
-  description: "Vibe — блог живых историй: путешествия, переводы и личный опыт",
+  description: siteConfig.description,
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -21,6 +22,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ru" {...mantineHtmlProps} className={fontVariables}>
       <head>
         <ColorSchemeScript defaultColorScheme={defaultColorScheme} />
+        {/* Общая RSS-лента вручную, не metadata.alternates: относительный href без metadataBase (план 32, реш. 2) */}
+        <link rel="alternate" type="application/rss+xml" title="Vibe" href="/rss.xml" />
       </head>
       <body className="ui-page">
         <ClientSideInitializer>

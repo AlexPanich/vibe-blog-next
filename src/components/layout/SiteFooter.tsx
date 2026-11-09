@@ -1,9 +1,10 @@
 import Link from "@/components/general/Link";
 import { SITE_PAGES } from "@/domains/site-pages/exports/sitePages";
+import { IconRss } from "@tabler/icons-react";
 
 /*
   Подвал публичной части: знак, подпись и страницы о блоге. «О блоге» — только на телефоне:
-  на широком экране он в шапке. RSS — после спеки 32
+  на широком экране он в шапке. RSS — обычный <a>: это route handler, не страница
 */
 export default function SiteFooter() {
   return (
@@ -19,6 +20,7 @@ export default function SiteFooter() {
               { page.label }
             </Link>
           )) }
+          <a href="/rss.xml" className="ui-footer__rss"><IconRss size={15} stroke={1.8} /> RSS</a>
         </nav>
       </div>
     </footer>
