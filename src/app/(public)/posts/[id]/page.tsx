@@ -80,7 +80,7 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
     </article>
 
     { more.length > 0 && <section className="ui-post-more">
-      <h2 className="ui-post-more__title">Ещё у автора</h2>
+      <h2 className="ui-post-more__title">Ещё у { author.nameGenitive ?? 'автора' }</h2>
       <div className="ui-post-grid">
         { more.map(card => <PostCardBridge key={card.id} post={resource(postResource, card)} />) }
       </div>

@@ -26,7 +26,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     for(const person of people){
       const createdAt = new Date(person.since);
-      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, avatarKey: files.avatars[person.key], bannedAt: null, banReason: null, createdAt };
+      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, avatarKey: files.avatars[person.key], coverKey: files.covers?.[person.key] ?? null, nameGenitive: person.nameGenitive, bannedAt: null, banReason: null, createdAt };
       const existing = tx.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, person.email)).get();
 
       if(existing){

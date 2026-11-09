@@ -52,6 +52,7 @@ export async function authorsDirectory({ sort, q, tag }: AuthorsFilterDto){
     id: users.id,
     name: users.name,
     avatarKey: users.avatarKey,
+    coverKey: users.coverKey,
     bio: users.bio,
     roles: users.roles,
     postsCount: published.n,

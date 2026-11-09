@@ -13,7 +13,7 @@ import { parseRoles } from "@/domains/users/shared/userRoles";
 export const getAuthor = cache(async (id: number) => {
   const author = await db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, name: true, bio: true, avatarKey: true, roles: true, createdAt: true, favoritesPublic: true }
+    columns: { id: true, name: true, bio: true, avatarKey: true, roles: true, createdAt: true, favoritesPublic: true, coverKey: true, nameGenitive: true }
   });
 
   return author ? { ...author, roles: parseRoles(author.roles) } : notFound();

@@ -62,7 +62,7 @@ db.transaction(tx => {
 fillDemo(db, images);
 
 // Старые загрузки больше никто не держит — подчищаем всё, кроме только что созданного
-const fresh = new Set([ ...Object.values(images.avatars), ...Object.values(images.photos).map(f => f.key) ]);
+const fresh = new Set([ ...Object.values(images.avatars), ...Object.values(images.covers ?? {}), ...Object.values(images.photos).map(f => f.key) ]);
 let removed = 0;
 
 for(const file of readdirSync(uploadsConfig.dir)){

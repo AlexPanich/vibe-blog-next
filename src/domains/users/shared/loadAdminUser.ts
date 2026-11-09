@@ -139,6 +139,7 @@ const ADMIN_TONES: Record<UserAdminActionType, EventTone> = {
   role_granted: 'plum',
   role_revoked: 'faint',
   avatar_removed: 'coral',
+  cover_removed: 'coral',
 };
 
 const DECISIONS: Record<ModerationDecision, { label: string, tone: EventTone }> = {

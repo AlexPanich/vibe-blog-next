@@ -17,6 +17,8 @@ export type SeedImage = { key: string, width: number, height: number }
 export type SeedImages = {
   // ключ человека → ключ загрузки
   avatars: Record<string, string>,
+  // ключ человека → ключ своей обложки (спека 41); в старом manifest поля нет
+  covers?: Record<string, string>,
   // «набор-номер» из photos.json → загрузка
   photos: Record<string, SeedImage>
 }
@@ -28,7 +30,7 @@ export const SEED_IMAGES_MANIFEST = 'seed-images.json';
 */
 export async function buildSeedImages(uploadsDir: string, cacheDir: string): Promise<SeedImages> {
   const manifest = JSON.parse(readFileSync(new URL('./photos.json', import.meta.url), 'utf8')) as PhotoManifest;
-  const images: SeedImages = { avatars: {}, photos: {} };
+  const images: SeedImages = { avatars: {}, covers: {}, photos: {} };
 
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(uploadsDir, { recursive: true });
@@ -36,6 +38,22 @@ export async function buildSeedImages(uploadsDir: string, cacheDir: string): Pro
   for(const person of people){
     const file = await cached(cacheDir, `avatar-${person.key}.jpg`, manifest._avatars[person.key]);
     images.avatars[person.key] = await saveSquare(uploadsDir, file);
+  }
+
+  // Обложки — отдельные файлы, а не ключи фото постов: удаление обложки стирает файлы по ключу
+  for(const person of people){
+    if(!person.cover){
+      continue;
+    }
+
+    const [ set, index ] = person.cover;
+    const entry = manifest[set]?.[index];
+
+    if(!entry){
+      throw new Error(`нет фото ${set}-${index} в photos.json`);
+    }
+
+    images.covers![person.key] = await saveWidth(uploadsDir, await cached(cacheDir, `${set}-${index}.jpg`, entry.url));
   }
 
   for(const post of demoPosts){
@@ -91,6 +109,8 @@ const IMAGE_WIDTHS = [ 1600, 800, 400 ];
 
 const AVATAR_SIZES = [ 256, 64 ];
 
+const COVER_WIDTHS = [ 1600, 800 ];
+
 const ATTEMPTS = 4;
 
 // Wikimedia отвечает 429 на частые запросы: пауза между скачиваниями и повтор с ожиданием
@@ -142,6 +162,17 @@ async function saveSquare(uploadsDir: string, file: string){
 
   for(const size of AVATAR_SIZES){
     await sharp(file).rotate().resize(size, size, { fit: 'cover' }).webp({ quality: 85 }).toFile(path.join(uploadsDir, `${key}-${size}.webp`));
+  }
+
+  return key;
+}
+
+// Как saveWidthVariants: варианты по ширине для обложки профиля
+async function saveWidth(uploadsDir: string, file: string){
+  const key = randomUUID();
+
+  for(const size of COVER_WIDTHS){
+    await sharp(file).rotate().resize({ width: size, withoutEnlargement: true }).webp({ quality: 82 }).toFile(path.join(uploadsDir, `${key}-${size}.webp`));
   }
 
   return key;

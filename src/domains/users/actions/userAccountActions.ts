@@ -5,9 +5,9 @@ import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { auth } from "@/globals/auth";
 import { sendToQueue } from "@/globals/queue";
 import { rateLimiters } from "@/globals/rateLimiter";
-import { avatarUploadDto, changeEmailDto, changePasswordDto, userBioDto } from "@/domains/users/dto/authRequests";
-import { AVATAR_SIZES } from "@/core/imageUrl";
-import { readImage, saveSquareVariants } from "@/shared/images";
+import { imageUploadDto, changeEmailDto, changePasswordDto, userBioDto } from "@/domains/users/dto/authRequests";
+import { AVATAR_SIZES, COVER_WIDTHS } from "@/core/imageUrl";
+import { readImage, saveSquareVariants, saveWidthVariants } from "@/shared/images";
 import { removeUploads } from "@/globals/uploads";
 import { db } from "@/globals/db";
 import { users } from "@/database/schema";
@@ -90,25 +90,36 @@ export const changeEmailAction = actionAuthClient
 export const updateBioAction = actionAuthClient
   .inputSchema(userBioDto)
   .action(async ({ parsedInput, ctx: { auth: user } }) => {
-    await db.update(users).set({ bio: parsedInput.bio || null }).where(eq(users.id, user.id));
+    const nameGenitive = parsedInput.nameGenitive || null;
+    const old = db.transaction(tx => {
+      const row = tx.select({ nameGenitive: users.nameGenitive }).from(users).where(eq(users.id, user.id)).get();
+      tx.update(users).set({ bio: parsedInput.bio || null, nameGenitive }).where(eq(users.id, user.id)).run();
+
+      return row?.nameGenitive ?? null;
+    });
     revalidatePath(`/authors/${user.id}`);
+
+    // «Ещё у …» на закэшированных страницах постов (спека 41): сброс — только если имя сменилось
+    if(old !== nameGenitive){
+      revalidatePath('/posts/[id]', 'page');
+    }
 
     return { done: true };
   });
 
 export const uploadAvatarAction = actionAuthClient
-  .inputSchema(avatarUploadDto)
+  .inputSchema(imageUploadDto)
   .action(async ({ parsedInput: { file }, ctx: { auth: user } }) => {
     await consumeOrFail(rateLimiters.imageUpload, String(user.id));
 
     const read = await readImage(file);
 
     if(!read.ok){
-      returnValidationErrors(avatarUploadDto, { file: { _errors: [ read.error ] } });
+      returnValidationErrors(imageUploadDto, { file: { _errors: [ read.error ] } });
     }
 
     const { key } = await saveSquareVariants(read.buffer, AVATAR_SIZES);
-    const old = await replaceAvatar(user.id, key);
+    const old = await replaceImage(user.id, 'avatarKey', key);
 
     if(old){
       await removeUploads(old, AVATAR_SIZES);
@@ -119,10 +130,42 @@ export const uploadAvatarAction = actionAuthClient
 
 export const removeAvatarAction = actionAuthClient
   .action(async ({ ctx: { auth: user } }) => {
-    const old = await replaceAvatar(user.id, null);
+    const old = await replaceImage(user.id, 'avatarKey', null);
 
     if(old){
       await removeUploads(old, AVATAR_SIZES);
+    }
+
+    return { done: true };
+  });
+
+export const uploadCoverAction = actionAuthClient
+  .inputSchema(imageUploadDto)
+  .action(async ({ parsedInput: { file }, ctx: { auth: user } }) => {
+    await consumeOrFail(rateLimiters.imageUpload, String(user.id));
+
+    const read = await readImage(file);
+
+    if(!read.ok){
+      returnValidationErrors(imageUploadDto, { file: { _errors: [ read.error ] } });
+    }
+
+    const { key } = await saveWidthVariants(read.buffer, COVER_WIDTHS);
+    const old = await replaceImage(user.id, 'coverKey', key);
+
+    if(old){
+      await removeUploads(old, COVER_WIDTHS);
+    }
+
+    return { coverKey: key };
+  });
+
+export const removeCoverAction = actionAuthClient
+  .action(async ({ ctx: { auth: user } }) => {
+    const old = await replaceImage(user.id, 'coverKey', null);
+
+    if(old){
+      await removeUploads(old, COVER_WIDTHS);
     }
 
     return { done: true };
@@ -136,13 +179,16 @@ function wrongCurrentPassword(schema: typeof changePasswordDto | typeof changeEm
   return returnValidationErrors(schema, { current: { _errors: [ 'Неверный текущий пароль' ] } });
 }
 
-// Новый ключ вместо старого; старый возвращается, чтобы стереть его файлы после записи
-async function replaceAvatar(userId: number, key: string | null){
+/*
+  Новый ключ аватара или обложки вместо старого; старый возвращается, чтобы стереть его
+  файлы после записи
+*/
+async function replaceImage(userId: number, column: 'avatarKey' | 'coverKey', key: string | null){
   const old = db.transaction(tx => {
-    const row = tx.select({ avatarKey: users.avatarKey }).from(users).where(eq(users.id, userId)).get();
-    tx.update(users).set({ avatarKey: key }).where(eq(users.id, userId)).run();
+    const row = tx.select({ value: users[column] }).from(users).where(eq(users.id, userId)).get();
+    tx.update(users).set({ [column]: key }).where(eq(users.id, userId)).run();
 
-    return row?.avatarKey ?? null;
+    return row?.value ?? null;
   });
 
   revalidatePath(`/authors/${userId}`);

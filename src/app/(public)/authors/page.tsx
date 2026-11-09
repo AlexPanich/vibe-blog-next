@@ -11,6 +11,7 @@ import AuthorSpotlight from "@/domains/users/components/AuthorSpotlight";
 import { AuthorsSort, authorsFilterDto } from "@/domains/users/dto/userRequests";
 import { authorsDirectory, DirectoryAuthor } from "@/domains/users/shared/authorsDirectory";
 import { authorsUrl } from "@/domains/users/shared/authorsUrl";
+import { authorCover } from "@/domains/users/shared/authorCover";
 import { IconUsers } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +38,8 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
   const [ authors, tags ] = await Promise.all([ authorsDirectory(filter), tagsWithCounts() ]);
   const spotlight = filtered ? [] : [ ...authors ].sort(byReaders).slice(0, SPOTLIGHT);
   const rest = authors.filter(author => !spotlight.includes(author));
-  const covers = await lastPostCovers(spotlight.map(author => author.id));
+  // Обложка последнего поста — только тем, у кого нет своей (спека 41)
+  const covers = await lastPostCovers(spotlight.filter(author => !author.coverKey).map(author => author.id));
   const chips = tags.filter(t => t.postsCount > 0).sort((a, b) => b.postsCount - a.postsCount).slice(0, CHIPS);
   const active = filter.tag ? tags.find(t => t.slug === filter.tag) : undefined;
 
@@ -97,7 +99,7 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
         </div>
         <div className="ui-authors-spotlight__row">
           { spotlight.map(author => (
-            <AuthorSpotlight key={author.id} author={author} cover={covers.get(author.id) ?? null} rating={rating(author)} />
+            <AuthorSpotlight key={author.id} author={author} cover={authorCover(author.coverKey, covers.get(author.id))} rating={rating(author)} />
           )) }
         </div>
       </section> }

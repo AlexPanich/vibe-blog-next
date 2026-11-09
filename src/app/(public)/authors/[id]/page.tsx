@@ -13,6 +13,7 @@ import PostCardBridge from "@/domains/posts/components/PostCardBridge";
 import AuthorPostTabs from "@/domains/posts/components/AuthorPostTabs";
 import AuthorHead from "@/domains/users/components/AuthorHead";
 import { getAuthor } from "@/domains/users/shared/getAuthor";
+import { authorCover } from "@/domains/users/shared/authorCover";
 import { followersCount } from "@/domains/users/shared/userFollows";
 import UserBlockProvider from "@/domains/users/components/block/UserBlockProvider";
 import UserBlockGate from "@/domains/users/components/block/UserBlockGate";
@@ -48,8 +49,8 @@ export default async function AuthorPage({ params, searchParams }: PageProps<'/a
     db.select({ type: posts.type, count: count() }).from(posts).where(published).groupBy(posts.type),
     // Взвешенная средняя по опубликованным постам — как на странице авторов
     db.select({ average: avg(postRatings.value) }).from(postRatings).innerJoin(posts, eq(posts.id, postRatings.postId)).where(published),
-    // Баннер — обложка последнего опубликованного поста, какая бы вкладка ни была открыта
-    db.select({ id: posts.id, coverImageId: posts.coverImageId }).from(posts).where(published).orderBy(desc(posts.publishedAt)).limit(1),
+    // Баннер — своя обложка или обложка последнего поста, какая бы вкладка ни была открыта
+    author.coverKey ? [] : db.select({ id: posts.id, coverImageId: posts.coverImageId }).from(posts).where(published).orderBy(desc(posts.publishedAt)).limit(1),
     followersCount(author.id),
     // Закрытое избранное — null: вкладки нет (спека 40)
     author.favoritesPublic ? countFavorites(author.id) : null
@@ -69,7 +70,7 @@ export default async function AuthorPage({ params, searchParams }: PageProps<'/a
     <UserBlockProvider authorId={author.id} authorName={author.name}>
       <AuthorHead
         author={author}
-        cover={banner?.cover ?? null}
+        cover={authorCover(author.coverKey, banner?.cover)}
         postsCount={postsCount}
         followersCount={followers}
         rating={rating.average === null ? null : formatRating(Number(rating.average))}

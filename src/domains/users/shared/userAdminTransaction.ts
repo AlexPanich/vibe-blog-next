@@ -19,7 +19,7 @@ export function adminTransaction<T>(actorId: number, targetId: number, change: (
       actionError(403, 'У вас больше нет прав администратора');
     }
 
-    const target = tx.select({ roles: users.roles, bannedAt: users.bannedAt, avatarKey: users.avatarKey }).from(users).where(eq(users.id, targetId)).get();
+    const target = tx.select({ roles: users.roles, bannedAt: users.bannedAt, avatarKey: users.avatarKey, coverKey: users.coverKey }).from(users).where(eq(users.id, targetId)).get();
 
     if(!target){
       return notFound();
@@ -35,4 +35,4 @@ export function staleError(): never {
 
 export type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-type AdminTarget = Pick<typeof users.$inferSelect, 'roles' | 'bannedAt' | 'avatarKey'>;
+type AdminTarget = Pick<typeof users.$inferSelect, 'roles' | 'bannedAt' | 'avatarKey' | 'coverKey'>;

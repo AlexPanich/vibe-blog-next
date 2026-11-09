@@ -40,6 +40,8 @@ export function describeNotification(row: DescribedRow): { text: string, href: s
       return fixed(`С вас снята роль «${roleLabel(row.role)}»`, '/office/profile');
     case 'user.avatar_removed':
       return fixed('Администратор удалил ваш аватар', '/office/profile');
+    case 'user.cover_removed':
+      return fixed('Администратор удалил обложку вашего профиля', '/office/profile');
     case 'author_request.created':
       return fixed('Новая заявка на роль автора', '/office/admin/author-requests');
     case 'author_request.rejected':

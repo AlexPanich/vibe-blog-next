@@ -1,7 +1,9 @@
-// Ширины webp-вариантов картинки поста и стороны квадрата аватара
+// Ширины webp-вариантов картинки поста, стороны квадрата аватара и ширины обложки профиля
 export const IMAGE_WIDTHS = [ 1600, 800, 400 ] as const;
 
 export const AVATAR_SIZES = [ 256, 64 ] as const;
+
+export const COVER_WIDTHS = [ 1600, 800 ] as const;
 
 export type ImageSize = (typeof IMAGE_WIDTHS)[number] | (typeof AVATAR_SIZES)[number];
 

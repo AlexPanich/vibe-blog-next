@@ -20,7 +20,7 @@
    - сообщения: .ui-messenger, .ui-chat-list / .ui-chat-row, .ui-dialog, .ui-picker, .ui-message, .ui-composer;
    - подписки: .ui-follows, .ui-follow-list / .ui-follow-person, .ui-follow-card, .ui-find-authors;
    - комментарии в кабинете: .ui-office-comments / .ui-office-comment;
-   - профиль в кабинете: .ui-account (секции), .ui-account-avatar, .ui-account-roles,
+   - профиль в кабинете: .ui-account (секции), .ui-account-avatar, .ui-account-cover, .ui-account-roles,
      .ui-account-options, .ui-account-security;
    - заявка в авторы: .ui-request, .ui-request-hero, .ui-request-card, .ui-request-history /
      .ui-request-item; в админке — .ui-request-review, .ui-request-recent, .ui-request-decided;
@@ -30,7 +30,7 @@
    - все посты в админке: .ui-admin-posts;
    - пользователи в админке: .ui-admin-users, роли пилюлями .ui-role-pills / .ui-role-pill;
    - пользователь в админке: .ui-user-page, .ui-user-hero, .ui-user-card, .ui-user-roles,
-     .ui-user-ban, .ui-user-avatar, .ui-user-log;
+     .ui-user-ban, .ui-user-avatar, .ui-user-cover__preview, .ui-user-log;
    - рубрики: .ui-tags-head, .ui-tags-section, .ui-tag-tile, .ui-tag-rest, .ui-tag-follow-toggle;
    - страницы о блоге: .ui-site-pages, .ui-site-nav, .ui-site-page, .ui-site-contacts, .ui-site-cta.
    ========================================================================== */
@@ -9098,6 +9098,41 @@ span.ui-photo__arrow {
   color: var(--ink-faint);
 }
 
+/* Обложка профиля (спека 41): полоса пропорций баннера, под ней кнопки и подсказки */
+.ui-account-cover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.ui-account-cover__band {
+  height: 120px;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--paper-tint);
+}
+
+.ui-account-cover__band img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ui-account-cover__band[data-tone='coral'] { background: var(--accent-soft); }
+.ui-account-cover__band[data-tone='sun'] { background: var(--sun-soft); }
+.ui-account-cover__band[data-tone='mint'] { background: var(--mint-soft); }
+.ui-account-cover__band[data-tone='plum'] { background: var(--plum-soft); }
+
+.ui-account-cover .mantine-Button-root {
+  border-radius: var(--radius-pill);
+}
+
+.ui-account-cover__hint.ui-account-cover__hint {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
 /* Роли пилюлями */
 .ui-account-roles {
   display: flex;
@@ -9355,6 +9390,10 @@ span.ui-photo__arrow {
 
   .ui-account-avatar__hint.ui-account-avatar__hint {
     display: none;
+  }
+
+  .ui-account-cover__band {
+    height: 96px;
   }
 
   /* Варианты — строками в одной рамке, только название */
@@ -11774,6 +11813,15 @@ span.ui-photo__arrow {
 .ui-user-avatar .ui-user-card__error {
   flex-basis: 100%;
   order: 2;
+}
+
+/* Превью обложки профиля в карточке «Обложка» (спека 41): раскладка — как у аватара */
+.ui-user-cover__preview {
+  display: block;
+  width: 160px;
+  height: 48px;
+  border-radius: var(--radius-control);
+  object-fit: cover;
 }
 
 .ui-user-log {

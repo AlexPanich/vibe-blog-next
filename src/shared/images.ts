@@ -63,6 +63,28 @@ export async function saveImageVariants(buffer: Buffer, widths: readonly number[
 }
 
 /*
+  Варианты по ширине — для обложки профиля (спека 41): баннер широкий, портретное фото
+  по длинной стороне вышло бы узким. Кадрирует CSS
+*/
+export async function saveWidthVariants(buffer: Buffer, widths: readonly number[]){
+  const key = randomUUID();
+  const source = sharp(buffer, { limitInputPixels: uploadsConfig.maxPixels }).rotate();
+
+  try{
+    for(const size of widths){
+      const data = await source.clone().resize({ width: size, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+      await writeUpload(`${key}-${size}.webp`, data);
+    }
+  }
+  catch(e){
+    await removeUploads(key, widths);
+    throw e;
+  }
+
+  return { key };
+}
+
+/*
   Квадрат по центру — для аватаров
 */
 export async function saveSquareVariants(buffer: Buffer, sizes: readonly number[]){

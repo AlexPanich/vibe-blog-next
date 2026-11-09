@@ -6,6 +6,7 @@ import UserRolesSwitches from "@/domains/users/components/admin/UserRolesSwitche
 import UserBanForm from "@/domains/users/components/admin/UserBanForm";
 import UserAdminLog from "@/domains/users/components/admin/UserAdminLog";
 import UserAvatarRemoveForm from "@/domains/users/components/admin/UserAvatarRemoveForm";
+import UserCoverRemoveForm from "@/domains/users/components/admin/UserCoverRemoveForm";
 import { userBanFormResource, userRolesFormResource } from "@/domains/users/dto/userResources";
 import { loadAdminUser } from "@/domains/users/shared/loadAdminUser";
 import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
@@ -20,8 +21,8 @@ import { IconChevronLeft, IconInfoCircle } from "@tabler/icons-react";
 export const dynamic = 'force-dynamic';
 
 /*
-  Пользователь в админке (спека 42, шаг 19): шапка с цифрами, слева «Роли» и «Аватар»,
-  справа «Блокировка» и «Последние действия». Себя менять нельзя — вместо карточек
+  Пользователь в админке (спека 42, шаг 19): шапка с цифрами, слева «Роли», «Аватар» и
+  «Обложка» (спека 41), справа «Блокировка» и «Последние действия». Себя менять нельзя — вместо карточек
   управления плашка. На телефоне — одна колонка и «‹ Пользователи» вместо крошек
 */
 export default async function AdminUsersItem({ params }: PageProps<'/office/admin/users/[id]'>) {
@@ -66,6 +67,13 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
             >
               <UserAvatarRemoveForm key={user.avatarKey} id={user.id} name={user.name} avatarKey={user.avatarKey} />
             </UserAdminCard> }
+
+            { user.coverKey && <UserAdminCard
+              title="Обложка"
+              hint="Можно удалить, если нарушает правила — пользователь получит уведомление"
+            >
+              <UserCoverRemoveForm key={user.coverKey} id={user.id} coverKey={user.coverKey} />
+            </UserAdminCard> }
           </div>
 
           <div className="ui-user-page__column">
@@ -92,7 +100,7 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
         </div>
       ) : <>
         <p className="ui-user-page__self">
-          <IconInfoCircle size={15} stroke={1.8} />Свои роли, блокировку и аватар здесь менять нельзя
+          <IconInfoCircle size={15} stroke={1.8} />Свои роли, блокировку, аватар и обложку здесь менять нельзя
         </p>
         { log }
       </> }

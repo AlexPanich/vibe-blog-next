@@ -10,4 +10,5 @@ export const USER_ADMIN_ACTION_LABELS: Record<UserAdminActionType, string> = {
   role_granted: 'Выдана роль',
   role_revoked: 'Снята роль',
   avatar_removed: 'Аватар удалён',
+  cover_removed: 'Обложка удалена',
 };

@@ -50,11 +50,15 @@ export const changeEmailDto = z.object({
 export type ChangeEmailDto = z.infer<typeof changeEmailDto>
 
 export const userBioDto = z.object({
-  bio: z.string().trim().max(500, 'Не больше 500 символов')
+  bio: z.string().trim().max(500, 'Не больше 500 символов'),
+  // «Ещё у …» (спека 41): одно-два слова, до 40; пусто — null в action
+  nameGenitive: z.string().trim().transform(v => v.replace(/\s+/g, ' '))
+    .pipe(z.string().max(40, 'Не больше 40 символов').refine(v => v.split(' ').length <= 2, 'Одно или два слова'))
 })
 
 export type UserBioDto = z.infer<typeof userBioDto>
 
-export const avatarUploadDto = z.object({
+// Загрузка аватара и обложки профиля: файл проверяет readImage в action
+export const imageUploadDto = z.object({
   file: z.instanceof(File, { message: 'Выберите файл' })
 })

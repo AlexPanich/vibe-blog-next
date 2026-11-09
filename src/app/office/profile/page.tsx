@@ -3,7 +3,9 @@ import OfficeHead from "@/components/layout/OfficeHead";
 import Link from "@/components/general/Link";
 import LocalDate from "@/components/general/LocalDate";
 import AvatarForm from "@/domains/users/components/AvatarForm";
+import CoverForm from "@/domains/users/components/CoverForm";
 import UserBioForm from "@/domains/users/components/UserBioForm";
+import { lastPostCovers } from "@/domains/posts/shared/lastPostCovers";
 import PasswordChangeForm from "@/domains/users/components/PasswordChangeForm";
 import EmailChangeForm from "@/domains/users/components/EmailChangeForm";
 import ProfileSection from "@/domains/users/components/profile/ProfileSection";
@@ -26,13 +28,15 @@ export default async function OfficeProfile() {
   const user = await requireAuthUser();
   const profile = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { bio: true, avatarKey: true, messagesFriendsOnly: true, favoritesPublic: true, emailVerified: true }
+    columns: { bio: true, avatarKey: true, coverKey: true, nameGenitive: true, messagesFriendsOnly: true, favoritesPublic: true, emailVerified: true }
   });
   // Вошедший только через GitHub пароля не имеет — ни смены пароля, ни смены email (там нужен пароль)
   const credential = await db.query.accounts.findFirst({
     where: and(eq(accounts.userId, user.id), eq(accounts.providerId, 'credential'), isNotNull(accounts.password)),
     columns: { updatedAt: true }
   });
+  // Без своей обложки превью показывает то, что видно сейчас на странице автора
+  const coverFallback = profile?.coverKey ? null : (await lastPostCovers([ user.id ])).get(user.id) ?? null;
   const isAuthor = user.roles.includes('author');
 
   return (
@@ -52,8 +56,12 @@ export default async function OfficeProfile() {
           <AvatarForm name={user.name} avatarKey={profile?.avatarKey ?? null} />
         </ProfileSection>
 
+        <ProfileSection title="Обложка" hint="Баннер на вашей странице автора и в карточке на странице авторов">
+          <CoverForm authorId={user.id} coverKey={profile?.coverKey ?? null} fallback={coverFallback} />
+        </ProfileSection>
+
         <ProfileSection title="Публичная страница" hint="Имя и пара строк о себе — на странице автора">
-          <UserBioForm name={user.name} bio={profile?.bio ?? ''} />
+          <UserBioForm name={user.name} bio={profile?.bio ?? ''} nameGenitive={profile?.nameGenitive ?? ''} />
         </ProfileSection>
 
         <ProfileSection title="Роли" hint="Выдаёт администратор">
