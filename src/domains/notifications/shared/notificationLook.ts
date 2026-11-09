@@ -1,5 +1,5 @@
 import type { NotificationType } from "@/database/schema";
-import { IconAlertCircle, IconFlag, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconUserCheck, type Icon } from "@tabler/icons-react";
+import { IconAlertCircle, IconAward, IconFlag, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconUserCheck, type Icon } from "@tabler/icons-react";
 
 export type NotificationTone = 'mint' | 'coral' | 'sun' | 'plum' | 'ink'
 
@@ -21,6 +21,7 @@ const LOOKS: Record<NotificationType, NotificationLook> = {
   'post.approved': { icon: IconCircleCheck, tone: 'mint', title: 'Пост опубликован', action: 'Открыть пост' },
   'post.unblocked': { icon: IconCircleCheck, tone: 'mint', title: 'Пост разблокирован', action: 'Открыть пост' },
   'post.published': { icon: IconFileText, tone: 'plum', title: 'Новый пост', action: 'Читать' },
+  'post.featured': { icon: IconAward, tone: 'sun', title: 'Выбор редакции', action: 'Открыть пост' },
   'post.rejected': { icon: IconAlertCircle, tone: 'coral', title: 'Пост отклонён', action: 'Исправить' },
   'post.blocked': { icon: IconAlertCircle, tone: 'coral', title: 'Пост заблокирован', action: 'Открыть пост' },
   'comment.created': { icon: IconMessageCircle, tone: 'sun', title: 'Комментарий к посту', action: 'Ответить' },

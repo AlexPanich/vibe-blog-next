@@ -4,6 +4,8 @@ import { posts } from "@/database/schema";
 import { moderatePosts } from "@/domains/posts/policy";
 import PostRow from "@/domains/posts/components/PostRow";
 import PostQueueRow from "@/domains/posts/components/PostQueueRow";
+import PostFeatureButton from "@/domains/posts/components/PostFeatureButton";
+import { featuredNow } from "@/domains/posts/shared/editorsPick";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRowData } from "@/domains/posts/shared/postRows";
 import { POST_MODERATION_TABS, postModerationFilterDto } from "@/domains/posts/dto/postModerationRequests";
@@ -11,7 +13,7 @@ import { requireAuthUser } from "@/shared/auth";
 import OfficeHead from "@/components/layout/OfficeHead";
 import { asc, count, desc, eq, inArray } from "drizzle-orm";
 import Link from "@/components/general/Link";
-import { IconChecks } from "@tabler/icons-react";
+import { IconAward, IconChecks } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +28,8 @@ const TABS = {
 
 /*
   Очередь модерации (спека 42, шаг 13): вкладки статусов с числами; в очереди — строки с
-  ревью («Взять на ревью» / «Продолжить» / «Занят»), в остальных вкладках — строки постов
+  ревью («Взять на ревью» / «Продолжить» / «Занят»), в остальных вкладках — строки постов.
+  У опубликованных — выбор для главной и метка «На главной» у текущего (спека 39)
 */
 export default async function ModerationPosts({ searchParams }: PageProps<'/office/moderation/posts'>) {
   await CONTAINER.boucerService.breakIfCant(moderatePosts);
@@ -87,6 +90,10 @@ export default async function ModerationPosts({ searchParams }: PageProps<'/offi
             href={`/office/moderation/posts/${post.id}`}
             author={post.author}
             tags={pickTags(post)}
+            badge={status === 'published' && featuredNow(post.featuredAt) && <span className="ui-post-row__pick">
+              <IconAward size={12} stroke={2} />На главной
+            </span>}
+            side={status === 'published' && <PostFeatureButton id={post.id} featured={featuredNow(post.featuredAt)} variant="row" />}
           />) }
         </div>
       ) }

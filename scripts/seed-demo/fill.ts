@@ -135,7 +135,14 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     const publishedPosts = demoPosts.filter(p => (p.status ?? 'published') === 'published');
 
-    // --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — она «Выбор редакции»
+    // --- Ручной «Выбор редакции» (спека 39): два дня назад, автору — прочитанное уведомление.
+    // Сняв выбор, на главной видно автоматику — «Лучшее за неделю»
+    const editorsPick = postIds['velosiped-na-rabotu-god-spustya'];
+
+    tx.update(schema.posts).set({ featuredAt: daysAgo(2), featuredBy: uid.some }).where(eq(schema.posts.id, editorsPick.id)).run();
+    tx.insert(schema.notifications).values({ userId: editorsPick.userId, type: 'post.featured', actorId: uid.some, postId: editorsPick.id, readAt: daysAgo(1.5), createdAt: daysAgo(2) }).run();
+
+    // --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — «Лучшее за неделю», пока нет ручного выбора
     for(const post of publishedPosts){
       const { id, createdAt } = postIds[post.url];
       const base = post.url === 'nedelya-v-gorakh-dagestana' ? 4.85 : 3.6 + random() * 1.2;

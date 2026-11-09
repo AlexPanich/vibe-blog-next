@@ -10,6 +10,7 @@ import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { IconAlertCircle, IconArchive, IconCircleCheck, IconEye, IconHourglass, IconLock, IconMessageCircle, IconPencil, IconStar, type Icon } from "@tabler/icons-react";
 import type { Route } from "next";
 import Link from "@/components/general/Link";
+import type { ReactNode } from "react";
 
 type PostRowProps<T extends string> = {
   post: Pick<Post, 'id' | 'title' | 'status' | 'createdAt' | 'publishedAt'> & Pick<PostRowData, 'cover' | 'rating' | 'commentsCount' | 'note'>,
@@ -19,7 +20,11 @@ type PostRowProps<T extends string> = {
   // Кто ведёт ревью — в очереди модерации
   reviewer?: string,
   // «Править» у черновика — в своих постах
-  editable?: boolean
+  editable?: boolean,
+  // Метка в конце меты — «На главной» в модерации (спека 39)
+  badge?: ReactNode,
+  // Кнопка справа поверх растянутой ссылки, как «Править» — выбор для главной (спека 39)
+  side?: ReactNode
 }
 
 // Без обложки — иконка статуса на подложке цвета рубрики
@@ -35,9 +40,9 @@ const STATUS_ICONS: Record<PostStatus, Icon> = {
 /*
   Строка поста в списках кабинета (спека 42): миниатюра, заголовок, мета (статус, рубрика,
   дата), справа цифры опубликованного или «Править» у черновика; у отклонённого — замечание
-  модератора. Ссылка — на заголовке и растянута на строку, «Править» лежит поверх неё
+  модератора. Ссылка — на заголовке и растянута на строку, «Править» и side лежат поверх неё
 */
-export default function PostRow<T extends string>({ post, href, tags = [], author, reviewer, editable = false }: PostRowProps<T>) {
+export default function PostRow<T extends string>({ post, href, tags = [], author, reviewer, editable = false, badge, side }: PostRowProps<T>) {
   const rubric = tags[0];
   const StatusIcon = STATUS_ICONS[post.status];
   const showStats = post.status === 'published' || post.status === 'hidden';
@@ -60,6 +65,7 @@ export default function PostRow<T extends string>({ post, href, tags = [], autho
           { rubric && <span className="ui-post-row__tag">#{ rubric.name }</span> }
           <LocalDate value={post.publishedAt ?? post.createdAt} options={{ day: 'numeric', month: 'short' }} />
           { reviewer && <span className="ui-post-row__reviewer"><IconEye size={14} stroke={1.8} />На ревью: { reviewer }</span> }
+          { badge }
         </div>
         { post.note && <p className="ui-post-row__note">
           <IconAlertCircle size={14} stroke={1.8} />Модератор: { post.note }
@@ -76,6 +82,7 @@ export default function PostRow<T extends string>({ post, href, tags = [], autho
         { editable && post.status === 'draft' && <Link href={`/office/posts/${post.id}/edit`} className="ui-post-row__edit">
           <IconPencil size={14} stroke={1.8} />Править
         </Link> }
+        { side }
       </div>
     </div>
   );

@@ -66,6 +66,7 @@ export function describeNotification(row: DescribedRow): { text: string, href: s
     'post.blocked': `Пост ${post} заблокирован модератором`,
     'post.unblocked': `Пост ${post} разблокирован`,
     'post.published': `Новый пост ${post}`,
+    'post.featured': `Ваш пост ${post} выбрали для главной`,
     'report.resolved': `Жалоба на комментарий к посту ${post} рассмотрена`,
     'post_report.resolved': `Жалоба на пост ${post} рассмотрена${resolutionTail(row.postReportResolution)}`,
   }[row.type];

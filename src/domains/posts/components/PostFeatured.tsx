@@ -9,22 +9,29 @@ import { formatRating } from "@/domains/posts/shared/formatRating";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
 import PostCover from "@/domains/posts/components/PostCover";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
-import { IconArticle, IconAward, IconLanguage, IconMapPin } from "@tabler/icons-react";
+import type { HomePick } from "@/domains/posts/shared/editorsPick";
+import { IconArticle, IconAward, IconLanguage, IconMapPin, IconStar } from "@tabler/icons-react";
 
 type PostFeaturedProps<T extends PostResource> = {
   post: StrictResource<T, PostResource>,
-  // Выбор редакции недели; иначе это просто самый свежий пост, без метки
-  picked: boolean
+  // Ручной выбор редакции, лучшая оценка недели или просто самый свежий пост — без метки
+  pick: HomePick
 }
 
 const TYPE_ICONS = { simple: IconArticle, translate: IconLanguage, travel: IconMapPin };
 
+const PICK_LABELS = {
+  editor: { icon: IconAward, label: 'Выбор редакции' },
+  week: { icon: IconStar, label: 'Лучшее за неделю' },
+};
+
 /*
   Большой пост над карточками на главной (спека 30): обложка слева, справа метка «Выбор
-  редакции», рубрика, заголовок, выдержка и автор с датой, временем чтения и оценкой.
+  редакции» или «Лучшее за неделю» (спека 39), рубрика, заголовок, выдержка и автор с датой, временем чтения и оценкой.
   На телефоне — столбиком, как карточка
 */
-export default function PostFeatured<T extends PostResource>({ post, picked }: PostFeaturedProps<T>) {
+export default function PostFeatured<T extends PostResource>({ post, pick }: PostFeaturedProps<T>) {
+  const pickLabel = pick === null ? null : PICK_LABELS[pick];
   const href = `/posts/${post.id}` as const;
   const rubric = post.tags[0];
   const TypeIcon = TYPE_ICONS[post.type];
@@ -40,8 +47,8 @@ export default function PostFeatured<T extends PostResource>({ post, picked }: P
     </div>
 
     <div className="ui-featured__text">
-      { (picked || rubric) && <div className="ui-featured__top">
-        { picked && <span className="ui-featured__pick"><IconAward size={14} stroke={2} />Выбор редакции</span> }
+      { (pickLabel || rubric) && <div className="ui-featured__top">
+        { pickLabel && <span className="ui-featured__pick"><pickLabel.icon size={14} stroke={2} />{ pickLabel.label }</span> }
         { rubric && <Link href={`/posts?tag=${rubric.slug}`} className="ui-featured__rubric">{ rubric.name }</Link> }
       </div> }
       <h3 className="ui-featured__title">

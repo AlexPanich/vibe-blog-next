@@ -1726,6 +1726,32 @@ a.ui-tag:hover {
   background: var(--paper-tint);
 }
 
+/* Кнопка выбора для главной в строке — тот же вид, что «Править» (спека 39) */
+.ui-post-row__feature {
+  white-space: nowrap;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ui-post-row__feature:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Метка «На главной» в мете строки — текущий выбор редакции */
+.ui-post-row__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.125rem 0.5625rem;
+  border-radius: var(--radius-pill);
+  background: var(--sun);
+  color: var(--on-sun);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 /* Телефон: миниатюра 64px, цифры — строкой под текстом, «Править» уходит — правка из карточки поста */
 @media (max-width: 720px) {
   .ui-post-row {
@@ -1774,8 +1800,15 @@ a.ui-tag:hover {
   }
 
   .ui-post-row__edit,
-  .ui-post-row__side:not(:has(> span)) {
+  .ui-post-row__side:not(:has(> span, > .ui-post-row__feature)) {
     display: none;
+  }
+
+  /* Выбор для главной на телефоне остаётся: у него нет другого места */
+  .ui-post-row__side .ui-post-row__feature {
+    display: inline-flex;
+    margin-left: auto;
+    padding: 0.375rem 0.75rem;
   }
 }
 
@@ -5655,6 +5688,29 @@ a.ui-chat-row[data-active='true']:hover {
 
 .ui-post__crumbs a:hover {
   color: var(--link);
+}
+
+/* «Выбрать для главной» модератора (спека 39): пункт ряда, цветом ссылки — это действие */
+.ui-post__feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ui-post__feature:hover {
+  text-decoration: underline;
+}
+
+.ui-post__feature:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .ui-post__type {
@@ -10371,6 +10427,13 @@ span.ui-photo__arrow {
 
 .ui-decision__note {
   color: var(--ink-soft);
+}
+
+.ui-decision__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .ui-decision__release {

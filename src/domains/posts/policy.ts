@@ -21,6 +21,14 @@ export function moderatePosts(user: AuthUser){
   return user.roles.includes('moderator') || user.roles.includes('admin');
 }
 
+/*
+  Выбрать пост для главной и снять с неё (спека 39). Пока то же, что модерация, — отдельное
+  имя для кнопок и actions, если право сузят
+*/
+export function featurePost(user: AuthUser){
+  return moderatePosts(user);
+}
+
 export function adminPosts(user: AuthUser){
   return user.roles.includes('admin');
 }

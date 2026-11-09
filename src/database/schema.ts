@@ -50,7 +50,7 @@ export type UserAdminActionType = (typeof USER_ADMIN_ACTIONS)[number];
 
 export const NOTIFICATION_TYPES = [
   'comment.created', 'comment.reply', 'comment.hidden', 'comment.unhidden', 'comment.edited',
-  'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted',
+  'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted', 'post.featured',
   'report.created', 'report.resolved',
   'post_report.created', 'post_report.resolved',
   'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed', 'user.cover_removed',
@@ -165,6 +165,13 @@ export const posts = sqliteTable('posts', {
     Ставится при первом approve, restore и unblock её не меняют
   */
   publishedAt: integer('published_at', { mode: 'timestamp' }),
+  /*
+    Ручной «Выбор редакции» (спека 39): когда и кто выбрал. Действует 7 дней (editorsPick.ts),
+    ненулевой featuredAt — максимум у одного поста: новый выбор обнуляет прежний, уход из
+    published — тоже (changePostStatus)
+  */
+  featuredAt: integer('featured_at', { mode: 'timestamp' }),
+  featuredBy: integer('featured_by').references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('posts_status_idx').on(t.status),
@@ -177,6 +184,7 @@ export const posts = sqliteTable('posts', {
     (${t.type} = 'travel' AND ${t.source} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL)
   `),
   check('posts_lead_check', sql`${t.lead} IS NULL OR length(${t.lead}) BETWEEN 20 AND 200`),
+  check('posts_featured_check', sql`(${t.featuredAt} IS NULL) = (${t.featuredBy} IS NULL)`),
 ]);
 
 /*

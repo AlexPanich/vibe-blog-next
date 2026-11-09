@@ -6,7 +6,9 @@ import { actionAuthClient } from "@/globals/actionClient";
 import { postModerations } from "@/database/schema";
 import { aiIdSchema } from "@/domains/posts/dto/postRequests";
 import { postApproveDto, postBlockDto, postRejectDto, postUnblockDto } from "@/domains/posts/dto/postModerationRequests";
-import { transitPost } from "@/domains/posts/policy";
+import { featurePost, transitPost } from "@/domains/posts/policy";
+import { pickForHome, unpickFromHome } from "@/domains/posts/shared/postFeature";
+import { publishNotifications } from "@/domains/notifications/exports/notify";
 import { reviewGuard } from "@/domains/posts/shared/reviewGuard";
 import { changePostStatus } from "@/domains/posts/shared/changePostStatus";
 import { insertBlockModeration } from "@/domains/posts/shared/postBlocking";
@@ -83,4 +85,30 @@ export const unblockPostAction = actionAuthClient
     });
 
     return redirect(`/office/moderation/posts/${post.id}`);
+  });
+
+/*
+  Выбор для главной (спека 39). Policy — только роль: статус и «уже выбран» проверяет
+  UPDATE в pickForHome (409 устаревшей странице). Без redirect — кнопка делает router.refresh()
+*/
+export const featurePostAction = actionAuthClient
+  .bindArgsSchemas([ aiIdSchema ])
+  .action(async ({ bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
+    await CONTAINER.postService.findOrFail(id);
+    await CONTAINER.boucerService.breakIfCant(featurePost);
+
+    publishNotifications(pickForHome(id, auth.id));
+
+    return { featured: true };
+  });
+
+export const unfeaturePostAction = actionAuthClient
+  .bindArgsSchemas([ aiIdSchema ])
+  .action(async ({ bindArgsParsedInputs: [ id ] }) => {
+    await CONTAINER.postService.findOrFail(id);
+    await CONTAINER.boucerService.breakIfCant(featurePost);
+
+    unpickFromHome(id);
+
+    return { featured: false };
   });

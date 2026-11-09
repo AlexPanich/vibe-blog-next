@@ -11,6 +11,9 @@ import PostReviewPreview from "@/domains/posts/components/PostReviewPreview";
 import PostReviewDecision from "@/domains/posts/components/PostReviewDecision";
 import PostBlockingForm from "@/domains/posts/components/PostBlockingForm";
 import PostModerationHistory from "@/domains/posts/components/PostModerationHistory";
+import PostFeatureButton from "@/domains/posts/components/PostFeatureButton";
+import LocalDate from "@/components/general/LocalDate";
+import { EDITORS_PICK_DAYS, editorsPickUntil, featuredNow } from "@/domains/posts/shared/editorsPick";
 import { postModerateResource } from "@/domains/posts/dto/postResources";
 import { POST_MODERATION_TABS } from "@/domains/posts/dto/postModerationRequests";
 import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
@@ -81,6 +84,7 @@ type DecisionPost = {
   status: PostStatus,
   reviewerId: number | null,
   reviewStartedAt: Date | null,
+  featuredAt: Date | null,
   reviewer: { name: string } | null
 }
 
@@ -97,7 +101,13 @@ function Decision({ post, me }: { post: DecisionPost, me: AuthUser }) {
       canTakeover={adminPosts(me)}
     />;
   }
-  else if(post.status === 'published' || post.status === 'hidden'){
+  else if(post.status === 'published'){
+    return <>
+      <EditorsPick id={post.id} featuredAt={post.featuredAt} />
+      <section className="ui-decision"><PostBlockingForm key="block" post={target} mode="block" /></section>
+    </>;
+  }
+  else if(post.status === 'hidden'){
     // key: после смены статуса страница рендерится заново, и без него форма унесла бы введённый текст
     return <section className="ui-decision"><PostBlockingForm key="block" post={target} mode="block" /></section>;
   }
@@ -106,6 +116,23 @@ function Decision({ post, me }: { post: DecisionPost, me: AuthUser }) {
   }
 
   return <section className="ui-decision"><p className="ui-decision__note">Пост уже не на модерации.</p></section>;
+}
+
+// Выбор для главной у опубликованного (спека 39) — над блокировкой
+function EditorsPick({ id, featuredAt }: { id: number, featuredAt: Date | null }) {
+  const featured = featuredAt !== null && featuredNow(featuredAt);
+
+  return (
+    <section className="ui-decision">
+      <h2 className="ui-decision__title">Выбор редакции</h2>
+      <p className="ui-decision__note">
+        { featured
+          ? <>Пост на главной до <LocalDate value={editorsPickUntil(featuredAt)} options={{ day: 'numeric', month: 'long' }} />. Снимете — главная вернётся к лучшему за неделю.</>
+          : `Пост встанет на главную на ${EDITORS_PICK_DAYS} дней, прежний выбор снимется. Автор получит уведомление.` }
+      </p>
+      <div><PostFeatureButton id={id} featured={featured} variant="panel" /></div>
+    </section>
+  );
 }
 
 // Вкладка модерации, в которой лежит пост; для остальных статусов — очередь

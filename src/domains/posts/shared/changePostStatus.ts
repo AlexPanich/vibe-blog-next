@@ -18,14 +18,16 @@ type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
   (settlePostReports, спека 36). Смена статуса всегда снимает ревьюера: ревью — только внутри
   moderating. Первое одобрение ставит publishedAt — дату в ленте «Новые» (спека 22).
   Уведомления перехода пишутся в той же транзакции, а в браузер уходят после commit, туда же
-  — широковещательный post.published. Права проверяет вызывающий.
+  — широковещательный post.published. Уход из published снимает выбор редакции в том же
+  UPDATE (спека 39); restore и unblock его не возвращают. Права проверяет вызывающий.
 */
 export function changePostStatus(postId: number, transition: PostTransition, actorId: number, also?: (tx: DBTransaction) => void, guard?: SQL){
   const { from, to } = POST_TRANSITIONS[transition];
+  const unfeature = from === 'published' ? { featuredAt: null, featuredBy: null } : {};
 
   const { notificationIds, authorId, firstPublished } = db.transaction(tx => {
     const [ changed ] = tx.update(posts)
-      .set({ status: to, reviewerId: null, reviewStartedAt: null })
+      .set({ status: to, reviewerId: null, reviewStartedAt: null, ...unfeature })
       .where(and(eq(posts.id, postId), eq(posts.status, from), guard))
       .returning({ userId: posts.userId })
       .all();
