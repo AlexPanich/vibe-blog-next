@@ -105,7 +105,7 @@ export default function DialogList<T extends DialogRowResource[]>({ meId, dialog
   if(rows.length === 0){
     return q === ''
       ? <p className="ui-chat-list__empty">
-          Переписок пока нет. Написать можно со страницы автора — кнопка «Написать» рядом с подпиской. <Link href="/authors">К авторам</Link>
+          Переписок пока нет. Найдите собеседника среди авторов и своих подписок — <Link href="/office/messages/new">Написать сообщение</Link>
         </p>
       : <p className="ui-chat-list__empty">Никого не нашлось</p>;
   }

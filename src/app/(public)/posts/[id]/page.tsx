@@ -9,7 +9,7 @@ import PostCardBridge from "@/domains/posts/components/PostCardBridge";
 import { coverOf, getPostImages } from "@/domains/posts/shared/postImages";
 import PostLocationMap from "@/domains/posts/components/map/PostLocationMap";
 import { postRatingStats } from "@/domains/posts/shared/postRatings";
-import { readingMinutes } from "@/domains/posts/shared/postText";
+import { postSummary, readingMinutes } from "@/domains/posts/shared/postText";
 import { authorMorePosts } from "@/domains/posts/shared/authorMorePosts";
 import { postRatingBlockResource, postResource } from "@/domains/posts/dto/postResources";
 import { resource } from "@/core/resource";
@@ -18,14 +18,13 @@ import CommentsBlock from "@/domains/comments/exports/CommentsBlock";
 import { commentListResource, loadComments } from "@/domains/comments/exports/loadComments";
 import { getPublishedPost } from "@/domains/posts/shared/getPublishedPost";
 import { idOrFail } from "@/shared/params";
-import { stripMarkdown } from "@/core/markdown";
 import Link from "@/components/general/Link";
 import { getAuthor } from "@/domains/users/shared/getAuthor";
 import { IconArrowLeft } from "@tabler/icons-react";
 
 export async function generateMetadata({ params }: PageProps<'/posts/[id]'>) {
   const post = await getPublishedPost(idOrFail((await params).id));
-  const description = stripMarkdown(post.content).slice(0, 160);
+  const description = postSummary(post);
 
   return { title: post.title, description, openGraph: { title: post.title, description, type: 'article' } }
 }
@@ -81,7 +80,7 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
     </article>
 
     { more.length > 0 && <section className="ui-post-more">
-      <h2 className="ui-post-more__title">Ещё у автора</h2>
+      <h2 className="ui-post-more__title">Ещё у { author.nameGenitive ?? 'автора' }</h2>
       <div className="ui-post-grid">
         { more.map(card => <PostCardBridge key={card.id} post={resource(postResource, card)} />) }
       </div>

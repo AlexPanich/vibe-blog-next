@@ -28,9 +28,26 @@ export const POST_URL_MAX = 16;
 
 export const POST_TITLE_MAX = 16;
 
+export const POST_LEAD_MIN = 20;
+
+export const POST_LEAD_MAX = 200;
+
+const leadMessage = `От ${POST_LEAD_MIN} до ${POST_LEAD_MAX} символов`;
+
+/*
+  Подзаголовок (спека 35): необязателен, обычный текст в одну строку. Пробельные
+  последовательности, в том числе переводы строк, сворачиваются, пустой — null
+*/
+const postLead = z.string()
+  .default('')
+  .transform(v => v.replace(/\s+/g, ' ').trim())
+  .transform(v => v || null)
+  .pipe(z.string().min(POST_LEAD_MIN, leadMessage).max(POST_LEAD_MAX, leadMessage).nullable());
+
 export const postOwnCreateDto = z.object({
   url: z.string().min(5).max(POST_URL_MAX),
   title: z.string().min(5).max(POST_TITLE_MAX),
+  lead: postLead,
   content: z.string().min(5),
   tagIds: z.array(z.int().positive())
     .max(TAGS_PER_POST, `Не больше ${TAGS_PER_POST} рубрик`)
@@ -59,3 +76,8 @@ export const postEditStartDto = z.object({
 })
 
 export type PostEditStartDto = z.infer<typeof postEditStartDto>
+
+// Избранное на странице автора видно всем (спека 40)
+export const postFavoritesPublicDto = z.object({
+  favoritesPublic: z.boolean()
+})

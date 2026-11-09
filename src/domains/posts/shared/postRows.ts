@@ -5,7 +5,7 @@ import type { PostStatus } from "@/database/schema";
 import { withCardData } from "@/domains/posts/shared/postCards";
 import { desc, inArray } from "drizzle-orm";
 
-type RowSource = { id: number, status: PostStatus, content: string, coverImageId: number | null };
+type RowSource = { id: number, status: PostStatus, lead: string | null, content: string, coverImageId: number | null };
 
 /*
   Всё для строки поста в кабинете (спека 42): то же, что карточке (обложка, оценка,

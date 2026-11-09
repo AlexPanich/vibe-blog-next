@@ -4,8 +4,8 @@ import 'server-only';
 import { CONTAINER } from "@/globals/container";
 import { actionAuthClient } from "@/globals/actionClient";
 import { sessions, userAdminActions, users } from "@/database/schema";
-import { aiIdSchema, userBanDto, userRemoveAvatarDto, userRolesDto, userUnbanDto } from "@/domains/users/dto/userAdminRequests";
-import { AVATAR_SIZES } from "@/core/imageUrl";
+import { aiIdSchema, userBanDto, userRemoveImageDto, userRolesDto, userUnbanDto } from "@/domains/users/dto/userAdminRequests";
+import { AVATAR_SIZES, COVER_WIDTHS } from "@/core/imageUrl";
 import { removeUploads } from "@/globals/uploads";
 import { manageUser } from "@/domains/users/policy";
 import { parseRoles, serializeRoles } from "@/domains/users/shared/userRoles";
@@ -15,6 +15,7 @@ import { notify, publishNotifications } from "@/domains/notifications/exports/no
 import { liveBus } from "@/globals/liveBus";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export const updateUserRolesAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
@@ -109,7 +110,7 @@ export const unbanUserAction = actionAuthClient
 */
 export const removeUserAvatarAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
-  .inputSchema(userRemoveAvatarDto)
+  .inputSchema(userRemoveImageDto)
   .action(async ({ parsedInput, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
     await CONTAINER.boucerService.breakIfCant(u => manageUser(u, { id }));
 
@@ -127,6 +128,34 @@ export const removeUserAvatarAction = actionAuthClient
     publishNotifications(notificationIds);
 
     await removeUploads(parsedInput.expected, AVATAR_SIZES);
+
+    return redirect(`/office/admin/users/${id}`);
+  });
+
+/*
+  Обложка профиля (спека 41) — так же, как аватар
+*/
+export const removeUserCoverAction = actionAuthClient
+  .bindArgsSchemas([ aiIdSchema ])
+  .inputSchema(userRemoveImageDto)
+  .action(async ({ parsedInput, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
+    await CONTAINER.boucerService.breakIfCant(u => manageUser(u, { id }));
+
+    const notificationIds = adminTransaction(auth.id, id, (tx, target) => {
+      if(target.coverKey !== parsedInput.expected){
+        staleError();
+      }
+
+      tx.update(users).set({ coverKey: null }).where(eq(users.id, id)).run();
+      tx.insert(userAdminActions).values({ userId: id, actorId: auth.id, action: 'cover_removed', comment: parsedInput.comment || null }).run();
+
+      return notify(tx, 'user.cover_removed', [ id ], { actorId: auth.id });
+    });
+
+    publishNotifications(notificationIds);
+
+    await removeUploads(parsedInput.expected, COVER_WIDTHS);
+    revalidatePath(`/authors/${id}`);
 
     return redirect(`/office/admin/users/${id}`);
   });

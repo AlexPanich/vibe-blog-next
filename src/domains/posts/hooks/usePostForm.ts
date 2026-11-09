@@ -1,6 +1,6 @@
 import 'client-only';
 import type { PostType } from "@/database/schema";
-import type { PostDetailsDto, PostOwnCreateDto } from "@/domains/posts/dto/postRequests";
+import type { PostDetailsDto, PostEditorDto } from "@/domains/posts/dto/postRequests";
 import type { PostDetailsResource } from "@/domains/posts/dto/postResources";
 import useForm from "@/hooks/useForm";
 
@@ -11,6 +11,7 @@ import useForm from "@/hooks/useForm";
 export type PostFormState = {
   url: string,
   title: string,
+  lead: string,
   content: string,
   tagIds: number[],
   type: PostType,
@@ -20,12 +21,15 @@ export type PostFormState = {
   lng: number | string
 }
 
-type PostFormInitial = Pick<PostFormState, 'url' | 'title' | 'content' | 'tagIds'> & Partial<PostDetailsResource>
+type PostFormInitial = Pick<PostFormState, 'url' | 'title' | 'content' | 'tagIds'>
+  & { lead: string | null }
+  & Partial<PostDetailsResource>
 
 export default function usePostForm(initial: PostFormInitial){
   const form = useForm<PostFormState>({
     url: initial.url,
     title: initial.title,
+    lead: initial.lead ?? '',
     content: initial.content,
     tagIds: initial.tagIds,
     type: initial.type ?? 'simple',
@@ -34,10 +38,11 @@ export default function usePostForm(initial: PostFormInitial){
     lng: initial.lng ?? ''
   });
 
-  function payload(): PostOwnCreateDto {
-    const { url, title, content, tagIds } = form.data;
+  // Вход схемы, а не выход: lead до нормализации — строка, null из него делает zod
+  function payload(): Omit<PostEditorDto, 'submit'> {
+    const { url, title, lead, content, tagIds } = form.data;
 
-    return { url, title, content, tagIds, details: details(form.data) };
+    return { url, title, lead, content, tagIds, details: details(form.data) };
   }
 
   return { ...form, payload };

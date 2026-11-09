@@ -32,6 +32,7 @@ const LOOKS: Record<NotificationType, NotificationLook> = {
   'user.role_granted': { icon: IconUserCheck, tone: 'mint', title: 'Новая роль', action: 'Подробнее' },
   'user.role_revoked': { icon: IconAlertCircle, tone: 'coral', title: 'Роль снята', action: 'Профиль' },
   'user.avatar_removed': { icon: IconAlertCircle, tone: 'coral', title: 'Аватар удалён', action: 'Профиль' },
+  'user.cover_removed': { icon: IconAlertCircle, tone: 'coral', title: 'Обложка удалена', action: 'Профиль' },
   'user.unbanned': { icon: IconUserCheck, tone: 'plum', title: 'Аккаунт разблокирован', action: 'Профиль' },
   'author_request.rejected': { icon: IconAlertCircle, tone: 'coral', title: 'Заявка отклонена', action: 'Подробнее' },
   'author_request.created': { icon: IconShieldCheck, tone: 'plum', title: 'Заявка в авторы', action: 'Рассмотреть' },

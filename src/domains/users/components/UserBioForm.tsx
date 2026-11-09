@@ -10,15 +10,17 @@ import { IconCheck } from "@tabler/icons-react";
 
 type UserBioFormProps = {
   name: string,
-  bio: string
+  bio: string,
+  nameGenitive: string
 }
 
 /*
   «Публичная страница»: имя и «О себе» — видно на странице автора. Имя пока только
-  показывается: сменить его нельзя до спеки 45
+  показывается: сменить его нельзя до спеки 45. Имя в родительном падеже для «Ещё у …» под
+  постом (спека 41) человек пишет сам — склонять не пытаемся
 */
-export default function UserBioForm({ name, bio }: UserBioFormProps) {
-  const { nv, update, data } = useForm({ bio });
+export default function UserBioForm({ name, bio, nameGenitive }: UserBioFormProps) {
+  const { nv, update, data } = useForm({ bio, nameGenitive });
   const action = useAction(updateBioAction);
 
   return (
@@ -31,6 +33,16 @@ export default function UserBioForm({ name, bio }: UserBioFormProps) {
           variant="filled"
           description="Задаётся при регистрации, сменить пока нельзя"
           inputWrapperOrder={[ 'label', 'input', 'description' ]}
+        />
+        <TextInput
+          label="Как вас называть в подписях: «Ещё у …»"
+          placeholder="Ани, Марата Хасанова"
+          description="Под вашими постами: «Ещё у Ани». Пусто — «Ещё у автора»"
+          maxLength={40}
+          inputWrapperOrder={[ 'label', 'input', 'description', 'error' ]}
+          {...nv('nameGenitive')}
+          onChange={e => update('nameGenitive', e.target.value)}
+          error={fieldError(action.result.validationErrors, 'nameGenitive')}
         />
         <Textarea
           label={<span className="ui-account-count">О себе <small>{ data.bio.length } / 500</small></span>}

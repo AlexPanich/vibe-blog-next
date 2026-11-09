@@ -1,4 +1,6 @@
 import { imageUrl } from "@/core/imageUrl";
+import type { AuthorCover } from "@/domains/users/shared/authorCover";
+import { authorTone } from "@/domains/users/shared/authorTone";
 import { plural } from "@/core/plural";
 import type { Role } from "@/database/schema";
 import UserAvatar from "@/domains/users/components/UserAvatar";
@@ -12,15 +14,13 @@ import UserRoleBadge from "@/domains/users/components/UserRoleBadge";
 
 type AuthorHeadProps = {
   author: { id: number, name: string, bio: string | null, avatarKey: string | null, roles: Role[], createdAt: Date },
-  // Обложка последнего опубликованного поста; без неё — цветная плашка
-  cover: { fileKey: string, width: number, height: number } | null,
+  // Своя обложка профиля или обложка последнего поста; без неё — цветная плашка
+  cover: AuthorCover | null,
   postsCount: number,
   followersCount: number,
   // Средняя оценка по опубликованным постам, уже строкой («4,8»)
   rating: string | null
 }
-
-const TONES = [ 'coral', 'sun', 'mint', 'plum' ] as const;
 
 /*
   Шапка профиля автора (спека 30): баннер, большой аватар на его краю, имя с ролью, «о себе»,
@@ -31,7 +31,7 @@ const TONES = [ 'coral', 'sun', 'mint', 'plum' ] as const;
 export default function AuthorHead({ author, cover, postsCount, followersCount, rating }: AuthorHeadProps) {
   return (
     <section className="ui-author-head">
-      <div className="ui-author-head__band" data-tone={cover ? undefined : TONES[author.id % TONES.length]}>
+      <div className="ui-author-head__band" data-tone={cover ? undefined : authorTone(author.id)}>
         { cover && <img
           src={imageUrl(cover.fileKey, 1600)}
           srcSet={`${imageUrl(cover.fileKey, 800)} 800w, ${imageUrl(cover.fileKey, 1600)} 1600w`}

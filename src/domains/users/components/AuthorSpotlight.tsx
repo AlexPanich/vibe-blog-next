@@ -1,5 +1,7 @@
 import Link from "@/components/general/Link";
 import { imageUrl } from "@/core/imageUrl";
+import type { AuthorCover } from "@/domains/users/shared/authorCover";
+import { authorTone } from "@/domains/users/shared/authorTone";
 import { plural } from "@/core/plural";
 import AuthorTopics from "@/domains/users/components/AuthorTopics";
 import UserAvatar from "@/domains/users/components/UserAvatar";
@@ -10,13 +12,11 @@ import { IconArrowRight } from "@tabler/icons-react";
 
 type AuthorSpotlightProps = {
   author: DirectoryAuthor,
-  // Обложка последнего опубликованного поста; без неё — цветная плашка
-  cover: { fileKey: string, width: number, height: number } | null,
+  // Своя обложка профиля или обложка последнего поста; без неё — цветная плашка
+  cover: AuthorCover | null,
   // Средняя оценка строкой («4,2»)
   rating: string | null
 }
-
-const TONES = [ 'coral', 'sun', 'mint', 'plum' ] as const;
 
 /*
   Большая карточка на странице авторов (спека 30): обложка, аватар на её краю, имя с ролью,
@@ -28,7 +28,7 @@ export default function AuthorSpotlight({ author, cover, rating }: AuthorSpotlig
 
   return (
     <article className="ui-spotlight">
-      <div className="ui-spotlight__cover" data-tone={cover ? undefined : TONES[author.id % TONES.length]}>
+      <div className="ui-spotlight__cover" data-tone={cover ? undefined : authorTone(author.id)}>
         { cover && <img
           src={imageUrl(cover.fileKey, 800)}
           width={cover.width}

@@ -25,9 +25,10 @@ export const userUnbanDto = z.object({
 export type UserUnbanDto = z.infer<typeof userUnbanDto>
 
 /*
-  expected — ключ аватара, который admin видел: пользователь мог уже сменить картинку
+  Удаление аватара или обложки. expected — ключ картинки, который admin видел:
+  пользователь мог уже сменить её
 */
-export const userRemoveAvatarDto = z.object({
+export const userRemoveImageDto = z.object({
   comment: z.string().trim().max(500),
   expected: z.string()
 })

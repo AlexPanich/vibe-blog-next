@@ -15,7 +15,7 @@ import { IconCircleCheck, IconSend } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState, type ReactNode } from "react";
 
-type PostFields = Pick<Post, 'id' | 'url' | 'title' | 'content'> & { tagIds: number[] } & PostDetailsResource
+type PostFields = Pick<Post, 'id' | 'url' | 'title' | 'lead' | 'content'> & { tagIds: number[] } & PostDetailsResource
 
 type PostEditorFormProps<T extends PostFields, U extends TagListResource> = {
   // Нет поста — создание
@@ -28,7 +28,7 @@ type PostEditorFormProps<T extends PostFields, U extends TagListResource> = {
   photos: ReactNode
 }
 
-const EMPTY = { url: '', title: '', content: '', tagIds: [] }
+const EMPTY = { url: '', title: '', lead: '', content: '', tagIds: [] }
 
 /*
   Редактор поста (спека 42): поля слева, справа карточка публикации, подсказки и фото.

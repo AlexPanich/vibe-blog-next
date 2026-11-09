@@ -35,3 +35,10 @@ export const messageRestrictDto = z.object({ restrict: z.boolean() })
 export const messageIgnoreDto = z.object({ ignore: z.boolean() })
 
 export const messagesFriendsOnlyDto = z.object({ friendsOnly: z.boolean() })
+
+// Выбор собеседника (спека 50): запрос из адреса; длинный обрезается, массив — как без запроса
+export const messagePickerDto = z.object({
+  q: z.string().transform(s => s.trim().slice(0, 100)).optional().catch(undefined)
+})
+
+export type MessagePickerDto = z.infer<typeof messagePickerDto>

@@ -3,14 +3,14 @@ import { db } from "@/globals/db";
 import { comments } from "@/database/schema";
 import { withRatings } from "@/domains/posts/shared/postRatings";
 import { withCovers } from "@/domains/posts/shared/postImages";
-import { postExcerpt, readingMinutes } from "@/domains/posts/shared/postText";
+import { postSummary, readingMinutes } from "@/domains/posts/shared/postText";
 import { visibleComments } from "@/domains/posts/shared/postComments";
 import { and, count, inArray } from "drizzle-orm";
 
-type CardSource = { id: number, content: string, coverImageId: number | null };
+type CardSource = { id: number, lead: string | null, content: string, coverImageId: number | null };
 
 /*
-  Всё, что карточке нужно сверх строки поста: оценка, обложка, выдержка, время чтения и
+  Всё, что карточке нужно сверх строки поста: оценка, обложка, lead или выдержка, время чтения и
   число комментариев — по запросу на список, а не на пост
 */
 export async function withCardData<T extends CardSource>(posts: T[]){
@@ -19,7 +19,7 @@ export async function withCardData<T extends CardSource>(posts: T[]){
 
   return rows.map(post => ({
     ...post,
-    excerpt: postExcerpt(post.content),
+    excerpt: postSummary(post),
     readingMinutes: readingMinutes(post.content),
     commentsCount: counts.get(post.id) ?? 0
   }));

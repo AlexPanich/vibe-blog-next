@@ -72,8 +72,8 @@ export default async function OfficeStart({ searchParams }: PageProps<'/office'>
           { followers && stats && <p className="ui-start-hello__sub">{ weekSummary(followers.week, stats.comments.week) }</p> }
         </div>
         <div className="ui-start-hello__actions">
-          <ButtonLink href="/office/feed" variant="default" leftSection={<IconNews size={16} />}>Моя лента</ButtonLink>
-          { isAuthor && <ButtonLink href="/office/posts/create" leftSection={<IconPencilPlus size={16} />}>Новый пост</ButtonLink> }
+          <ButtonLink href="/office/feed" variant="default" size="md" leftSection={<IconNews size={16} />}>Моя лента</ButtonLink>
+          { isAuthor && <ButtonLink href="/office/posts/create" size="md" leftSection={<IconPencilPlus size={16} />}>Новый пост</ButtonLink> }
         </div>
       </div>
 

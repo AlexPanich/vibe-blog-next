@@ -2,7 +2,7 @@
 
 import 'client-only';
 import { PostForm } from "@/domains/posts/hooks/usePostForm";
-import { POST_TITLE_MAX, POST_URL_MAX } from "@/domains/posts/dto/postRequests";
+import { POST_LEAD_MAX, POST_TITLE_MAX, POST_URL_MAX } from "@/domains/posts/dto/postRequests";
 import { fieldError, FieldErrorProps } from "@/components/general/FieldError";
 import { StrictResource } from "@/core/resource";
 import TagPicker from "@/domains/tags/exports/TagPicker";
@@ -11,7 +11,7 @@ import PostContentEditor from "@/domains/posts/components/editor/PostContentEdit
 import PostTypeCards from "@/domains/posts/components/editor/PostTypeCards";
 import PostFieldLabel from "@/domains/posts/components/editor/PostFieldLabel";
 import PostLocationPicker from "@/domains/posts/components/map/PostLocationPicker";
-import { Input, NumberInput, SimpleGrid, Stack, TextInput } from "@mantine/core";
+import { Input, NumberInput, SimpleGrid, Stack, Textarea, TextInput } from "@mantine/core";
 import type { ReactNode } from "react";
 
 type PostFormFieldsProps<T extends TagListResource> = {
@@ -23,8 +23,8 @@ type PostFormFieldsProps<T extends TagListResource> = {
 }
 
 /*
-  Поля редактора поста (спека 42): тип карточками, крупный заголовок со счётчиком, slug с
-  префиксом, поля типа, рубрики-чипы, обложка, текст
+  Поля редактора поста (спека 42): тип карточками, крупный заголовок со счётчиком,
+  подзаголовок со счётчиком (спека 35), slug с префиксом, поля типа, рубрики-чипы, обложка, текст
 */
 export default function PostFormFields<T extends TagListResource>({
   form: { nv, update, data },
@@ -44,6 +44,18 @@ export default function PostFormFields<T extends TagListResource>({
         {...nv('title')}
         onChange={e => update('title', e.target.value)}
         error={fieldError(errors, 'title')}
+      />
+      <Textarea
+        label={<PostFieldLabel hint={`${data.lead.length} / ${POST_LEAD_MAX}`}>Подзаголовок</PostFieldLabel>}
+        description="Пара фраз, о чём пост — видно в ленте и в превью ссылки"
+        placeholder="Необязательно"
+        autosize
+        minRows={2}
+        maxRows={4}
+        maxLength={POST_LEAD_MAX}
+        {...nv('lead')}
+        onChange={e => update('lead', e.target.value)}
+        error={fieldError(errors, 'lead')}
       />
       <TextInput
         label="URL (slug)"

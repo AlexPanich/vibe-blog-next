@@ -8,6 +8,8 @@ export type SeedPost = {
   url: string,
   author: string,
   title: string,
+  // Подзаголовок: 20–200 символов, CHECK в БД (спека 35)
+  lead?: string,
   type?: PostType,
   lat?: number,
   lng?: number,

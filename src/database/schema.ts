@@ -29,7 +29,7 @@ export const AUTHOR_REQUEST_STATUSES = ['pending', 'approved', 'rejected'] as co
 
 export type AuthorRequestStatus = (typeof AUTHOR_REQUEST_STATUSES)[number];
 
-export const USER_ADMIN_ACTIONS = ['banned', 'unbanned', 'role_granted', 'role_revoked', 'avatar_removed'] as const;
+export const USER_ADMIN_ACTIONS = ['banned', 'unbanned', 'role_granted', 'role_revoked', 'avatar_removed', 'cover_removed'] as const;
 
 export type UserAdminActionType = (typeof USER_ADMIN_ACTIONS)[number];
 
@@ -37,7 +37,7 @@ export const NOTIFICATION_TYPES = [
   'comment.created', 'comment.reply', 'comment.hidden', 'comment.unhidden', 'comment.edited',
   'post.approved', 'post.rejected', 'post.blocked', 'post.unblocked', 'post.published', 'post.submitted',
   'report.created', 'report.resolved',
-  'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed',
+  'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed', 'user.cover_removed',
   'message.created',
   'author_request.created', 'author_request.rejected',
 ] as const;
@@ -66,9 +66,17 @@ export const users = sqliteTable('users', {
   bio: text('bio'),
   // Личные сообщения только от друзей (взаимных подписчиков); staff флаг обходит
   messagesFriendsOnly: integer('messages_friends_only', { mode: 'boolean' }).notNull().default(false),
+  // Избранное видно всем на странице автора (спека 40); better-auth колонку не знает, пишет updateFavoritesPublicAction
+  favoritesPublic: integer('favorites_public', { mode: 'boolean' }).notNull().default(false),
+  // Своя обложка профиля (спека 41): webp по ширине, COVER_WIDTHS; better-auth колонку не знает, пишет uploadCoverAction
+  coverKey: text('cover_key'),
+  // «Ещё у Ани» под постом (спека 41): человек пишет сам, без склонения; пишет updateBioAction
+  nameGenitive: text('name_genitive'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-});
+}, t => [
+  check('users_name_genitive_check', sql`${t.nameGenitive} IS NULL OR length(${t.nameGenitive}) BETWEEN 1 AND 40`),
+]);
 
 export const sessions = sqliteTable('sessions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -112,6 +120,8 @@ export const posts = sqliteTable('posts', {
   url: text('url').notNull().unique(),
   title: text('title').notNull(),
   content: text('content').notNull(),
+  // Подзаголовок (спека 35): обычный текст, пустой — NULL
+  lead: text('lead'),
   status: text('status', { enum: POST_STATUSES }).notNull().default('draft'),
   /*
     Поля типа хранятся плоско и nullable, согласованность с type держит check ниже
@@ -144,6 +154,7 @@ export const posts = sqliteTable('posts', {
     (${t.type} = 'translate' AND ${t.source} IS NOT NULL AND ${t.lat} IS NULL AND ${t.lng} IS NULL) OR
     (${t.type} = 'travel' AND ${t.source} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL)
   `),
+  check('posts_lead_check', sql`${t.lead} IS NULL OR length(${t.lead}) BETWEEN 20 AND 200`),
 ]);
 
 /*

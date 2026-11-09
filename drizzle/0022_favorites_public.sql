@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `favorites_public` integer DEFAULT false NOT NULL;

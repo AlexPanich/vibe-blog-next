@@ -17,10 +17,10 @@
    - страница фото: .ui-photo;
    - редактор поста: .ui-post-editor, .ui-crumbs, .ui-type-card, .ui-tag-field, .ui-cover-drop,
      .ui-md, .ui-publish-card, .ui-editor-tips, .ui-photos-card;
-   - сообщения: .ui-messenger, .ui-chat-list / .ui-chat-row, .ui-dialog, .ui-message, .ui-composer;
+   - сообщения: .ui-messenger, .ui-chat-list / .ui-chat-row, .ui-dialog, .ui-picker, .ui-message, .ui-composer;
    - подписки: .ui-follows, .ui-follow-list / .ui-follow-person, .ui-follow-card, .ui-find-authors;
    - комментарии в кабинете: .ui-office-comments / .ui-office-comment;
-   - профиль в кабинете: .ui-account (секции), .ui-account-avatar, .ui-account-roles,
+   - профиль в кабинете: .ui-account (секции), .ui-account-avatar, .ui-account-cover, .ui-account-roles,
      .ui-account-options, .ui-account-security;
    - заявка в авторы: .ui-request, .ui-request-hero, .ui-request-card, .ui-request-history /
      .ui-request-item; в админке — .ui-request-review, .ui-request-recent, .ui-request-decided;
@@ -30,7 +30,7 @@
    - все посты в админке: .ui-admin-posts;
    - пользователи в админке: .ui-admin-users, роли пилюлями .ui-role-pills / .ui-role-pill;
    - пользователь в админке: .ui-user-page, .ui-user-hero, .ui-user-card, .ui-user-roles,
-     .ui-user-ban, .ui-user-avatar, .ui-user-log;
+     .ui-user-ban, .ui-user-avatar, .ui-user-cover__preview, .ui-user-log;
    - рубрики: .ui-tags-head, .ui-tags-section, .ui-tag-tile, .ui-tag-rest, .ui-tag-follow-toggle;
    - страницы о блоге: .ui-site-pages, .ui-site-nav, .ui-site-page, .ui-site-contacts, .ui-site-cta.
    ========================================================================== */
@@ -2741,6 +2741,12 @@ a.ui-tag:hover {
   padding-top: 0.5rem;
 }
 
+.ui-digest__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
 /* Рядом с тремя плитками по 11rem большой плитке нужно ~23rem (подпись + 7 столбиков): уже
    1360px окна их нет — она уходит на свою строку */
 @media (max-width: 1360px) {
@@ -4546,6 +4552,72 @@ a.ui-chat-row[data-active='true']:hover {
   border-top: 1px solid var(--line);
 }
 
+/* Выбор собеседника (спека 50): корень — .ui-dialog, на телефоне экран как у диалога */
+.ui-picker__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.ui-picker__search {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-picker__to {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.ui-picker__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ui-picker__body .ui-chat-list {
+  overflow: visible;
+}
+
+.ui-picker__group {
+  margin: 0;
+  padding: 1rem 1.25rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ui-picker__body .ui-chat-list__empty {
+  padding-inline: 1.25rem;
+}
+
+.ui-picker__badge {
+  flex: none;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper-tint);
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.ui-picker .ui-chat-row {
+  padding-inline: 1.25rem;
+}
+
+/* Писать нельзя и переписки нет: серая строка, причина целиком */
+.ui-chat-row[data-disabled='true'] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ui-chat-row[data-disabled='true'] .ui-chat-row__text {
+  white-space: normal;
+}
+
 /* Пузыри: чужие — фон страницы на сером, свои — фиолетовые */
 .ui-message {
   display: flex;
@@ -4689,8 +4761,19 @@ a.ui-chat-row[data-active='true']:hover {
   .ui-messenger:not(:has(.ui-dialog)) .ui-messenger__main,
   .ui-messenger:has(.ui-dialog) .ui-messenger__side,
   .ui-desk__main:has(.ui-dialog) .ui-office-head,
-  body:has(.ui-dialog) .ui-tabbar {
+  body:has(.ui-dialog) .ui-tabbar,
+  body:has(.ui-dialog) .ui-fab {
     display: none;
+  }
+
+  .ui-picker__search {
+    padding-inline: 1rem;
+  }
+
+  .ui-picker__group,
+  .ui-picker__body .ui-chat-list__empty,
+  .ui-picker .ui-chat-row {
+    padding-inline: 1rem;
   }
 
   body:has(.ui-dialog) {
@@ -5602,6 +5685,17 @@ a.ui-chat-row[data-active='true']:hover {
   text-wrap: balance;
 }
 
+/* Подзаголовок (спека 35): ближе к заголовку, чем общий gap шапки */
+.ui-post__lead {
+  max-width: 46rem;
+  margin: -0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: clamp(1.125rem, 1.9vw, 1.375rem);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
 .ui-post__byline {
   display: flex;
   flex-wrap: wrap;
@@ -5918,6 +6012,10 @@ a.ui-chat-row[data-active='true']:hover {
   .ui-post__crumbs {
     justify-content: flex-start;
     font-size: 0.8125rem;
+  }
+
+  .ui-post__lead {
+    margin-top: -0.25rem;
   }
 
   .ui-post__byline {
@@ -6691,6 +6789,14 @@ span.ui-photo__arrow {
 .ui-author-tabs a[aria-current='page'] {
   border-bottom-color: var(--accent);
   color: var(--ink);
+}
+
+/* Своё закрытое избранное (спека 40): пометка «видно только вам» */
+.ui-author-tabs__own small {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-faint);
 }
 
 .ui-author-posts,
@@ -8892,6 +8998,8 @@ span.ui-photo__arrow {
   gap: 2.5rem;
   padding-block: 1.75rem;
   border-top: 1px solid var(--line);
+  /* Якорь /office/profile#favorites — не под шапкой */
+  scroll-margin-top: 6rem;
 }
 
 .ui-account__section:first-child {
@@ -8986,6 +9094,41 @@ span.ui-photo__arrow {
 }
 
 .ui-account-avatar__hint.ui-account-avatar__hint {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
+/* Обложка профиля (спека 41): полоса пропорций баннера, под ней кнопки и подсказки */
+.ui-account-cover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.ui-account-cover__band {
+  height: 120px;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--paper-tint);
+}
+
+.ui-account-cover__band img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ui-account-cover__band[data-tone='coral'] { background: var(--accent-soft); }
+.ui-account-cover__band[data-tone='sun'] { background: var(--sun-soft); }
+.ui-account-cover__band[data-tone='mint'] { background: var(--mint-soft); }
+.ui-account-cover__band[data-tone='plum'] { background: var(--plum-soft); }
+
+.ui-account-cover .mantine-Button-root {
+  border-radius: var(--radius-pill);
+}
+
+.ui-account-cover__hint.ui-account-cover__hint {
   font-size: 0.8125rem;
   color: var(--ink-faint);
 }
@@ -9247,6 +9390,10 @@ span.ui-photo__arrow {
 
   .ui-account-avatar__hint.ui-account-avatar__hint {
     display: none;
+  }
+
+  .ui-account-cover__band {
+    height: 96px;
   }
 
   /* Варианты — строками в одной рамке, только название */
@@ -10044,6 +10191,19 @@ span.ui-photo__arrow {
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
+}
+
+.ui-review-post__lead,
+.ui-article__lead {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.125rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ui-article__lead {
+  margin-top: 0.75rem;
 }
 
 .ui-review-post__author {
@@ -11653,6 +11813,15 @@ span.ui-photo__arrow {
 .ui-user-avatar .ui-user-card__error {
   flex-basis: 100%;
   order: 2;
+}
+
+/* Превью обложки профиля в карточке «Обложка» (спека 41): раскладка — как у аватара */
+.ui-user-cover__preview {
+  display: block;
+  width: 160px;
+  height: 48px;
+  border-radius: var(--radius-control);
+  object-fit: cover;
 }
 
 .ui-user-log {

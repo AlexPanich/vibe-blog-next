@@ -11,6 +11,7 @@ type PostHeadProps = {
   post: {
     id: number,
     title: string,
+    lead: string | null,
     type: PostType,
     source: string | null,
     publishedAt: Date | null,
@@ -24,8 +25,8 @@ type PostHeadProps = {
 const TYPE_ICONS = { translate: IconLanguage, travel: IconMapPin };
 
 /*
-  Шапка страницы поста (спека 30): метка типа, рубрика и время чтения, заголовок, автор с
-  датой и подпиской. Без 'use client' — рендерит серверная страница
+  Шапка страницы поста (спека 30): метка типа, рубрика и время чтения, заголовок,
+  подзаголовок (спека 35), автор с датой и подпиской. Без 'use client' — рендерит серверная страница
 */
 export default function PostHead({ post, author, rubric, readingMinutes }: PostHeadProps) {
   const TypeIcon = post.type === 'simple' ? null : TYPE_ICONS[post.type];
@@ -43,6 +44,7 @@ export default function PostHead({ post, author, rubric, readingMinutes }: PostH
       </div>
 
       <h1 className="ui-post__title">{ post.title }</h1>
+      { post.lead && <p className="ui-post__lead">{ post.lead }</p> }
 
       <div className="ui-post__byline">
         <Link href={`/authors/${author.id}`} className="ui-post__author">

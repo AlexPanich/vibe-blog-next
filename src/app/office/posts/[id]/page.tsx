@@ -60,6 +60,7 @@ export default async function OfficePostsItem({ params }: PageProps<'/office/pos
       </Link>
 
       <h1 className="ui-title ui-title--lg">{ post.title }</h1>
+      { post.lead && <p className="ui-article__lead">{ post.lead }</p> }
 
       <div className="ui-meta">
         <PostStatusTag status={post.status} />
