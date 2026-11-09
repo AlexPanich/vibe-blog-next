@@ -5,7 +5,8 @@ import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { auth } from "@/globals/auth";
 import { sendToQueue } from "@/globals/queue";
 import { rateLimiters } from "@/globals/rateLimiter";
-import { imageUploadDto, changeEmailDto, changePasswordDto, userBioDto } from "@/domains/users/dto/authRequests";
+import { imageUploadDto, changeEmailDto, changePasswordDto, userBioDto, userNameDto } from "@/domains/users/dto/authRequests";
+import { nextNameChangeAt } from "@/domains/users/shared/nameChange";
 import { AVATAR_SIZES, COVER_WIDTHS } from "@/core/imageUrl";
 import { readImage, saveSquareVariants, saveWidthVariants } from "@/shared/images";
 import { removeUploads } from "@/globals/uploads";
@@ -105,6 +106,39 @@ export const updateBioAction = actionAuthClient
     }
 
     return { done: true };
+  });
+
+/*
+  Смена имени (спека 45): не чаще раза в сутки по name_changed_at — переживает перезапуск, и
+  форма знает, когда снова можно. То же имя — не смена. Имя видно везде, поэтому сброс всего кэша.
+  Сессию better-auth трогать не нужно: cookieCache не включён, getSession читает пользователя из БД
+*/
+export const updateNameAction = actionAuthClient
+  .inputSchema(userNameDto)
+  .action(async ({ parsedInput: { name }, ctx: { auth: user } }) => {
+    // actionError внутри транзакции откатывает её
+    const changed = db.transaction(tx => {
+      const row = tx.select({ name: users.name, nameChangedAt: users.nameChangedAt }).from(users).where(eq(users.id, user.id)).get();
+
+      if(!row || row.name === name){
+        return false;
+      }
+
+      if(nextNameChangeAt(row.nameChangedAt)){
+        actionError(429, 'Имя можно менять раз в сутки');
+      }
+
+      const now = new Date();
+      tx.update(users).set({ name, nameChangedAt: now, updatedAt: now }).where(eq(users.id, user.id)).run();
+
+      return true;
+    });
+
+    if(changed){
+      revalidatePath('/', 'layout');
+    }
+
+    return { changed, name };
   });
 
 export const uploadAvatarAction = actionAuthClient

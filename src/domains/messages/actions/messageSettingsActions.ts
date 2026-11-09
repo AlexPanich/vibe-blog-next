@@ -5,7 +5,7 @@ import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { db } from "@/globals/db";
 import { liveBus } from "@/globals/liveBus";
 import { messageIgnores, messageRestrictions, users } from "@/database/schema";
-import { aiIdSchema, messageIgnoreDto, messageRestrictDto, messagesFriendsOnlyDto } from "@/domains/messages/dto/messageRequests";
+import { aiIdSchema, messageIgnoreDto, messageRestrictDto, messagesFromDto } from "@/domains/messages/dto/messageRequests";
 import { MESSAGE_IGNORES_LIMIT } from "@/domains/messages/shared/messageAccess";
 import { deletePeerNotifications } from "@/domains/messages/shared/messageNotifications";
 import { and, count, eq } from "drizzle-orm";
@@ -78,13 +78,14 @@ export const ignoreMessagesAction = actionAuthClient
     return { ignored: ignore };
   });
 
-export const updateMessagesFriendsOnlyAction = actionAuthClient
-  .inputSchema(messagesFriendsOnlyDto)
-  .action(async ({ parsedInput: { friendsOnly }, ctx: { auth } }) => {
-    db.update(users).set({ messagesFriendsOnly: friendsOnly }).where(eq(users.id, auth.id)).run();
+// Страница автора открытого поста получит правило при следующем messageStateAction — кэш не сбрасываем
+export const updateMessagesFromAction = actionAuthClient
+  .inputSchema(messagesFromDto)
+  .action(async ({ parsedInput: { messagesFrom }, ctx: { auth } }) => {
+    db.update(users).set({ messagesFrom }).where(eq(users.id, auth.id)).run();
     revalidatePath('/office/profile');
 
-    return { friendsOnly };
+    return { messagesFrom };
   });
 
 type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];

@@ -1,4 +1,4 @@
-import type { Role } from "../../src/database/schema.ts";
+import type { MessagesFrom, Role } from "../../src/database/schema.ts";
 import type { SeedPhoto } from "./types.ts";
 
 export type Person = {
@@ -11,6 +11,8 @@ export type Person = {
   since: string,
   // Избранное видно всем на странице автора (спека 40)
   favoritesPublic?: boolean,
+  // Кто может написать первым (спека 45); не задано — все
+  messagesFrom?: MessagesFrom,
   // «Ещё у …» под постом (спека 41)
   nameGenitive: string,
   // Своя обложка профиля (спека 41): фото из photos.json, режется отдельным файлом
@@ -54,9 +56,9 @@ export const people: Person[] = [
 
   { key: 'katya', name: 'Катя Лис', nameGenitive: 'Кати', email: 'katya@example.com', roles: [], since: '2024-03-18', favoritesPublic: true,
     bio: 'Читаю Vibe по утрам вместо новостей. Люблю длинные тексты про дороги.' },
-  { key: 'pavel', name: 'Павел Орлов', nameGenitive: 'Павла', email: 'pavel@example.com', roles: [], since: '2024-07-04',
+  { key: 'pavel', name: 'Павел Орлов', nameGenitive: 'Павла', email: 'pavel@example.com', roles: [], since: '2024-07-04', messagesFrom: 'following',
     bio: 'Фотолюбитель, снимаю на старый Зенит. Задаю много вопросов в комментариях.' },
-  { key: 'vera', name: 'Вера Ким', nameGenitive: 'Веры', email: 'vera@example.com', roles: [], since: '2024-10-30',
+  { key: 'vera', name: 'Вера Ким', nameGenitive: 'Веры', email: 'vera@example.com', roles: [], since: '2024-10-30', messagesFrom: 'nobody',
     bio: 'Учительница литературы. Читаю переводы и спорю с ними.' },
   { key: 'gleb', name: 'Глеб Носов', nameGenitive: 'Глеба', email: 'gleb@example.com', roles: [], since: '2025-02-11',
     bio: 'Велосипедист и походник. В Vibe — за маршрутами.' },

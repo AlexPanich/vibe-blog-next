@@ -4,7 +4,7 @@ import 'client-only';
 import { useAction } from "next-safe-action/hooks";
 import { signupAction } from "@/domains/users/actions/authActions";
 import useForm from "@/hooks/useForm";
-import { UserSignupDto } from "@/domains/users/dto/authRequests";
+import { USER_NAME_MAX, UserSignupDto } from "@/domains/users/dto/authRequests";
 import { fieldError } from "@/components/general/FieldError";
 import { Button, PasswordInput, Stack, TextInput } from "@mantine/core";
 import { IconLock, IconMail, IconUser, IconUserPlus } from "@tabler/icons-react";
@@ -38,6 +38,7 @@ export default function SignupForm() {
         <TextInput
           label="Имя"
           leftSection={<IconUser size={17} stroke={1.7} />}
+          maxLength={USER_NAME_MAX}
           {...nv('name')}
           onChange={e => update('name', e.target.value)}
           error={fieldError(errors, 'name')}

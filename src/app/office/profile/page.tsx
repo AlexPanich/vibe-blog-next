@@ -5,16 +5,20 @@ import LocalDate from "@/components/general/LocalDate";
 import AvatarForm from "@/domains/users/components/AvatarForm";
 import CoverForm from "@/domains/users/components/CoverForm";
 import UserBioForm from "@/domains/users/components/UserBioForm";
+import { userNameStateResource } from "@/domains/users/dto/userResources";
+import { nextNameChangeAt } from "@/domains/users/shared/nameChange";
+import { resource } from "@/core/resource";
+import z from "zod";
 import { lastPostCovers } from "@/domains/posts/shared/lastPostCovers";
 import PasswordChangeForm from "@/domains/users/components/PasswordChangeForm";
 import EmailChangeForm from "@/domains/users/components/EmailChangeForm";
 import ProfileSection from "@/domains/users/components/profile/ProfileSection";
 import ProfileRoles from "@/domains/users/components/profile/ProfileRoles";
 import ProfileSecurityRow from "@/domains/users/components/profile/ProfileSecurityRow";
-import MessagesFriendsOnlyForm from "@/domains/messages/components/MessagesFriendsOnlyForm";
+import MessagesFromForm from "@/domains/messages/components/MessagesFromForm";
 import PostFavoritesPublicForm from "@/domains/posts/components/PostFavoritesPublicForm";
 import { db } from "@/globals/db";
-import { accounts, users } from "@/database/schema";
+import { accounts, MESSAGES_FROM, users } from "@/database/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { IconArrowUpRight, IconLock, IconMail } from "@tabler/icons-react";
 
@@ -28,7 +32,7 @@ export default async function OfficeProfile() {
   const user = await requireAuthUser();
   const profile = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { bio: true, avatarKey: true, coverKey: true, nameGenitive: true, messagesFriendsOnly: true, favoritesPublic: true, emailVerified: true }
+    columns: { bio: true, avatarKey: true, coverKey: true, nameGenitive: true, nameChangedAt: true, messagesFrom: true, favoritesPublic: true, emailVerified: true }
   });
   // Вошедший только через GitHub пароля не имеет — ни смены пароля, ни смены email (там нужен пароль)
   const credential = await db.query.accounts.findFirst({
@@ -61,7 +65,11 @@ export default async function OfficeProfile() {
         </ProfileSection>
 
         <ProfileSection title="Публичная страница" hint="Имя и пара строк о себе — на странице автора">
-          <UserBioForm name={user.name} bio={profile?.bio ?? ''} nameGenitive={profile?.nameGenitive ?? ''} />
+          <UserBioForm
+            nameState={resource(userNameStateResource, { name: user.name, nextChangeAt: nextNameChangeAt(profile?.nameChangedAt ?? null) })}
+            bio={profile?.bio ?? ''}
+            nameGenitive={profile?.nameGenitive ?? ''}
+          />
         </ProfileSection>
 
         <ProfileSection title="Роли" hint="Выдаёт администратор">
@@ -69,7 +77,7 @@ export default async function OfficeProfile() {
         </ProfileSection>
 
         <ProfileSection title="Личные сообщения" hint="Кто может мне писать" mobileTitle="Кто может мне писать">
-          <MessagesFriendsOnlyForm friendsOnly={profile?.messagesFriendsOnly ?? false} />
+          <MessagesFromForm messagesFrom={resource(z.enum(MESSAGES_FROM), profile?.messagesFrom ?? 'all')} />
         </ProfileSection>
 
         <ProfileSection id="favorites" title="Избранное" hint="Кто видит ваши закладки" mobileTitle="Кто видит избранное">

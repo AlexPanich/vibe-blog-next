@@ -5,6 +5,11 @@ export const USER_ROLES = ['author', 'moderator', 'admin'] as const;
 
 export type Role = (typeof USER_ROLES)[number];
 
+// Кто может написать мне первым (спека 45); ответ в своём диалоге можно всегда
+export const MESSAGES_FROM = ['all', 'following', 'nobody'] as const;
+
+export type MessagesFrom = (typeof MESSAGES_FROM)[number];
+
 export const POST_STATUSES = ['draft', 'moderating', 'published', 'rejected', 'hidden', 'blocked'] as const;
 
 export type PostStatus = (typeof POST_STATUSES)[number];
@@ -64,18 +69,24 @@ export const users = sqliteTable('users', {
   banReason: text('ban_reason'),
   // «О себе» на странице автора; better-auth колонку не знает, пишет updateBioAction
   bio: text('bio'),
-  // Личные сообщения только от друзей (взаимных подписчиков); staff флаг обходит
-  messagesFriendsOnly: integer('messages_friends_only', { mode: 'boolean' }).notNull().default(false),
+  /*
+    Кто может начать со мной переписку (спека 45): все, мои подписки, никто. Staff обходит,
+    ответ в диалоге, где я писал, — всегда. better-auth колонку не знает, пишет updateMessagesFromAction
+  */
+  messagesFrom: text('messages_from', { enum: MESSAGES_FROM }).notNull().default('all'),
   // Избранное видно всем на странице автора (спека 40); better-auth колонку не знает, пишет updateFavoritesPublicAction
   favoritesPublic: integer('favorites_public', { mode: 'boolean' }).notNull().default(false),
   // Своя обложка профиля (спека 41): webp по ширине, COVER_WIDTHS; better-auth колонку не знает, пишет uploadCoverAction
   coverKey: text('cover_key'),
   // «Ещё у Ани» под постом (спека 41): человек пишет сам, без склонения; пишет updateBioAction
   nameGenitive: text('name_genitive'),
+  // Последняя смена имени (спека 45): не чаще раза в сутки; null — не меняли. Пишет updateNameAction
+  nameChangedAt: integer('name_changed_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   check('users_name_genitive_check', sql`${t.nameGenitive} IS NULL OR length(${t.nameGenitive}) BETWEEN 1 AND 40`),
+  check('users_messages_from_check', sql`${t.messagesFrom} IN ('all', 'following', 'nobody')`),
 ]);
 
 export const sessions = sqliteTable('sessions', {

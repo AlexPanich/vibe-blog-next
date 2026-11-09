@@ -1,6 +1,6 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { dialogs, messageIgnores, messageRestrictions, userFollows, users } from "@/database/schema";
+import { dialogs, messageIgnores, messageRestrictions, messages, userFollows, users } from "@/database/schema";
 import type { AuthUser } from "@/shared/authUser";
 import { isBlockedBetween } from "@/domains/users/exports/userBlocks";
 import { and, eq, or } from "drizzle-orm";
@@ -35,14 +35,15 @@ export function findOwnDialog(tx: DBTransaction, dialogId: number, userId: numbe
 /*
   Почему sender не может написать recipient; null — может. Собеседник должен существовать —
   это проверяет вызывающий. Закрытость не хранится, а вычисляется: подписка изменилась —
-  личка открылась сама. Staff обходит «только от друзей», но не запрет
+  личка открылась сама. Staff обходит настройку получателя (messages_from), но не запрет и
+  блокировку. Ответ в диалоге, где получатель писал, — всегда (спека 45)
 */
 export function writeBlockReason(tx: DBTransaction, sender: Pick<AuthUser, 'id' | 'roles'>, recipientId: number): string | null {
   if(sender.id === recipientId){
     return 'Себе написать нельзя';
   }
 
-  const recipient = tx.select({ bannedAt: users.bannedAt, friendsOnly: users.messagesFriendsOnly }).from(users).where(eq(users.id, recipientId)).get();
+  const recipient = tx.select({ bannedAt: users.bannedAt, messagesFrom: users.messagesFrom }).from(users).where(eq(users.id, recipientId)).get();
 
   if(!recipient){
     return 'Пользователь не найден';
@@ -62,11 +63,20 @@ export function writeBlockReason(tx: DBTransaction, sender: Pick<AuthUser, 'id' 
 
   const staff = sender.roles.includes('moderator') || sender.roles.includes('admin');
 
-  if(recipient.friendsOnly && !staff && !areFriends(tx, sender.id, recipientId)){
-    return 'Пользователь принимает сообщения только от друзей';
+  if(staff || recipient.messagesFrom === 'all'){
+    return null;
   }
 
-  return null;
+  if(recipient.messagesFrom === 'following' && follows(tx, recipientId, sender.id)){
+    return null;
+  }
+
+  // Ответ всегда можно (спека 45, п. 9): получатель сам писал в этом диалоге
+  if(hasWrittenTo(tx, recipientId, sender.id)){
+    return null;
+  }
+
+  return MESSAGES_FROM_REASONS[recipient.messagesFrom];
 }
 
 // userId запретил restrictedId писать ему
@@ -78,14 +88,30 @@ export function isIgnored(tx: DBTransaction, userId: number, ignoredId: number){
   return !!tx.select().from(messageIgnores).where(and(eq(messageIgnores.userId, userId), eq(messageIgnores.ignoredId, ignoredId))).get();
 }
 
-function areFriends(tx: DBTransaction, a: number, b: number){
-  const rows = tx.select({ followerId: userFollows.followerId })
+// followerId подписан на followingId — select по PK userFollows
+function follows(tx: DBTransaction, followerId: number, followingId: number){
+  return !!tx.select({ followerId: userFollows.followerId })
     .from(userFollows)
-    .where(or(
-      and(eq(userFollows.followerId, a), eq(userFollows.followingId, b)),
-      and(eq(userFollows.followerId, b), eq(userFollows.followingId, a))
-    ))
-    .all();
-
-  return rows.length === 2;
+    .where(and(eq(userFollows.followerId, followerId), eq(userFollows.followingId, followingId)))
+    .get();
 }
+
+// В диалоге authorId и peerId есть сообщение authorId; удалил свои — исключение пропало
+function hasWrittenTo(tx: DBTransaction, authorId: number, peerId: number){
+  const dialog = findDialogBetween(tx, authorId, peerId);
+
+  if(!dialog){
+    return false;
+  }
+
+  return !!tx.select({ id: messages.id })
+    .from(messages)
+    .where(and(eq(messages.dialogId, dialog.id), eq(messages.userId, authorId)))
+    .limit(1)
+    .get();
+}
+
+const MESSAGES_FROM_REASONS = {
+  following: 'Пользователь принимает сообщения только от тех, на кого подписан',
+  nobody: 'Пользователь не принимает новые сообщения'
+} as const;

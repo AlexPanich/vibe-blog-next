@@ -70,3 +70,11 @@ export type UserFollowRowListResource = z.infer<typeof userFollowRowListResource
 export const userBlockRowResource = followPersonResource
 
 export type UserBlockRowResource = z.infer<typeof userBlockRowResource>
+
+// «Публичная страница» в профиле (спека 45): имя и когда его снова можно сменить
+export const userNameStateResource = z.object({
+  name: z.string(),
+  nextChangeAt: z.date().nullable()
+})
+
+export type UserNameStateResource = z.infer<typeof userNameStateResource>
