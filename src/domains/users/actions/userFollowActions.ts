@@ -7,13 +7,15 @@ import { userFollows, users } from "@/database/schema";
 import { aiIdSchema } from "@/domains/users/dto/userAdminRequests";
 import { followersCount, followState, publishFollowersCount, USER_FOLLOWS_LIMIT } from "@/domains/users/shared/userFollows";
 import { isBlockedBetween } from "@/domains/users/shared/userBlocks";
+import { notifyThrottled, publishNotifications } from "@/domains/notifications/exports/notify";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import z from "zod";
 
 /*
   Подписка одним кликом, без подтверждения. Отписаться можно всегда, подписаться — на
-  существующего, не на себя, без блокировки между нами и не больше чем на 200 авторов
+  существующего, не на себя, без блокировки между нами и не больше чем на 200 авторов.
+  Новая подписка уведомляет автора один раз на пару навсегда, отписка — ничего (спека 51)
 */
 export const followUserAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
@@ -25,10 +27,11 @@ export const followUserAction = actionAuthClient
       actionError(403, 'Подписаться на себя нельзя');
     }
 
-    db.transaction(tx => {
+    const notificationIds = db.transaction(tx => {
       if(!follow){
         tx.delete(userFollows).where(own).run();
-        return;
+
+        return [];
       }
 
       if(!tx.select({ id: users.id }).from(users).where(eq(users.id, id)).get()){
@@ -45,8 +48,13 @@ export const followUserAction = actionAuthClient
         actionError(409, `Не больше ${USER_FOLLOWS_LIMIT} подписок на авторов`);
       }
 
-      tx.insert(userFollows).values({ followerId: auth.id, followingId: id }).onConflictDoNothing().run();
+      const added = tx.insert(userFollows).values({ followerId: auth.id, followingId: id }).onConflictDoNothing().returning().all();
+
+      // Повторный клик по уже подписанному не уведомляет
+      return added.length === 0 ? [] : notifyThrottled(tx, 'user.followed', id, { actorId: auth.id }, { kind: 'follow', targetId: id });
     });
+
+    publishNotifications(notificationIds);
 
     await publishFollowersCount([ id ]);
     revalidatePath('/authors/[id]', 'page');

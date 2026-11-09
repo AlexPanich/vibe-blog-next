@@ -10,6 +10,16 @@ export const MESSAGES_FROM = ['all', 'following', 'nobody'] as const;
 
 export type MessagesFrom = (typeof MESSAGES_FROM)[number];
 
+// Род для глагола в уведомлениях (спека 51): «оценил / оценила»; null — безродовая форма
+export const USER_GENDERS = ['m', 'f'] as const;
+
+export type UserGender = (typeof USER_GENDERS)[number];
+
+// Антиспам уведомлений (спека 51): rate — пара человек–пост, follow — пара подписчик–автор
+export const THROTTLE_KINDS = ['rate', 'follow'] as const;
+
+export type ThrottleKind = (typeof THROTTLE_KINDS)[number];
+
 export const POST_STATUSES = ['draft', 'moderating', 'published', 'rejected', 'hidden', 'blocked'] as const;
 
 export type PostStatus = (typeof POST_STATUSES)[number];
@@ -55,6 +65,7 @@ export const NOTIFICATION_TYPES = [
   'post_report.created', 'post_report.resolved',
   'user.unbanned', 'user.role_granted', 'user.role_revoked', 'user.avatar_removed', 'user.cover_removed',
   'message.created',
+  'post.rated', 'user.followed',
   'author_request.created', 'author_request.rejected',
 ] as const;
 
@@ -78,6 +89,8 @@ export const users = sqliteTable('users', {
   */
   bannedAt: integer('banned_at', { mode: 'timestamp' }),
   banReason: text('ban_reason'),
+  // Срок бана (спека 46): null при bannedAt — навсегда. Бан истёк — поля чистит хук входа (globals/auth.ts)
+  bannedUntil: integer('banned_until', { mode: 'timestamp' }),
   // «О себе» на странице автора; better-auth колонку не знает, пишет updateBioAction
   bio: text('bio'),
   /*
@@ -91,6 +104,8 @@ export const users = sqliteTable('users', {
   coverKey: text('cover_key'),
   // «Ещё у Ани» под постом (спека 41): человек пишет сам, без склонения; пишет updateBioAction
   nameGenitive: text('name_genitive'),
+  // Род для глагола в уведомлениях (спека 51), только выбор человека; нигде не показывается. Пишет updateBioAction
+  gender: text('gender', { enum: USER_GENDERS }),
   // Последняя смена имени (спека 45): не чаще раза в сутки; null — не меняли. Пишет updateNameAction
   nameChangedAt: integer('name_changed_at', { mode: 'timestamp' }),
   // Когда последний раз открывал «К моим постам» (спека 43): позже — «Новый». null — всё новое
@@ -100,6 +115,7 @@ export const users = sqliteTable('users', {
 }, t => [
   check('users_name_genitive_check', sql`${t.nameGenitive} IS NULL OR length(${t.nameGenitive}) BETWEEN 1 AND 40`),
   check('users_messages_from_check', sql`${t.messagesFrom} IN ('all', 'following', 'nobody')`),
+  check('users_gender_check', sql`${t.gender} IS NULL OR ${t.gender} IN ('m', 'f')`),
 ]);
 
 export const sessions = sqliteTable('sessions', {
@@ -174,9 +190,17 @@ export const posts = sqliteTable('posts', {
   */
   featuredAt: integer('featured_at', { mode: 'timestamp' }),
   featuredBy: integer('featured_by').references(() => users.id),
+  /*
+    Последняя отправка на модерацию (спека 49): ставит changePostStatus при каждом переходе в
+    moderating. Ключ очереди; повторная отправка видна в истории модерации. null — не отправлялся
+  */
+  submittedAt: integer('submitted_at', { mode: 'timestamp' }),
+  // Последнее сохранение содержимого (спека 49): поля редактора и галерея; смена статуса не трогает
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('posts_status_idx').on(t.status),
+  index('posts_status_submitted_idx').on(t.status, t.submittedAt),
   index('posts_type_idx').on(t.type),
   index('posts_status_published_idx').on(t.status, t.publishedAt),
   // text enum в SQLite ничего не проверяет, поэтому поля типа держит сама БД
@@ -217,11 +241,14 @@ export const userAdminActions = sqliteTable('user_admin_actions', {
   action: text('action', { enum: USER_ADMIN_ACTIONS }).notNull(),
   role: text('role', { enum: USER_ROLES }),
   comment: text('comment'),
+  // Срок из записи banned (спека 46): null — навсегда или не бан
+  until: integer('until', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('user_admin_actions_user_created_idx').on(t.userId, t.createdAt),
   check('user_admin_actions_role', sql`(${t.action} IN ('role_granted', 'role_revoked')) = (${t.role} IS NOT NULL)`),
   check('user_admin_actions_ban_comment', sql`${t.action} <> 'banned' OR length(trim(coalesce(${t.comment}, ''))) > 0`),
+  check('user_admin_actions_until', sql`${t.until} IS NULL OR ${t.action} = 'banned'`),
 ]);
 
 export const userAdminActionsRelations = relations(userAdminActions, ({ one }) => ({
@@ -504,9 +531,14 @@ export const notifications = sqliteTable('notifications', {
   actorId: integer('actor_id').references(() => users.id),
   postId: integer('post_id').references(() => posts.id),
   commentId: integer('comment_id'),
-  // message.created — одно непрочитанное на диалог
+  // message.created — одна строка на диалог (спека 51), прочитанная тоже заменяется
   dialogId: integer('dialog_id'),
   role: text('role', { enum: USER_ROLES }),
+  /*
+    Группа (спека 51): сколько событий собрала непрочитанная строка — комментарии и оценки
+    к посту, подписчики. Актор, commentId и createdAt — последнего события
+  */
+  groupCount: integer('group_count').notNull().default(1),
   readAt: integer('read_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
@@ -516,6 +548,21 @@ export const notifications = sqliteTable('notifications', {
   index('notifications_post_idx').on(t.postId),
   index('notifications_dialog_idx').on(t.dialogId),
   check('notifications_role', sql`(${t.type} IN ('user.role_granted', 'user.role_revoked')) = (${t.role} IS NOT NULL)`),
+]);
+
+/*
+  Память антиспама уведомлений (спека 51): когда паре актор–цель последний раз уведомили.
+  rate — targetId = пост, раз в сутки; follow — targetId = пользователь, один раз. Отдельно от
+  post_ratings / user_follows: снятие оценки и отписка удаляют те строки
+*/
+export const notificationThrottles = sqliteTable('notification_throttles', {
+  actorId: integer('actor_id').notNull().references(() => users.id),
+  kind: text('kind', { enum: THROTTLE_KINDS }).notNull(),
+  targetId: integer('target_id').notNull(),
+  notifiedAt: integer('notified_at', { mode: 'timestamp' }).notNull(),
+}, t => [
+  primaryKey({ columns: [ t.actorId, t.kind, t.targetId ] }),
+  check('notification_throttles_kind', sql`${t.kind} IN ('rate', 'follow')`),
 ]);
 
 /*

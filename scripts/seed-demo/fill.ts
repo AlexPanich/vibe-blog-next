@@ -10,8 +10,9 @@ import type { SeedComment } from "./types.ts";
 /*
   Демо-контент одной транзакцией: пользователи из people.ts (существующие по email
   обновляются, новые создаются с паролем password123), рубрики, посты всех типов и статусов
-  с фото и модерацией, оценки, просмотры, избранное, ветки комментариев (к постам и к фото, скрытые,
-  удалённые, с жалобами), жалобы на посты, подписки, блокировка, сообщения, заявки в авторы и уведомления.
+  с фото и модерацией (очередь — по времени отправки), оценки, просмотры, избранное, ветки комментариев (к постам и к фото, скрытые,
+  удалённые, с жалобами), жалобы на посты, подписки, блокировка, сообщения, заявки в авторы и уведомления —
+  с группами и памятью антиспама, как их пишет notify (спека 51).
   Даты — от now. Остальной контент база должна не содержать: сид-dev сначала его стирает,
   прод-сид запускается только на пустой базе
 */
@@ -26,7 +27,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     for(const person of people){
       const createdAt = new Date(person.since);
-      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, messagesFrom: person.messagesFrom ?? 'all', avatarKey: files.avatars[person.key], coverKey: files.covers?.[person.key] ?? null, nameGenitive: person.nameGenitive, bannedAt: null, banReason: null, commentsSeenAt: person.key in COMMENTS_SEEN_DAYS ? daysAgo(COMMENTS_SEEN_DAYS[person.key]) : null, createdAt };
+      const values = { name: person.name, roles: JSON.stringify(person.roles), bio: person.bio, favoritesPublic: person.favoritesPublic ?? false, messagesFrom: person.messagesFrom ?? 'all', avatarKey: files.avatars[person.key], coverKey: files.covers?.[person.key] ?? null, nameGenitive: person.nameGenitive, gender: person.gender ?? null, bannedAt: null, banReason: null, bannedUntil: null, commentsSeenAt: person.key in COMMENTS_SEEN_DAYS ? daysAgo(COMMENTS_SEEN_DAYS[person.key]) : null, createdAt };
       const existing = tx.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, person.email)).get();
 
       if(existing){
@@ -60,6 +61,10 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       const status = post.status ?? 'published';
       const created = now - post.days * DAY - Math.floor(random() * 10) * HOUR;
       const published = status === 'published' || status === 'hidden' || status === 'blocked';
+      // Отправка на модерацию (спека 49): у очереди — заданные часы назад, у остальных не-черновиков — при создании
+      const submitted = status === 'draft' ? null : status === 'moderating' && post.submittedHoursAgo !== undefined ? now - post.submittedHoursAgo * HOUR : created;
+      // Сохранение содержимого: черновик правили позже, остальные — при создании
+      const updated = status === 'draft' ? Math.max(created, Math.min(now - 60_000, created + 2 * HOUR)) : created;
       const id = tx.insert(schema.posts).values({
         userId: uid[post.author],
         url: post.url,
@@ -72,6 +77,8 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         lat: post.lat ?? null,
         lng: post.lng ?? null,
         createdAt: new Date(created),
+        submittedAt: submitted === null ? null : new Date(submitted),
+        updatedAt: new Date(updated),
         publishedAt: published ? new Date(created + HOUR) : null,
       }).returning({ id: schema.posts.id }).get().id;
 
@@ -99,8 +106,14 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       }
 
       if(status === 'moderating'){
-        for(const staff of [ 'some', 'alice' ]){
-          tx.insert(schema.notifications).values({ userId: uid[staff], type: 'post.submitted', actorId: uid[post.author], postId: id, createdAt: new Date(created) }).run();
+        // Прежний отказ — до последней отправки: в истории «Автор отправил повторно» (спека 49)
+        if(post.moderation){
+          tx.insert(schema.postModerations).values({ postId: id, userId: uid.some, decision: 'rejected', comment: post.moderation, createdAt: new Date(created + 2 * HOUR) }).run();
+          tx.insert(schema.notifications).values({ userId: uid[post.author], type: 'post.rejected', actorId: uid.some, postId: id, readAt: new Date(created + 3 * HOUR), createdAt: new Date(created + 2 * HOUR) }).run();
+        }
+
+        for(const staff of [ 'some', 'alice' ].filter(k => k !== post.author)){
+          tx.insert(schema.notifications).values({ userId: uid[staff], type: 'post.submitted', actorId: uid[post.author], postId: id, createdAt: new Date(submitted ?? created) }).run();
         }
       }
 
@@ -142,17 +155,35 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     tx.update(schema.posts).set({ featuredAt: daysAgo(2), featuredBy: uid.some }).where(eq(schema.posts.id, editorsPick.id)).run();
     tx.insert(schema.notifications).values({ userId: editorsPick.userId, type: 'post.featured', actorId: uid.some, postId: editorsPick.id, readAt: daysAgo(1.5), createdAt: daysAgo(2) }).run();
 
-    // --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — «Лучшее за неделю», пока нет ручного выбора
+    /*
+      --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — «Лучшее за неделю», пока нет ручного выбора.
+      post.rated (спека 51) — у Бориса и Ани: на свежий пост Бориса — непрочитанная группа из четырёх, на
+      свежий пост Ани — одиночная непрочитанная, на старые — прочитанная от последнего оценившего
+    */
+    const freshRated = [ 'bob', 'anya' ].map(author => publishedPosts.filter(p => p.author === author).sort((a, b) => a.days - b.days)[0]?.url);
+
     for(const post of publishedPosts){
-      const { id, createdAt } = postIds[post.url];
+      const { id, createdAt, userId } = postIds[post.url];
       const base = post.url === 'nedelya-v-gorakh-dagestana' ? 4.85 : 3.6 + random() * 1.2;
       const raters = pick(everyone.filter(k => k !== post.author), 4 + Math.floor(random() * 9));
-
-      tx.insert(schema.postRatings).values(raters.map(key => {
+      const ratingRows = raters.map(key => {
         const at = new Date(Math.min(now, createdAt + (1 + random() * 48) * HOUR));
 
         return { postId: id, userId: uid[key], value: clamp(Math.round(base + (random() - 0.5) * 1.6), 1, 5), createdAt: at, updatedAt: at };
-      })).run();
+      });
+
+      tx.insert(schema.postRatings).values(ratingRows).run();
+
+      if(post.author === 'bob' || post.author === 'anya'){
+        const byTime = [ ...ratingRows ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const groupCount = post.url === freshRated[0] ? Math.min(4, byTime.length) : 1;
+        const counted = byTime.slice(-groupCount);
+        const last = counted[counted.length - 1];
+        const unread = freshRated.includes(post.url);
+
+        tx.insert(schema.notifications).values({ userId, type: 'post.rated', actorId: last.userId, postId: id, groupCount, readAt: unread ? null : new Date(last.createdAt.getTime() + HOUR), createdAt: last.createdAt }).run();
+        tx.insert(schema.notificationThrottles).values(counted.map(r => ({ actorId: r.userId, kind: 'rate' as const, targetId: id, notifiedAt: r.createdAt }))).run();
+      }
 
       const fans = pick(readers.filter(k => k !== post.author), Math.floor(random() * 5));
 
@@ -200,13 +231,28 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       }
     }
 
-    // --- Комментарии
+    // --- Комментарии. Непрочитанные уведомления о них копятся по группе и пишутся после обхода
+    const commentEvents = new Map<string, CommentEvent[]>();
+
     for(const [ url, tree ] of Object.entries(commentTrees)){
       const post = postIds[url];
 
       for(const node of tree){
         addComment(post, node, null, null);
       }
+    }
+
+    // Группа как у notify (спека 51): строка последнего события, тот же актор подряд счёт не растит
+    for(const events of commentEvents.values()){
+      events.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+      let groupCount = 0;
+
+      for(const [ i, event ] of events.entries()){
+        groupCount += i > 0 && events[i - 1].actorId === event.actorId ? 0 : 1;
+      }
+
+      tx.insert(schema.notifications).values({ ...events[events.length - 1], groupCount }).run();
     }
 
     function addComment(post: typeof postIds[string], node: SeedComment, parent: { id: number, userId: number } | null, parentImage: number | null){
@@ -258,11 +304,11 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       const readAt = now - at.getTime() > 2 * DAY ? new Date(at.getTime() + DAY) : null;
 
       if(!node.deleted && parent && parent.userId !== author){
-        tx.insert(schema.notifications).values({ userId: parent.userId, type: 'comment.reply', actorId: author, postId: post.id, commentId: id, readAt, createdAt: at }).run();
+        commentNotification({ userId: parent.userId, type: 'comment.reply', actorId: author, postId: post.id, commentId: id, createdAt: at }, readAt);
       }
 
       if(!node.deleted && post.userId !== author && parent?.userId !== post.userId){
-        tx.insert(schema.notifications).values({ userId: post.userId, type: 'comment.created', actorId: author, postId: post.id, commentId: id, readAt, createdAt: at }).run();
+        commentNotification({ userId: post.userId, type: 'comment.created', actorId: author, postId: post.id, commentId: id, createdAt: at }, readAt);
       }
 
       for(const reply of node.replies ?? []){
@@ -270,12 +316,25 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       }
     }
 
+    // Прочитанное — строкой сразу, непрочитанное — в группу получатель + тип + пост
+    function commentNotification(event: CommentEvent, readAt: Date | null){
+      if(readAt){
+        tx.insert(schema.notifications).values({ ...event, readAt }).run();
+        return;
+      }
+
+      const key = `${event.userId}:${event.type}:${event.postId}`;
+      commentEvents.set(key, [ ...(commentEvents.get(key) ?? []), event ]);
+    }
+
     // --- Подписки: взаимные пары — «друзья»
     const follows: [ string, string ][] = [
       [ 'anya', 'nina' ], [ 'nina', 'anya' ], [ 'anya', 'timur' ], [ 'timur', 'anya' ], [ 'marat', 'olga' ], [ 'olga', 'marat' ],
       [ 'liza', 'anya' ], [ 'igor', 'nina' ], [ 'bob', 'anya' ], [ 'dan', 'bob' ], [ 'bob', 'dan' ], [ 'some', 'liza' ], [ 'seva', 'igor' ],
     ];
-    const popularity: Record<string, number> = { anya: 9, nina: 7, marat: 6, timur: 5, olga: 5, igor: 4, liza: 4, bob: 3, seva: 2, some: 2 };
+    // У Бориса подписчиков больше: часть — за последние две недели, столбики на «Начале» (спека 49)
+    follows.push([ 'nina', 'bob' ], [ 'igor', 'bob' ], [ 'konstantin', 'bob' ]);
+    const popularity: Record<string, number> = { anya: 9, nina: 7, marat: 6, timur: 5, olga: 5, igor: 4, liza: 4, bob: 7, seva: 2, some: 2 };
 
     for(const [ author, count ] of Object.entries(popularity)){
       for(const reader of pick(readers.filter(k => k !== author), count)){
@@ -284,8 +343,36 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     }
 
     const followRows = new Map(follows.map(([ a, b ]) => [ `${a}:${b}`, { followerId: uid[a], followingId: uid[b], createdAt: daysAgo(10 + random() * 200) } ]));
+    const bobFollowers = [ ...followRows.values() ].filter(row => row.followingId === uid.bob);
+
+    // Свежие — последние в списке, разные дни: рост в процентах к прошлым двум неделям
+    for(const [ i, daysBack ] of BOB_RECENT_FOLLOWS.entries()){
+      const row = bobFollowers[bobFollowers.length - 1 - i];
+
+      if(row){
+        row.createdAt = daysAgo(daysBack);
+      }
+    }
 
     tx.insert(schema.userFollows).values([ ...followRows.values() ]).run();
+
+    /*
+      user.followed (спека 51): Борису — непрочитанная группа свежих подписчиков, актор — самый свежий;
+      Ане — прочитанная от последнего. Память follow — на все пары, иначе отписка-подписка снова уведомит
+    */
+    const bobFresh = BOB_RECENT_FOLLOWS.map((_, i) => bobFollowers[bobFollowers.length - 1 - i]).filter(row => row !== undefined);
+
+    if(bobFresh.length > 0){
+      tx.insert(schema.notifications).values({ userId: uid.bob, type: 'user.followed', actorId: bobFresh[0].followerId, groupCount: bobFresh.length, createdAt: bobFresh[0].createdAt }).run();
+    }
+
+    const anyaLast = [ ...followRows.values() ].filter(row => row.followingId === uid.anya).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+    if(anyaLast){
+      tx.insert(schema.notifications).values({ userId: uid.anya, type: 'user.followed', actorId: anyaLast.followerId, readAt: new Date(anyaLast.createdAt.getTime() + HOUR), createdAt: anyaLast.createdAt }).run();
+    }
+
+    tx.insert(schema.notificationThrottles).values([ ...followRows.values() ].map(row => ({ actorId: row.followerId, kind: 'follow' as const, targetId: row.followingId, notifiedAt: row.createdAt }))).run();
 
     // У тестовых учёток тоже: в «Моей ленте» видны чипы рубрик, у Алисы с авторами — и «ещё N»
     tx.insert(schema.tagFollows).values([
@@ -334,10 +421,24 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     dialog('gleb', 'bob', [
       [ 'gleb', 'Купите велосипед недорого, отдам с багажником', 6 ],
     ]);
-    tx.insert(schema.messageIgnores).values({ userId: uid.bob, ignoredId: uid.gleb, createdAt: daysAgo(5.5) }).run();
+    // Длинная переписка (спека 49): больше порции истории — «Показать более ранние»
+    dialog('timur', 'bob', Array.from({ length: 56 }, (_, i): [ string, string, number ] => [ ...LONG_CHAT[i % LONG_CHAT.length], 40 - i * 0.7 ]));
+    // Три непрочитанных подряд (спека 51): «написал вам 3 сообщения»
+    dialog('konstantin', 'bob', [
+      [ 'konstantin', 'Борис, здравствуйте! Можно пару вопросов про первый сплав?', 0.9 ],
+      [ 'bob', 'Конечно, спрашивайте.', 0.85 ],
+      [ 'konstantin', 'Какую байдарку брать новичку — надувную или каркасную?', 0.12 ],
+      [ 'konstantin', 'И нужен ли гидрокостюм в июне?', 0.11 ],
+      [ 'konstantin', 'Простите за поток вопросов, очень хочется не ошибиться с первым разом 🙂', 0.1 ],
+    ], 3);
+    tx.insert(schema.messageIgnores).values(MESSAGE_IGNORES.map(([ user, ignored ]) => ({ userId: uid[user], ignoredId: uid[ignored], createdAt: daysAgo(5.5) }))).run();
     tx.insert(schema.messageRestrictions).values({ userId: uid.bob, restrictedId: uid.artem, createdAt: daysAgo(8) }).run();
 
-    // unread — сколько последних сообщений не прочитано собеседником
+    /*
+      unread — сколько последних сообщений не прочитано собеседником. Уведомление — одна строка на
+      диалог у каждой стороны (спека 51): от последнего входящего, прочитанная, если оно прочитано.
+      Скрытая переписка уведомлений не создаёт
+    */
     function dialog(a: string, b: string, lines: [ string, string, number ][], unread = 0){
       const [ low, high ] = [ uid[a], uid[b] ].sort((x, y) => x - y);
       const last = lines[lines.length - 1];
@@ -348,17 +449,40 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         tx.insert(schema.messages).values({ dialogId, userId: uid[from], content, createdAt: daysAgo(days), readAt: isUnread ? null : daysAgo(days - 0.01) }).run();
       });
 
-      if(unread > 0){
-        const to = last[0] === a ? b : a;
-        tx.insert(schema.notifications).values({ userId: uid[to], type: 'message.created', actorId: uid[last[0]], dialogId, createdAt: daysAgo(last[2]) }).run();
+      for(const [ to, from ] of [ [ a, b ], [ b, a ] ]){
+        const index = lines.findLastIndex(([ sender ]) => sender === from);
+
+        if(index === -1 || MESSAGE_IGNORES.some(([ user, ignored ]) => user === to && ignored === from)){
+          continue;
+        }
+
+        const days = lines[index][2];
+        const read = index < lines.length - unread;
+        tx.insert(schema.notifications).values({ userId: uid[to], type: 'message.created', actorId: uid[from], dialogId, readAt: read ? daysAgo(days - 0.01) : null, createdAt: daysAgo(days) }).run();
       }
     }
 
-    // --- Заявки в авторы: Ева ждёт, Артёму отказали
+    // --- Уведомления Бориса о постах (спека 49): одобрения своих — прочитаны; публикация Ани,
+    // ушедшая потом в архив, — «пост недоступен»
+    for(const url of [ 'splav-po-chusovoy', 'kak-ya-vybirayu-marshrut' ]){
+      const post = postIds[url];
+      tx.insert(schema.notifications).values({ userId: uid.bob, type: 'post.approved', actorId: uid.some, postId: post.id, readAt: new Date(post.createdAt + 2 * HOUR), createdAt: new Date(post.createdAt + HOUR) }).run();
+    }
+
+    for(const url of [ 'onega-bez-mashiny-2019', 'nedelya-v-gorakh-dagestana' ]){
+      const post = postIds[url];
+      tx.insert(schema.notifications).values({ userId: uid.bob, type: 'post.published', actorId: uid.anya, postId: post.id, readAt: new Date(post.createdAt + 5 * HOUR), createdAt: new Date(post.createdAt + HOUR) }).run();
+    }
+
+    // --- Заявки в авторы: Ева, Катя и Глеб ждут (спека 49 — несколько ожидающих), Артёму отказали
     tx.insert(schema.authorRequests).values({ userId: uid.eva, text: 'Хочу писать о походах выходного дня под Москвой: маршруты от электрички, снаряжение, где переночевать. Есть фото и треки за два года.', createdAt: daysAgo(1) }).run();
     tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.eva, createdAt: daysAgo(1) }).run();
-    tx.insert(schema.authorRequests).values({ userId: uid.artem, text: 'хочу писать', status: 'rejected', reason: 'Расскажите подробнее, о чём будете писать, и приложите пример текста.', decidedBy: uid.alice, decidedAt: daysAgo(20), createdAt: daysAgo(21) }).run();
-    tx.insert(schema.notifications).values({ userId: uid.artem, type: 'author_request.rejected', actorId: uid.alice, readAt: daysAgo(19), createdAt: daysAgo(20) }).run();
+    tx.insert(schema.authorRequests).values({ userId: uid.katya, text: 'Хочу писать длинные тексты о дорогах: трассы, придорожные кафе и города, где останавливаешься на ночь. Пишу для себя три года, могу показать примеры.', createdAt: daysAgo(0.4) }).run();
+    tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.katya, createdAt: daysAgo(0.4) }).run();
+    tx.insert(schema.authorRequests).values({ userId: uid.gleb, text: 'Велосипедные маршруты выходного дня по Подмосковью: треки, покрытие, где перекусить. Езжу каждые выходные с 2019 года.', createdAt: daysAgo(2.5) }).run();
+    tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.gleb, readAt: daysAgo(2), createdAt: daysAgo(2.5) }).run();
+    tx.insert(schema.authorRequests).values({ userId: uid.artem, text: 'хочу писать', status: 'rejected', reason: 'Расскажите подробнее, о чём будете писать, и приложите пример текста.', decidedBy: uid.alice, decidedAt: daysAgo(3), createdAt: daysAgo(4) }).run();
+    tx.insert(schema.notifications).values({ userId: uid.artem, type: 'author_request.rejected', actorId: uid.alice, readAt: daysAgo(2), createdAt: daysAgo(3) }).run();
   });
 }
 
@@ -370,6 +494,24 @@ const PASSWORD_HASH = '2c5ddde7a24416d978bf9c408a63f70e:9a2eab05d7b39193fd22f60a
   «Новый», часть — нет. У остальных NULL — вкладку не открывали, новые все
 */
 const COMMENTS_SEEN_DAYS: Record<string, number> = { anya: 3 };
+
+// Борис скрыл переписку с Глебом: уведомлений о ней нет
+const MESSAGE_IGNORES: [ string, string ][] = [ [ 'bob', 'gleb' ] ];
+
+// Дни назад у свежих подписчиков Бориса (спека 49)
+const BOB_RECENT_FOLLOWS = [ 0.3, 1.4, 3.2, 6.5, 11.8 ];
+
+// Реплики длинной переписки Тимура и Бориса по кругу: отправители чередуются
+const LONG_CHAT: [ string, string ][] = [
+  [ 'timur', 'Борис, как вода на Чусовой на этой неделе?' ],
+  [ 'bob', 'Поднялась после дождей, течение бодрое.' ],
+  [ 'timur', 'Думаю взять ребят из альпклуба на выходные.' ],
+  [ 'bob', 'Берите, только стоянку у Камня Писаного занимайте до обеда.' ],
+  [ 'timur', 'Спасибо! Фото пришлю.' ],
+  [ 'bob', 'Жду, удачной воды.' ],
+  [ 'timur', 'Вернулись, всё отлично. Вопрос про следующий маршрут.' ],
+  [ 'bob', 'Давай, слушаю.' ],
+];
 
 const HOUR = 60 * 60 * 1000;
 
@@ -394,3 +536,5 @@ function rng(seed: number){
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+type CommentEvent = { userId: number, type: 'comment.created' | 'comment.reply', actorId: number, postId: number, commentId: number, createdAt: Date }

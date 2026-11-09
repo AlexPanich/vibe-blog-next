@@ -24,9 +24,9 @@ export const postDetailsDto = z.discriminatedUnion('type', [
 export type PostDetailsDto = z.infer<typeof postDetailsDto>
 
 // Пределы нужны и форме: счётчик символов у заголовка (спека 42)
-export const POST_URL_MAX = 16;
+export const POST_URL_MAX = 80;
 
-export const POST_TITLE_MAX = 16;
+export const POST_TITLE_MAX = 120;
 
 export const POST_LEAD_MIN = 20;
 
@@ -66,6 +66,14 @@ export const postEditorDto = postOwnCreateDto.extend({
 })
 
 export type PostEditorDto = z.input<typeof postEditorDto>
+
+/*
+  Сохранение черновика (спека 49): version — updatedAt, с которым открыт редактор. Пост успели
+  сохранить в другой вкладке — 409, а не молчаливая перезапись чужой правки
+*/
+export const postUpdateDto = postEditorDto.extend({
+  version: z.date()
+})
 
 /*
   «Изменить» вне черновика: статус, который видел автор. По нему выбирается переход — если

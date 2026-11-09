@@ -9,6 +9,7 @@ import useForm from "@/hooks/useForm";
 import { Button, Textarea } from "@mantine/core";
 import { IconBan, IconLockOpen, type Icon } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
+import { BAN_TERM_KEYS, BAN_TERMS, DEFAULT_BAN_TERM, type BanTerm } from "@/domains/users/shared/banTerms";
 
 type UserBanFormProps<T extends UserBanFormResource> = {
   user: StrictResource<T, UserBanFormResource>,
@@ -17,16 +18,31 @@ type UserBanFormProps<T extends UserBanFormResource> = {
 
 /*
   Бан с обязательной причиной (пользователь увидит её при входе) и разбан с необязательным
-  комментарием для журнала (спека 42, шаг 19). Срока блокировки нет — спека 46
+  комментарием для журнала (спека 42, шаг 19). У бана — срок пилюлями, по умолчанию 7 дней
+  (спека 46): форма передаёт только ключ, момент окончания считает action
 */
 export default function UserBanForm<T extends UserBanFormResource>({ user, mode }: UserBanFormProps<T>) {
   const { action: serverAction, label, placeholder, button, icon: ButtonIcon, color } = MODES[mode];
   const action = useAction(serverAction.bind(null, user.id));
-  const form = useForm({ comment: '' });
+  const form = useForm<{ comment: string, term: BanTerm }>({ comment: '', term: DEFAULT_BAN_TERM });
   const serverError = action.result.serverError?.message;
 
   return (
     <form className="ui-user-ban" onSubmit={e => { e.preventDefault(); action.execute(form.data) }}>
+      { mode === 'ban' && <div className="ui-user-ban__terms" role="radiogroup" aria-label="Срок блокировки">
+        { BAN_TERM_KEYS.map(term => (
+          <button
+            key={term}
+            type="button"
+            role="radio"
+            className="ui-user-ban__term"
+            aria-checked={form.data.term === term}
+            onClick={() => form.update('term', term)}
+          >
+            { BAN_TERMS[term].label }
+          </button>
+        )) }
+      </div> }
       <Textarea
         label={label}
         placeholder={placeholder}

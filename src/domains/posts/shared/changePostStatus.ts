@@ -19,15 +19,17 @@ type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
   moderating. Первое одобрение ставит publishedAt — дату в ленте «Новые» (спека 22).
   Уведомления перехода пишутся в той же транзакции, а в браузер уходят после commit, туда же
   — широковещательный post.published. Уход из published снимает выбор редакции в том же
-  UPDATE (спека 39); restore и unblock его не возвращают. Права проверяет вызывающий.
+  UPDATE (спека 39); restore и unblock его не возвращают. Каждый переход в moderating ставит
+  submittedAt — время последней отправки, ключ очереди (спека 49). Права проверяет вызывающий.
 */
 export function changePostStatus(postId: number, transition: PostTransition, actorId: number, also?: (tx: DBTransaction) => void, guard?: SQL){
   const { from, to } = POST_TRANSITIONS[transition];
   const unfeature = from === 'published' ? { featuredAt: null, featuredBy: null } : {};
+  const submitted = to === 'moderating' ? { submittedAt: new Date() } : {};
 
   const { notificationIds, authorId, firstPublished } = db.transaction(tx => {
     const [ changed ] = tx.update(posts)
-      .set({ status: to, reviewerId: null, reviewStartedAt: null, ...unfeature })
+      .set({ status: to, reviewerId: null, reviewStartedAt: null, ...unfeature, ...submitted })
       .where(and(eq(posts.id, postId), eq(posts.status, from), guard))
       .returning({ userId: posts.userId })
       .all();

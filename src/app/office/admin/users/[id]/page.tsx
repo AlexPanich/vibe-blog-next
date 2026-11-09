@@ -15,6 +15,7 @@ import Link from "@/components/general/Link";
 import { resource } from "@/core/resource";
 import { requireAuthUser } from "@/shared/auth";
 import { idOrFail } from "@/shared/params";
+import { isBanActive } from "@/shared/userBan";
 import { notFound } from "next/navigation";
 import { IconChevronLeft, IconInfoCircle } from "@tabler/icons-react";
 
@@ -36,8 +37,10 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
     return notFound();
   }
 
-  const { user, stats, events } = loaded;
-  const back = user.bannedAt ? '/office/admin/users?filter=banned' as const : '/office/admin/users' as const;
+  const { user, lastLoginAt, stats, events } = loaded;
+  // Истёкший бан — как его нет (спека 46): форма бана и обычный список
+  const banned = isBanActive(user);
+  const back = banned ? '/office/admin/users?filter=banned' as const : '/office/admin/users' as const;
   const manageable = manageUser(me, user);
   const log = (
     <UserAdminCard title="Последние действия">
@@ -52,7 +55,7 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
         <IconChevronLeft size={16} stroke={2} />Пользователи
       </Link>
 
-      <UserAdminHero user={user} stats={stats} />
+      <UserAdminHero user={user} stats={stats} lastLoginAt={lastLoginAt} />
 
       { manageable ? (
         <div className="ui-user-page__columns">
@@ -77,10 +80,13 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
           </div>
 
           <div className="ui-user-page__column">
-            { user.bannedAt ? (
+            { banned && user.bannedAt ? (
               <UserAdminCard
                 title="Блокировка"
-                hint={<>Заблокирован <LocalDate value={user.bannedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} /></>}
+                hint={<>
+                  Заблокирован <LocalDate value={user.bannedAt} options={{ day: 'numeric', month: 'long', year: 'numeric' }} />
+                  { user.bannedUntil ? <> · до <LocalDate value={user.bannedUntil} options={{ day: 'numeric', month: 'long' }} /></> : ' · навсегда' }
+                </>}
               >
                 <p className="ui-user-card__reason">{ user.banReason }</p>
                 { /* key: после смены режима форма не должна унести введённый текст */ }

@@ -3,6 +3,7 @@ import { db } from "@/globals/db";
 import { dialogs, messageIgnores, messageRestrictions, messages, userFollows, users } from "@/database/schema";
 import type { AuthUser } from "@/shared/authUser";
 import { isBlockedBetween } from "@/domains/users/exports/userBlocks";
+import { isBanActive } from "@/shared/userBan";
 import { and, eq, or } from "drizzle-orm";
 
 export type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -43,13 +44,13 @@ export function writeBlockReason(tx: DBTransaction, sender: Pick<AuthUser, 'id' 
     return 'Себе написать нельзя';
   }
 
-  const recipient = tx.select({ bannedAt: users.bannedAt, messagesFrom: users.messagesFrom }).from(users).where(eq(users.id, recipientId)).get();
+  const recipient = tx.select({ bannedAt: users.bannedAt, bannedUntil: users.bannedUntil, messagesFrom: users.messagesFrom }).from(users).where(eq(users.id, recipientId)).get();
 
   if(!recipient){
     return 'Пользователь не найден';
   }
 
-  if(recipient.bannedAt){
+  if(isBanActive(recipient)){
     return 'Аккаунт заблокирован';
   }
 

@@ -6,7 +6,8 @@ import { writeBlockReason } from "@/domains/messages/shared/messageAccess";
 import { blockedWithQueries } from "@/domains/users/exports/userBlocks";
 import type { AuthUser } from "@/shared/authUser";
 import { escapeLike } from "@/shared/escapeLike";
-import { and, asc, desc, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { banActiveSql } from "@/shared/userBan";
+import { and, asc, desc, eq, ne, not, notInArray, or, sql } from "drizzle-orm";
 
 export const MESSAGE_PICKER_LIMIT = 20;
 
@@ -36,7 +37,7 @@ export function loadMessagePicker(me: Pick<AuthUser, 'id' | 'roles'>, q: string 
 
   const common = [
     ne(users.id, me.id),
-    isNull(users.bannedAt),
+    not(banActiveSql()),
     notInArray(users.id, blocking),
     notInArray(users.id, blockedBy)
   ];

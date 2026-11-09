@@ -3,7 +3,8 @@ import { db } from "@/globals/db";
 import { notifications, users } from "@/database/schema";
 import type { NotificationType, Role } from "@/database/schema";
 import { blockedAmong } from "@/domains/users/exports/userBlocks";
-import { and, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
+import { banActiveSql } from "@/shared/userBan";
+import { and, desc, eq, gt, inArray, isNull, like, not, or, sql } from "drizzle-orm";
 
 export type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -25,12 +26,25 @@ const INSERT_CHUNK = 500;
   Социальные события: между людьми, связанными блокировкой, не создаются и при блокировке
   удаляются (спека 26). Модерация и роли сюда не входят — блокировка на них не влияет
 */
-const SOCIAL_TYPES: readonly NotificationType[] = [ 'comment.created', 'comment.reply', 'post.published', 'message.created' ];
+const SOCIAL_TYPES: readonly NotificationType[] = [ 'comment.created', 'comment.reply', 'post.published', 'message.created', 'post.rated', 'user.followed' ];
+
+/*
+  Группируемые типы (спека 51): одна непрочитанная строка на получателя и пост — или на
+  получателя. message.created здесь нет: у сообщений своё правило (messageNotifications.ts)
+*/
+const GROUP_KEYS: Partial<Record<NotificationType, 'post' | 'user'>> = {
+  'comment.created': 'post',
+  'comment.reply': 'post',
+  'post.rated': 'post',
+  'user.followed': 'user',
+};
 
 /*
   Пишется в транзакции действия: откат действия откатывает и уведомление. «Не себе» —
   актор из получателей выбрасывается. Возвращает id созданных: их публикует вызывающий
-  после commit (publishNotifications)
+  после commit (publishNotifications).
+  Группируемый тип заменяет висящую непрочитанную строку группы: старая удаляется, новая
+  встаёт наверх с groupCount + 1 и свежим актором (спека 51, реш. 6)
 */
 export function notify(tx: DBTransaction, type: NotificationType, recipients: number[], target: NotifyTarget): number[] {
   const unique = [ ...new Set(recipients) ].filter(id => id !== target.actorId);
@@ -50,6 +64,7 @@ export function notify(tx: DBTransaction, type: NotificationType, recipients: nu
     commentId: target.commentId ?? null,
     dialogId: target.dialogId ?? null,
     role: target.role ?? null,
+    groupCount: groupCountFor(tx, type, userId, target),
     createdAt
   }));
   const ids: number[] = [];
@@ -67,7 +82,7 @@ export function notify(tx: DBTransaction, type: NotificationType, recipients: nu
 export function staffIds(tx: DBTransaction): number[] {
   return tx.select({ id: users.id })
     .from(users)
-    .where(and(isNull(users.bannedAt), or(like(users.roles, '%"moderator"%'), like(users.roles, '%"admin"%'))))
+    .where(and(not(banActiveSql()), or(like(users.roles, '%"moderator"%'), like(users.roles, '%"admin"%'))))
     .all()
     .map(u => u.id);
 }
@@ -76,18 +91,24 @@ export function staffIds(tx: DBTransaction): number[] {
 export function adminIds(tx: DBTransaction): number[] {
   return tx.select({ id: users.id })
     .from(users)
-    .where(and(isNull(users.bannedAt), like(users.roles, '%"admin"%')))
+    .where(and(not(banActiveSql()), like(users.roles, '%"admin"%')))
     .all()
     .map(u => u.id);
 }
 
 /*
-  Уборка. Уведомления удалённого комментария уходят вместе с ним; задачи — post.submitted и
-  report.created, post_report.created — когда их сделали: это не факты, а работа, которой больше нет
+  Уборка. Уведомления удалённого комментария уходят вместе с ним, а группа теряет одно
+  событие и выдержку (спека 51, реш. 8): строка помнит только последний commentId, поэтому
+  комментарий из середины группы счёт не уменьшает. Задачи — post.submitted и report.created,
+  post_report.created — уходят, когда их сделали: это не факты, а работа, которой больше нет
 */
 export function deleteCommentNotifications(tx: DBTransaction, commentIds: number[]){
   if(commentIds.length > 0){
-    tx.delete(notifications).where(inArray(notifications.commentId, commentIds)).run();
+    tx.delete(notifications).where(and(inArray(notifications.commentId, commentIds), eq(notifications.groupCount, 1))).run();
+    tx.update(notifications)
+      .set({ groupCount: sql`${notifications.groupCount} - 1`, commentId: null })
+      .where(and(inArray(notifications.commentId, commentIds), gt(notifications.groupCount, 1)))
+      .run();
   }
 }
 
@@ -120,6 +141,38 @@ export function deleteSocialNotificationsBetween(tx: DBTransaction, a: number, b
       )
     ))
     .run();
+}
+
+/*
+  Счёт новой строки группы: висящая непрочитанная удаляется, счёт продолжается. Тот же актор,
+  что у висящей, счёт не увеличивает — повторная оценка через сутки или два комментария
+  подряд не дают «и ещё 1» (план 51, реш. 2)
+*/
+function groupCountFor(tx: DBTransaction, type: NotificationType, userId: number, target: NotifyTarget): number {
+  const key = GROUP_KEYS[type];
+
+  if(!key || (key === 'post' && target.postId == null)){
+    return 1;
+  }
+
+  const open = tx.select({ id: notifications.id, groupCount: notifications.groupCount, actorId: notifications.actorId })
+    .from(notifications)
+    .where(and(
+      eq(notifications.userId, userId),
+      eq(notifications.type, type),
+      isNull(notifications.readAt),
+      key === 'post' ? eq(notifications.postId, target.postId!) : undefined
+    ))
+    .orderBy(desc(notifications.id))
+    .get();
+
+  if(!open){
+    return 1;
+  }
+
+  tx.delete(notifications).where(eq(notifications.id, open.id)).run();
+
+  return open.actorId === target.actorId ? open.groupCount : open.groupCount + 1;
 }
 
 function trimTail(tx: DBTransaction, userIds: number[]){

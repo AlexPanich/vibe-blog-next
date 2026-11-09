@@ -11,13 +11,15 @@ import { StrictResource } from "@/core/resource";
 import { fieldError } from "@/components/general/FieldError";
 import LocalDate from "@/components/general/LocalDate";
 import useForm from "@/hooks/useForm";
-import { Alert, Button, Stack, Textarea, TextInput } from "@mantine/core";
+import type { UserGender } from "@/database/schema";
+import { Alert, Button, InputWrapper, Stack, Textarea, TextInput } from "@mantine/core";
 import { IconCheck } from "@tabler/icons-react";
 
 type UserBioFormProps<T extends UserNameStateResource> = {
   nameState: StrictResource<T, UserNameStateResource>,
   bio: string,
-  nameGenitive: string
+  nameGenitive: string,
+  gender: UserGender | null
 }
 
 /*
@@ -25,11 +27,11 @@ type UserBioFormProps<T extends UserNameStateResource> = {
   (спека 45): bio уходит всегда, имя — только если изменилось, и ошибка частоты имени не мешает
   сохранить «О себе». Пока сутки со смены не прошли, имя readOnly с датой, когда снова можно.
   Имя в родительном падеже для «Ещё у …» под постом (спека 41) человек пишет сам — склонять
-  не пытаемся
+  не пытаемся. Род (спека 51) — только для глагола в уведомлениях, нигде не показывается
 */
-export default function UserBioForm<T extends UserNameStateResource>({ nameState, bio, nameGenitive }: UserBioFormProps<T>) {
+export default function UserBioForm<T extends UserNameStateResource>({ nameState, bio, nameGenitive, gender }: UserBioFormProps<T>) {
   const router = useRouter();
-  const { nv, update, data } = useForm({ name: nameState.name, bio, nameGenitive });
+  const { nv, update, data } = useForm({ name: nameState.name, bio, nameGenitive, gender: (gender ?? '') as GenderChoice });
   const bioAction = useAction(updateBioAction);
   // Новое имя — в шапке и useUser(): пользователь кабинета приходит из layout. По 429 — дата под полем
   const nameAction = useAction(updateNameAction, {
@@ -45,7 +47,7 @@ export default function UserBioForm<T extends UserNameStateResource>({ nameState
   const locked = nameState.nextChangeAt;
 
   function submit(){
-    bioAction.execute({ bio: data.bio, nameGenitive: data.nameGenitive });
+    bioAction.execute({ bio: data.bio, nameGenitive: data.nameGenitive, gender: data.gender || null });
 
     if(!locked && normalizeName(data.name) !== nameState.name){
       nameAction.execute({ name: data.name });
@@ -84,6 +86,26 @@ export default function UserBioForm<T extends UserNameStateResource>({ nameState
           onChange={e => update('nameGenitive', e.target.value)}
           error={fieldError(bioAction.result.validationErrors, 'nameGenitive')}
         />
+        <InputWrapper label="Как писать о вас в уведомлениях" description="Только для уведомлений, нигде не показывается" inputWrapperOrder={[ 'label', 'input', 'description', 'error' ]}>
+          <div className="ui-account-options" role="radiogroup" aria-label="Как писать о вас в уведомлениях">
+            { GENDER_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                className="ui-account-option"
+                aria-checked={data.gender === option.value}
+                onClick={() => update('gender', option.value)}
+              >
+                <span className="ui-account-option__radio" aria-hidden />
+                <span className="ui-account-option__text">
+                  <b>{ option.label }</b>
+                  <small>{ option.text }</small>
+                </span>
+              </button>
+            )) }
+          </div>
+        </InputWrapper>
         <Textarea
           label={<span className="ui-account-count">О себе <small>{ data.bio.length } / 500</small></span>}
           labelProps={{ className: 'ui-account-count__label' }}
@@ -105,3 +127,11 @@ export default function UserBioForm<T extends UserNameStateResource>({ nameState
     </form>
   );
 }
+
+const GENDER_OPTIONS: { value: GenderChoice, label: string, text: string }[] = [
+  { value: 'm', label: 'Оценил', text: 'Подписался, написал вам' },
+  { value: 'f', label: 'Оценила', text: 'Подписалась, написала вам' },
+  { value: '', label: 'Не указывать', text: 'Без глагола: «новый подписчик»' },
+];
+
+type GenderChoice = UserGender | ''

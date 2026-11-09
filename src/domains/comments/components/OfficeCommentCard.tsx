@@ -22,8 +22,10 @@ export default function OfficeCommentCard({ comment, isNew = false }: { comment:
       <UserAvatar name={comment.author.name} avatarKey={comment.author.avatarKey} size={40} />
       <div className="ui-office-comment__body">
         <div className="ui-office-comment__top">
-          <span className="ui-office-comment__name">{ comment.author.name }</span>
-          { isNew && <span className="ui-office-comment__new">Новый</span> }
+          <span className="ui-office-comment__who">
+            <span className="ui-office-comment__name">{ comment.author.name }</span>
+            { isNew && <span className="ui-office-comment__new">Новый</span> }
+          </span>
           <span className="ui-office-comment__meta">
             <span className="ui-office-comment__to">
               { comment.onImage ? 'к фото поста' : 'к посту' } <Link href={href}>«{ comment.postTitle }»</Link>

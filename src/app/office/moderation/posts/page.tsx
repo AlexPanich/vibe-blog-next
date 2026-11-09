@@ -38,10 +38,10 @@ export default async function ModerationPosts({ searchParams }: PageProps<'/offi
   const { status } = postModerationFilterDto.parse(await searchParams);
   const counts = await tabCounts();
 
-  // В очереди дольше всех ждущие — сверху, в остальных вкладках — свежие
+  // В очереди — по времени последней отправки, раньше отправленные сверху (спека 49); в остальных вкладках — свежие
   const list = await withRowData(await db.query.posts.findMany({
     where: eq(posts.status, status),
-    orderBy: status === 'moderating' ? asc(posts.createdAt) : desc(posts.createdAt),
+    orderBy: status === 'moderating' ? [ asc(posts.submittedAt), asc(posts.id) ] : desc(posts.createdAt),
     with: { author: true, reviewer: true, ...POST_TAGS_WITH }
   }));
 

@@ -169,7 +169,12 @@ function peerLine(peer: DialogPeerResource): string {
     return 'Читатель';
   }
 
-  return peer.posts > 0 ? `Автор · ${peer.posts} ${plural(peer.posts, [ 'пост', 'поста', 'постов' ])}` : 'Автор';
+  if(peer.posts === 0){
+    return 'Автор';
+  }
+
+  // Падежа у рубрики нет («о походах» не собрать) — хештегом, как в AuthorTopics (спека 49)
+  return `Автор · ${peer.posts} ${plural(peer.posts, [ 'пост', 'поста', 'постов' ])}${peer.topic ? ` · #${peer.topic}` : ''}`;
 }
 
 type MessageBubbleProps = {

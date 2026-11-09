@@ -1,5 +1,6 @@
 import z from "zod";
 import { normalizeName } from "@/domains/users/shared/nameChange";
+import { USER_GENDERS } from "@/database/schema";
 
 export const USER_NAME_MIN = 2;
 export const USER_NAME_MAX = 24;
@@ -61,7 +62,9 @@ export const userBioDto = z.object({
   bio: z.string().trim().max(500, 'Не больше 500 символов'),
   // «Ещё у …» (спека 41): одно-два слова, до 40; пусто — null в action
   nameGenitive: z.string().trim().transform(v => v.replace(/\s+/g, ' '))
-    .pipe(z.string().max(40, 'Не больше 40 символов').refine(v => v.split(' ').length <= 2, 'Одно или два слова'))
+    .pipe(z.string().max(40, 'Не больше 40 символов').refine(v => v.split(' ').length <= 2, 'Одно или два слова')),
+  // Род для глагола в уведомлениях (спека 51); null — «не указывать»
+  gender: z.enum(USER_GENDERS).nullable()
 })
 
 export type UserBioDto = z.infer<typeof userBioDto>

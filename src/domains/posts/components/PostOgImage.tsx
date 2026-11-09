@@ -1,6 +1,6 @@
 import type { PostType } from "@/database/schema";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
-import { cutWords } from "@/domains/posts/shared/postText";
+import { cutWords } from "@/core/text";
 
 type PostOgImageProps = {
   // Обложка data URL (png 480×630) — справа от текста
@@ -30,7 +30,7 @@ export default function PostOgImage({ cover, type, title, summary, author, tags 
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           { type !== 'simple' && <span style={{ fontSize: 26, letterSpacing: 3, color: '#3ebf6e' }}>{ POST_TYPE_LABELS[type].toUpperCase() }</span> }
-          <div style={{ fontSize: titleSize(title), fontWeight: 700, lineHeight: 1.1 }}>{ title }</div>
+          <div style={{ fontSize: titleSize(title), fontWeight: 700, lineHeight: 1.1, display: 'block', lineClamp: 4, wordBreak: 'break-word' }}>{ title }</div>
           { summary && <div style={{ fontSize: 26, lineHeight: 1.4, color: '#b4bcb8', display: 'block', lineClamp: long ? 2 : 3 }}>
             { cutWords(summary, long ? 75 : 110) }
           </div> }
@@ -50,10 +50,14 @@ export default function PostOgImage({ cover, type, title, summary, author, tags 
 /*
   Заголовок и подзаголовок должны поместиться над подвалом: подзаголовок — три строки (~110
   символов при 26px), под длинным заголовком — мельче заголовок и две строки (~75). Текст
-  режется по слову заранее, lineClamp — подстраховка на широкие буквы
+  режется по слову заранее, lineClamp — подстраховка на широкие буквы. Заголовок до 120 символов
+  (спека 49) — не больше четырёх строк, слово без пробелов переносится
 */
 function titleSize(title: string){
-  if(title.length > 60){
+  if(title.length > 90){
+    return 42;
+  }
+  else if(title.length > 60){
     return 50;
   }
   else if(title.length > 40){

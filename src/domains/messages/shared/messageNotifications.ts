@@ -5,15 +5,20 @@ import { isIgnored, type DBTransaction } from "@/domains/messages/shared/message
 import { and, eq, isNull, ne } from "drizzle-orm";
 
 /*
-  Одно непрочитанное message.created на диалог: прежнее непрочитанное заменяется новым,
-  чтобы подняться наверх колокольчика. Скрытая переписка уведомлений не создаёт
+  Одна строка message.created на диалог (спека 51, реш. 7): прежняя — и прочитанная тоже —
+  заменяется новой, чтобы подняться наверх колокольчика и не копиться в истории. Число
+  сообщений в тексте считается при показе. Скрытая переписка уведомлений не создаёт
 */
 export function notifyMessage(tx: DBTransaction, dialogId: number, senderId: number, recipientId: number): number[] {
   if(isIgnored(tx, recipientId, senderId)){
     return [];
   }
 
-  tx.delete(notifications).where(unreadOf(dialogId, recipientId)).run();
+  tx.delete(notifications).where(and(
+    eq(notifications.type, 'message.created'),
+    eq(notifications.userId, recipientId),
+    eq(notifications.dialogId, dialogId)
+  )).run();
 
   return notify(tx, 'message.created', [ recipientId ], { actorId: senderId, dialogId });
 }

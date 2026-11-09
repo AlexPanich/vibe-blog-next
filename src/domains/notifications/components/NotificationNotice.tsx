@@ -19,7 +19,7 @@ export default function NotificationNotice({ item, onOpen }: { item: Notificatio
     <span className="ui-notice__icon" data-tone={tone}><ItemIcon size={18} stroke={2} /></span>
     <span className="ui-notice__body">
       <span className="ui-notice__title">{ title }</span>
-      <span className="ui-notice__text">{ item.actor && <b>{ item.actor.name }: </b> }{ item.text }</span>
+      <span className="ui-notice__text">{ item.actor && <><b>{ item.actor.name }</b>{ item.inline ? ' ' : ': ' }</> }{ item.text }</span>
     </span>
     <span className="ui-notice__side">
       <span className="ui-notice__when">

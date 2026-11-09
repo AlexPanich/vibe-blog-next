@@ -22,7 +22,7 @@ import { revalidatePath } from "next/cache";
 
 /*
   Галерея — часть содержимого: breakIfCant проверяет владельца, а «только черновик» — та же
-  транзакция, что запись. Устаревшая страница получает 409, а не 403
+  транзакция, что запись; она же двигает updatedAt поста. Устаревшая страница получает 409, а не 403
 */
 
 export const uploadPostImageAction = actionAuthClient
@@ -44,7 +44,7 @@ export const uploadPostImageAction = actionAuthClient
 
     try{
       const image = db.transaction(tx => {
-        ensureDraft(tx, postId);
+        touchDraft(tx, postId);
 
         const [ { total } ] = tx.select({ total: count() }).from(postImages).where(eq(postImages.postId, postId)).all();
 
@@ -75,7 +75,7 @@ export const updatePostImageCaptionAction = actionAuthClient
     const image = await findImageWithAccess(imageId);
 
     db.transaction(tx => {
-      ensureDraft(tx, image.postId);
+      touchDraft(tx, image.postId);
       tx.update(postImages).set({ caption: caption || null }).where(eq(postImages.id, imageId)).run();
     });
 
@@ -90,7 +90,7 @@ export const setPostCoverAction = actionAuthClient
     const image = await findImageWithAccess(imageId);
 
     db.transaction(tx => {
-      ensureDraft(tx, image.postId);
+      touchDraft(tx, image.postId);
       tx.update(posts).set({ coverImageId: imageId }).where(eq(posts.id, image.postId)).run();
     });
 
@@ -110,7 +110,7 @@ export const deletePostImageAction = actionAuthClient
     const image = await findImageWithAccess(imageId);
 
     db.transaction(tx => {
-      ensureDraft(tx, image.postId);
+      touchDraft(tx, image.postId);
 
       const commentIds = tx.select({ id: comments.id }).from(comments).where(eq(comments.imageId, imageId)).all().map(c => c.id);
 
@@ -134,10 +134,15 @@ export const deletePostImageAction = actionAuthClient
 
 type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-function ensureDraft(tx: DBTransaction, postId: number){
-  const post = tx.select({ status: posts.status }).from(posts).where(eq(posts.id, postId)).get();
+// Проверка «только черновик» и отметка сохранения содержимого (updatedAt, спека 49) — один условный UPDATE
+function touchDraft(tx: DBTransaction, postId: number){
+  const touched = tx.update(posts)
+    .set({ updatedAt: new Date() })
+    .where(and(eq(posts.id, postId), eq(posts.status, 'draft')))
+    .returning({ id: posts.id })
+    .all();
 
-  if(post?.status !== 'draft'){
+  if(touched.length === 0){
     actionError(409, 'Пост уже не черновик — галерея закрыта');
   }
 }

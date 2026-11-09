@@ -94,7 +94,7 @@ export const updateBioAction = actionAuthClient
     const nameGenitive = parsedInput.nameGenitive || null;
     const old = db.transaction(tx => {
       const row = tx.select({ nameGenitive: users.nameGenitive }).from(users).where(eq(users.id, user.id)).get();
-      tx.update(users).set({ bio: parsedInput.bio || null, nameGenitive }).where(eq(users.id, user.id)).run();
+      tx.update(users).set({ bio: parsedInput.bio || null, nameGenitive, gender: parsedInput.gender }).where(eq(users.id, user.id)).run();
 
       return row?.nameGenitive ?? null;
     });

@@ -4,6 +4,7 @@ import 'client-only';
 import NotificationRow from "@/domains/notifications/components/NotificationRow";
 import { loadNotificationsAction, readAllNotificationsAction, readNotificationAction, unreadNotificationsAction } from "@/domains/notifications/actions/notificationActions";
 import { notificationItemResource, type NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
+import { isReplacedBy } from "@/domains/notifications/shared/notificationGroup";
 import useLiveEvent from "@/hooks/useLiveEvent";
 import useUser from "@/hooks/useUser";
 import { ActionIcon, Button, Indicator, Loader, Popover, PopoverDropdown, PopoverTarget, Text } from "@mantine/core";
@@ -76,7 +77,8 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
 
     if(opened){
       const item = notificationItemResource.parse(data.notification);
-      setItems(prev => prev && !prev.some(i => i.id === item.id) ? [ item, ...prev ] : prev);
+      // Строка группы заменяет прежнюю (спека 51): старая уходит из открытой панели
+      setItems(prev => prev && !prev.some(i => i.id === item.id) ? [ item, ...prev.filter(i => !isReplacedBy(i, item)) ] : prev);
     }
   });
 

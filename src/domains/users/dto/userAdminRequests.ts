@@ -1,5 +1,6 @@
 import z from "zod";
 import { USER_ROLES } from "@/database/schema";
+import { BAN_TERM_KEYS, DEFAULT_BAN_TERM } from "@/domains/users/shared/banTerms";
 
 /*
   expected — роли, которые admin видел на странице: если в БД уже другие, изменение
@@ -12,8 +13,10 @@ export const userRolesDto = z.object({
 
 export type UserRolesDto = z.infer<typeof userRolesDto>
 
+// term — ключ срока (спека 46), сам момент окончания считает action
 export const userBanDto = z.object({
-  comment: z.string().trim().min(1, 'Укажите причину блокировки').max(2000)
+  comment: z.string().trim().min(1, 'Укажите причину блокировки').max(2000),
+  term: z.enum(BAN_TERM_KEYS).default(DEFAULT_BAN_TERM)
 })
 
 export type UserBanDto = z.infer<typeof userBanDto>

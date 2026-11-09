@@ -1,5 +1,5 @@
 import type { NotificationType } from "@/database/schema";
-import { IconAlertCircle, IconAward, IconFlag, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconUserCheck, type Icon } from "@tabler/icons-react";
+import { IconAlertCircle, IconAward, IconFlag, IconCircleCheck, IconFileText, IconMail, IconMessageCircle, IconShieldCheck, IconStar, IconUserCheck, IconUserPlus, type Icon } from "@tabler/icons-react";
 
 export type NotificationTone = 'mint' | 'coral' | 'sun' | 'plum' | 'ink'
 
@@ -29,7 +29,9 @@ const LOOKS: Record<NotificationType, NotificationLook> = {
   'comment.edited': { icon: IconMessageCircle, tone: 'sun', title: 'Комментарий изменён', action: 'Открыть' },
   'comment.hidden': { icon: IconAlertCircle, tone: 'coral', title: 'Комментарий скрыт', action: 'Открыть пост' },
   'comment.unhidden': { icon: IconCircleCheck, tone: 'mint', title: 'Комментарий возвращён', action: 'Открыть' },
-  'message.created': { icon: IconMail, tone: 'ink', title: 'Новые личные сообщения', action: 'Ответить' },
+  'message.created': { icon: IconMail, tone: 'ink', title: 'Личные сообщения', action: 'Ответить' },
+  'post.rated': { icon: IconStar, tone: 'sun', title: 'Оценка поста', action: 'Открыть пост' },
+  'user.followed': { icon: IconUserPlus, tone: 'mint', title: 'Новый подписчик', action: 'Профиль' },
   'user.role_granted': { icon: IconUserCheck, tone: 'mint', title: 'Новая роль', action: 'Подробнее' },
   'user.role_revoked': { icon: IconAlertCircle, tone: 'coral', title: 'Роль снята', action: 'Профиль' },
   'user.avatar_removed': { icon: IconAlertCircle, tone: 'coral', title: 'Аватар удалён', action: 'Профиль' },

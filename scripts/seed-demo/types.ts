@@ -15,8 +15,10 @@ export type SeedPost = {
   lng?: number,
   source?: string,
   status?: PostStatus,
-  // Причина для rejected / blocked — уходит в post_moderations
+  // Причина для rejected / blocked — уходит в post_moderations; у moderating — прежний отказ (отправлен повторно)
   moderation?: string,
+  // У moderating: сколько часов назад отправлен на модерацию (спека 49); не задано — при создании
+  submittedHoursAgo?: number,
   tags: TagName[],
   // Сколько дней назад создан и опубликован
   days: number,

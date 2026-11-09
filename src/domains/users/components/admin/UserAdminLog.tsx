@@ -35,7 +35,14 @@ function EventList({ events, year }: UserAdminLogProps) {
         <li key={e.key} className="ui-user-log__item">
           <span className="ui-user-log__dot" data-tone={e.tone} aria-hidden />
           <span className="ui-user-log__text">
-            { e.text }
+            { /* Одним span: .ui-user-log__text — колонка, голые куски текста разъехались бы по строкам */ }
+            <span>
+              { e.text }
+              { e.banUntil !== undefined && (e.banUntil
+                ? <> до <LocalDate value={e.banUntil} options={{ day: 'numeric', month: 'long' }} /></>
+                : ' навсегда') }
+              { e.actor && ` · ${e.actor}` }
+            </span>
             { e.comment && <q>{ e.comment }</q> }
           </span>
           <span className="ui-user-log__at">

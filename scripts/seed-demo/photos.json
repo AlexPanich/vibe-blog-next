@@ -499,6 +499,14 @@
    "source": "https://commons.wikimedia.org/wiki/File:Vinyl_records_Shop_for_Collectors_jafa.JPG"
   }
  ],
+ "katamaran": [
+  {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/%D0%A0%D0%B5%D0%BA%D0%B0_%D0%A7%D1%83%D1%81%D0%BE%D0%B2%D0%B0%D1%8F_%28Chusovaya_river%29_-_panoramio_%2816%29.jpg/1920px-%D0%A0%D0%B5%D0%BA%D0%B0_%D0%A7%D1%83%D1%81%D0%BE%D0%B2%D0%B0%D1%8F_%28Chusovaya_river%29_-_panoramio_%2816%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "author": "Artem Murugov",
+   "license": "CC BY 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:%D0%A0%D0%B5%D0%BA%D0%B0_%D0%A7%D1%83%D1%81%D0%BE%D0%B2%D0%B0%D1%8F_(Chusovaya_river)_-_panoramio_(16).jpg"
+  }
+ ],
  "chusovaya": [
   {
    "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Chusovaya_River_%28June_2025%29_-_0_2.jpg/1920px-Chusovaya_River_%28June_2025%29_-_0_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -561,6 +569,7 @@
   "vera": "https://i.pravatar.cc/512?img=25",
   "gleb": "https://i.pravatar.cc/512?img=67",
   "mila": "https://i.pravatar.cc/512?img=36",
-  "artem": "https://i.pravatar.cc/512?img=68"
+  "artem": "https://i.pravatar.cc/512?img=68",
+  "konstantin": "https://i.pravatar.cc/512?img=14"
  }
 }

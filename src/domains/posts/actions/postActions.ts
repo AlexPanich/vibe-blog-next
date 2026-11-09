@@ -6,7 +6,7 @@ import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { validate } from "@/shared/validation";
 import { db } from "@/globals/db";
 import { postTags, posts, tags } from "@/database/schema";
-import { aiIdSchema, postEditorDto, PostOwnCreateDto } from "@/domains/posts/dto/postRequests";
+import { aiIdSchema, postEditorDto, postUpdateDto, PostOwnCreateDto } from "@/domains/posts/dto/postRequests";
 import { createPost, transitPost, workWithPost } from "@/domains/posts/policy";
 import { changePostStatus } from "@/domains/posts/shared/changePostStatus";
 import { postDetailsColumns } from "@/domains/posts/shared/postDetails";
@@ -48,7 +48,7 @@ export const createPostAction = actionAuthClient
 
 export const updatePostAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
-	.inputSchema(postEditorDto)
+	.inputSchema(postUpdateDto)
 	.action(async ({ parsedInput, bindArgsParsedInputs: [ id ], ctx: { auth } }) => {
     const post = await CONTAINER.postService.findOrFail(id);
     await CONTAINER.boucerService.breakIfCant(u => workWithPost(u, post));
@@ -57,22 +57,31 @@ export const updatePostAction = actionAuthClient
       await CONTAINER.boucerService.breakIfCant(u => transitPost(u, post, 'submit'));
     }
 
-    await validate(postEditorDto, parsedInput, {
+    await validate(postUpdateDto, parsedInput, {
       url: unique(posts.url).exclude(posts.id, post.id)
     })
     await ensureTagsExist(parsedInput.tagIds);
 
-    // Редактировать можно только черновик — текст, рубрики и тип; статус проверяется в том же запросе
-    const { tagIds, details, submit, ...fields } = parsedInput;
+    /*
+      Редактировать можно только черновик — текст, рубрики и тип. Статус и версия (updatedAt, с
+      которым открыт редактор) проверяются в том же запросе; не совпало — причина по свежей строке
+    */
+    const { tagIds, details, submit, version, ...fields } = parsedInput;
     db.transaction(tx => {
       const updated = tx.update(posts)
-        .set({ ...fields, ...postDetailsColumns(details) })
-        .where(and(eq(posts.id, post.id), eq(posts.status, 'draft')))
+        .set({ ...fields, ...postDetailsColumns(details), updatedAt: new Date() })
+        .where(and(eq(posts.id, post.id), eq(posts.status, 'draft'), eq(posts.updatedAt, version)))
         .returning({ id: posts.id })
         .all();
 
       if(updated.length === 0){
-        actionError(409, 'Пост уже не черновик — редактирование закрыто');
+        const fresh = tx.select({ status: posts.status }).from(posts).where(eq(posts.id, post.id)).get();
+
+        if(fresh?.status !== 'draft'){
+          actionError(409, 'Пост уже не черновик — редактирование закрыто');
+        }
+
+        actionError(409, 'Пост сохранили в другой вкладке — скопируйте правки и обновите страницу');
       }
 
       replacePostTags(tx, post.id, tagIds);
@@ -84,10 +93,10 @@ export const updatePostAction = actionAuthClient
       return redirect(`/office/posts/${post.id}`);
     }
 
-    // Черновик остаётся в редакторе: форма видит время сохранения, галерея — свежие данные
+    // Черновик остаётся в редакторе: перерисовка приносит форме updatedAt, галерее — свежие данные
     revalidatePath(`/office/posts/${post.id}/edit`);
 
-    return { savedAt: new Date() };
+    return { saved: true };
 	});
 
 type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
