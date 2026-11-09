@@ -37,7 +37,7 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
     return notFound();
   }
 
-  const { user, stats, events } = loaded;
+  const { user, lastLoginAt, stats, events } = loaded;
   // Истёкший бан — как его нет (спека 46): форма бана и обычный список
   const banned = isBanActive(user);
   const back = banned ? '/office/admin/users?filter=banned' as const : '/office/admin/users' as const;
@@ -55,7 +55,7 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
         <IconChevronLeft size={16} stroke={2} />Пользователи
       </Link>
 
-      <UserAdminHero user={user} stats={stats} />
+      <UserAdminHero user={user} stats={stats} lastLoginAt={lastLoginAt} />
 
       { manageable ? (
         <div className="ui-user-page__columns">

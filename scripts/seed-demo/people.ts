@@ -66,6 +66,9 @@ export const people: Person[] = [
     bio: 'Готовлю по рецептам из интернета и честно рассказываю, что получилось.' },
   { key: 'artem', name: 'Артём Рыбаков', nameGenitive: 'Артёма', email: 'artem@example.com', roles: [], since: '2025-08-22',
     bio: 'Только начал читать Vibe. Пока больше молчу.' },
+  // Длинные имя и email (спека 49): вёрстка строк, шапок и списков
+  { key: 'konstantin', name: 'Константин Вознесенский-Оболенский', nameGenitive: 'Константина', email: 'konstantin.voznesensky-obolensky@example.com', roles: [], since: '2025-10-05',
+    bio: 'Читаю про реки и сплавы, собираюсь на первую байдарку следующим летом.' },
 ];
 
 export const tags = [

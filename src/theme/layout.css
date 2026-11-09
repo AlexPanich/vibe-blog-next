@@ -1624,6 +1624,12 @@ a.ui-tag:hover {
 }
 
 .ui-post-row__title {
+  /* Заголовок до 120 символов (спека 49): не больше двух строк, длинное слово переносится */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--font-body);
   font-size: 1rem;
@@ -1869,6 +1875,12 @@ a.ui-tag:hover {
 }
 
 .ui-queue-row__title {
+  /* Заголовок до 120 символов (спека 49): не больше двух строк, длинное слово переносится */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--font-body);
   font-size: 1.0625rem;
@@ -4537,6 +4549,10 @@ a.ui-chat-row[data-active='true']:hover {
 .ui-dialog__sub {
   font-size: 0.8125rem;
   color: var(--ink-faint);
+  /* Длинная рубрика в подписи (спека 49) — многоточием, а не второй строкой */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-dialog__icon {
@@ -7745,6 +7761,16 @@ span.ui-photo__arrow {
   text-decoration: none;
 }
 
+/* Заголовок поста в крошках бывает до 120 символов (спека 49) — режется многоточием */
+.ui-crumbs a,
+.ui-crumbs [aria-current] {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .ui-crumbs a:hover {
   color: var(--ink);
 }
@@ -8878,6 +8904,11 @@ span.ui-photo__arrow {
   width: 100%;
 }
 
+/* Имя и «Новый»: на десктопе — элементы строки __top, на телефоне — своя строка (иначе бейдж отдельно) */
+.ui-office-comment__who {
+  display: contents;
+}
+
 .ui-office-comment__name {
   font-size: 0.875rem;
   font-weight: 700;
@@ -9022,6 +9053,13 @@ span.ui-photo__arrow {
 
   .ui-office-comment__top > * {
     max-width: 100%;
+  }
+
+  .ui-office-comment__who {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
   }
 
   .ui-office-comment__meta {

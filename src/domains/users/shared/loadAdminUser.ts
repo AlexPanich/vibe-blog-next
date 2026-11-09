@@ -1,16 +1,17 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { authorRequests, commentReports, comments, postModerations, postRatings, posts, userAdminActions, userFollows, users } from "@/database/schema";
+import { authorRequests, commentReports, comments, postModerations, postRatings, posts, sessions, userAdminActions, userFollows, users } from "@/database/schema";
 import type { ModerationDecision, Role, UserAdminActionType } from "@/database/schema";
 import { formatRating } from "@/domains/posts/exports/formatRating";
 import { USER_ADMIN_ACTION_LABELS } from "@/domains/users/shared/userAdminActionLabels";
 import { parseRoles } from "@/domains/users/shared/userRoles";
 import { alias } from "drizzle-orm/sqlite-core";
-import { and, avg, count, eq, isNotNull } from "drizzle-orm";
+import { and, avg, count, eq, isNotNull, max } from "drizzle-orm";
 
 /*
   Карточка пользователя в админке (спека 42, шаг 19): сам пользователь, цифры шапки и
-  «Последние действия». undefined — пользователя нет
+  «Последние действия». undefined — пользователя нет. lastLoginAt — самая свежая из живых сессий
+  (спека 49): выход и бан сессии удаляют, тогда null
 */
 export async function loadAdminUser(id: number){
   const user = await db.query.users.findFirst({ where: eq(users.id, id) });
@@ -21,6 +22,7 @@ export async function loadAdminUser(id: number){
 
   return {
     user: { ...user, roles: parseRoles(user.roles) },
+    lastLoginAt: db.select({ at: max(sessions.createdAt) }).from(sessions).where(eq(sessions.userId, id)).get()?.at ?? null,
     stats: loadStats(id),
     events: loadEvents(id),
   };

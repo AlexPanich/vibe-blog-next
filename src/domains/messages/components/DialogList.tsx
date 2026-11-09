@@ -5,6 +5,7 @@ import ClientValue from "@/components/general/ClientValue";
 import { StrictResource } from "@/core/resource";
 import { loadDialogsAction } from "@/domains/messages/actions/messageActions";
 import type { DialogRowResource } from "@/domains/messages/dto/messageResources";
+import { DIALOG_PAGE_SIZE, DIALOG_RELOAD_MAX } from "@/domains/messages/shared/dialogPage";
 import { shortWhen } from "@/domains/messages/shared/messageDates";
 import { messageSnippet } from "@/domains/messages/shared/messageSnippet";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
@@ -28,8 +29,10 @@ const SEARCH_DELAY = 300;
 /*
   Список переписок в левой колонке «Сообщений», свежие сверху; открытый диалог подсвечен.
   Новое сообщение в показанном диалоге поднимает строку на месте; всё остальное (новый
-  диалог, удаление, прочитано) перечитывает первую порцию. Layout перечитан на сервере
-  (скрыли переписку, отправили сообщение) — без поиска берём его список
+  диалог, удаление, прочитано) перечитывает список на ту глубину, что уже показана: догруженные
+  «Показать ещё» строки не пропадают (спека 49). Layout перечитан на сервере (скрыли переписку,
+  отправили сообщение) — без поиска берём его список, а если догружено больше первой порции,
+  перечитываем на всю глубину
 */
 export default function DialogList<T extends DialogRowResource[]>({ meId, dialogs: initial, hasMore: initialHasMore, q }: DialogListProps<T>) {
   const [ rows, setRows ] = useState<DialogRowResource[]>(initial);
@@ -51,10 +54,15 @@ export default function DialogList<T extends DialogRowResource[]>({ meId, dialog
   // execute меняется на каждом рендере — эффект берёт его из ref
   const reload = useRef(load.execute);
 
+  const refreshLatest = useRef(refresh);
+  // Догружено больше первой порции — серверный список короче показанного, его не берём
+  const deep = q === '' && rows.length > DIALOG_PAGE_SIZE;
+  const deepLatest = useRef(deep);
+
   if(source !== initial){
     setSource(initial);
 
-    if(q === ''){
+    if(q === '' && !deep){
       setRows(initial);
       setHasMore(initialHasMore);
     }
@@ -62,7 +70,16 @@ export default function DialogList<T extends DialogRowResource[]>({ meId, dialog
 
   useEffect(() => {
     reload.current = load.execute;
+    refreshLatest.current = refresh;
+    deepLatest.current = deep;
   });
+
+  // Layout перечитан, а список догружен глубже — перечитать его на всю показанную глубину
+  useEffect(() => {
+    if(deepLatest.current){
+      refreshLatest.current();
+    }
+  }, [ initial ]);
 
   useEffect(() => {
     if(query.current === q){
@@ -79,7 +96,7 @@ export default function DialogList<T extends DialogRowResource[]>({ meId, dialog
     const row = rows.find(r => r.id === dialogId);
 
     if(!row){
-      load.execute(firstPage());
+      refresh();
       return;
     }
 
@@ -94,12 +111,19 @@ export default function DialogList<T extends DialogRowResource[]>({ meId, dialog
     setRows(prev => [ updated, ...prev.filter(r => r.id !== dialogId) ]);
   });
 
-  useLiveEvent('message.deleted', () => load.execute(firstPage()));
-  useLiveEvent('message.read', () => load.execute(firstPage()));
-  useLiveEvent('open', () => load.execute(firstPage()));
+  useLiveEvent('message.deleted', () => refresh());
+  useLiveEvent('message.read', () => refresh());
+  useLiveEvent('open', () => refresh());
 
   function firstPage(){
     return query.current === '' ? {} : { q: query.current };
+  }
+
+  // Без поиска — на показанную глубину (ответ без курсора заменяет rows целиком), с поиском — первая порция
+  function refresh(){
+    load.execute(query.current === '' && rows.length > DIALOG_PAGE_SIZE
+      ? { limit: Math.min(rows.length, DIALOG_RELOAD_MAX) }
+      : firstPage());
   }
 
   if(rows.length === 0){

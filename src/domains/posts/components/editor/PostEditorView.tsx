@@ -42,7 +42,8 @@ export default function PostEditorView({ value, onChange, onError }: PostEditorV
     <div ref={rootRef} className="ui-editor">
       <MDXEditor
         markdown={value}
-        onChange={onChange}
+        // Нормализация markdown при монтировании — не правка: форма не должна стать «грязной» (спека 49)
+        onChange={(markdown, initialNormalize) => initialNormalize || onChange(markdown)}
         onError={onError}
         contentEditableClassName="ui-prose ui-editor__content"
         translation={translate}

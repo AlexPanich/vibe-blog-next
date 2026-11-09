@@ -3,8 +3,9 @@ import { db } from "@/globals/db";
 import { postRatings, postTags, posts, tags, userFollows, users } from "@/database/schema";
 import { AuthorsFilterDto, AuthorsSort } from "@/domains/users/dto/userRequests";
 import { parseRoles } from "@/domains/users/shared/userRoles";
+import { authorTopics } from "@/domains/users/shared/authorTopics";
 import { escapeLike } from "@/shared/escapeLike";
-import { and, asc, avg, count, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, exists, sql, type SQL } from "drizzle-orm";
 
 // Рубрик у автора в карточке и в строке списка — не больше
 const TOPICS = 3;
@@ -65,7 +66,7 @@ export async function authorsDirectory({ sort, q, tag }: AuthorsFilterDto){
     .leftJoin(ratings, eq(ratings.userId, users.id))
     .where(and(...conditions))
     .orderBy(...order(sort, { posts: published.n, followers: followersCount, rating: ratings.average }));
-  const topics = await authorTopics(rows.map(row => row.id));
+  const topics = authorTopics(db, rows.map(row => row.id), TOPICS);
 
   return rows.map(row => ({
     ...row,
@@ -89,26 +90,4 @@ function order(sort: AuthorsSort, by: { posts: SQL.Aliased<number>, followers: S
   }
 
   return [ desc(by.followers), desc(by.posts), ...byName ];
-}
-
-// Самые частые рубрики опубликованных постов каждого автора; при равенстве — по алфавиту
-async function authorTopics(userIds: number[]){
-  const rows = userIds.length === 0 ? [] : await db.select({ userId: posts.userId, id: tags.id, name: tags.name, slug: tags.slug, n: count() })
-    .from(postTags)
-    .innerJoin(posts, and(eq(posts.id, postTags.postId), eq(posts.status, 'published')))
-    .innerJoin(tags, eq(tags.id, postTags.tagId))
-    .where(inArray(posts.userId, userIds))
-    .groupBy(posts.userId, tags.id);
-  const byUser = new Map<number, { id: number, name: string, slug: string }[]>();
-  const sorted = rows.sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ru'));
-
-  for(const { userId, id, name, slug } of sorted){
-    const list = byUser.get(userId) ?? [];
-
-    if(list.length < TOPICS){
-      byUser.set(userId, [ ...list, { id, name, slug } ]);
-    }
-  }
-
-  return byUser;
 }

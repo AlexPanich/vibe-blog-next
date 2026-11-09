@@ -107,6 +107,8 @@ export const postOfficeResource = z.object({
   lead: z.string().nullable(),
   content: z.string(),
   tagIds: z.array(z.number()),
+  // Последнее сохранение содержимого — «Сохранено …» в редакторе (спека 49)
+  updatedAt: z.date(),
   ...postDetailsResource.shape
 })
 

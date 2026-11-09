@@ -187,7 +187,7 @@ function roleStep(userId: number): OfficeStep {
       key: 'role',
       icon: IconLock,
       title: 'Заявка в авторы отклонена',
-      text: <>Причина: «{ last.reason }». Новую можно подать с <LocalDate value={nextAt} options={{ dateStyle: 'long' }} /></>,
+      text: <>Причина: «{ last.reason?.replace(/\.+$/, '') }». Новую можно подать с <LocalDate value={nextAt} options={{ dateStyle: 'long' }} /></>,
       action: open
     };
   }

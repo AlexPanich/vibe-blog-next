@@ -10,7 +10,7 @@ import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { IconArrowRight, IconEye, IconHourglass, IconLock } from "@tabler/icons-react";
 
 type PostQueueRowProps = {
-  post: Pick<Post, 'id' | 'title' | 'createdAt'> & Pick<PostRowData, 'cover'>,
+  post: Pick<Post, 'id' | 'title' | 'createdAt' | 'submittedAt'> & Pick<PostRowData, 'cover'>,
   author: { name: string, avatarKey: string | null },
   tags: Pick<Tag, 'id' | 'name'>[],
   // free — никто не взял, mine — ревью ведёте вы, other — ведёт другой модератор
@@ -19,8 +19,8 @@ type PostQueueRowProps = {
 }
 
 /*
-  Строка очереди модерации (спека 42, шаг 13): обложка, заголовок, автор, рубрика, давность,
-  кто ведёт ревью; справа — «Взять на ревью», «Продолжить» (своё ревью, рамка коралловая) или
+  Строка очереди модерации (спека 42, шаг 13): обложка, заголовок, автор, рубрика, давность
+  последней отправки (спека 49), кто ведёт ревью; справа — «Взять на ревью», «Продолжить» (своё ревью, рамка коралловая) или
   «Занят». Ссылка — на заголовке и растянута на строку, кнопка лежит поверх неё
 */
 export default function PostQueueRow({ post, author, tags, review, reviewer }: PostQueueRowProps) {
@@ -43,7 +43,7 @@ export default function PostQueueRow({ post, author, tags, review, reviewer }: P
           </span>
           { rubric && <span className="ui-queue-row__tag">#{ rubric.name }</span> }
           <span className="ui-queue-row__when">
-            <span className="ui-queue-row__when-label">создан </span><LocalDate value={post.createdAt} relative />
+            <span className="ui-queue-row__when-label">отправлен </span><LocalDate value={post.submittedAt ?? post.createdAt} relative />
           </span>
         </div>
         { review !== 'free' && <span className="ui-queue-row__reviewer">

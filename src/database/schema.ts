@@ -176,9 +176,17 @@ export const posts = sqliteTable('posts', {
   */
   featuredAt: integer('featured_at', { mode: 'timestamp' }),
   featuredBy: integer('featured_by').references(() => users.id),
+  /*
+    Последняя отправка на модерацию (спека 49): ставит changePostStatus при каждом переходе в
+    moderating. Ключ очереди; повторная отправка видна в истории модерации. null — не отправлялся
+  */
+  submittedAt: integer('submitted_at', { mode: 'timestamp' }),
+  // Последнее сохранение содержимого (спека 49): поля редактора и галерея; смена статуса не трогает
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, t => [
   index('posts_status_idx').on(t.status),
+  index('posts_status_submitted_idx').on(t.status, t.submittedAt),
   index('posts_type_idx').on(t.type),
   index('posts_status_published_idx').on(t.status, t.publishedAt),
   // text enum в SQLite ничего не проверяет, поэтому поля типа держит сама БД

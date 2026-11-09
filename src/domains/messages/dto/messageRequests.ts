@@ -1,5 +1,6 @@
 import z from "zod";
 import { MESSAGES_FROM } from "@/database/schema";
+import { DIALOG_PAGE_SIZE, DIALOG_RELOAD_MAX } from "@/domains/messages/shared/dialogPage";
 
 export const aiIdSchema = z.int().positive();
 
@@ -21,12 +22,14 @@ export type MessagePageDto = z.infer<typeof messagePageDto>
 
 /*
   Курсор списка диалогов: время последнего сообщения (мс) и id; без курсора — первая порция.
-  q — поиск по имени собеседника
+  q — поиск по имени собеседника. limit — размер первой порции: перечитать список на ту глубину,
+  что уже догружена «Показать ещё» (спека 49)
 */
 export const dialogPageDto = z.object({
   beforeAt: z.int().nonnegative().optional(),
   beforeId: z.int().positive().optional(),
-  q: z.string().trim().max(100).optional()
+  q: z.string().trim().max(100).optional(),
+  limit: z.int().min(DIALOG_PAGE_SIZE).max(DIALOG_RELOAD_MAX).optional()
 })
 
 export type DialogPageDto = z.infer<typeof dialogPageDto>
