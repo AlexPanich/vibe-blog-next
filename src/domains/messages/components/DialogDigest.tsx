@@ -2,12 +2,12 @@ import LocalDate from "@/components/general/LocalDate";
 import Link from "@/components/general/Link";
 import type { DialogRowResource } from "@/domains/messages/dto/messageResources";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
-import { IconArrowRight } from "@tabler/icons-react";
+import { IconArrowRight, IconMessagePlus } from "@tabler/icons-react";
 
 /*
   Последние переписки на «Начале» (спека 42): собеседник, обрезок последнего сообщения,
-  непрочитанное — жирным. «Написать сообщение» из макета нет: новому диалогу нужен
-  получатель (?to=), выбора собеседника пока нет — поэтому ссылка на все сообщения
+  непрочитанное — жирным. Внизу «Написать сообщение» — в выбор собеседника (спека 50) — и,
+  если переписки есть, «Все сообщения»
 */
 export default function DialogDigest({ dialogs, unread }: { dialogs: DialogRowResource[], unread: number }) {
   return (
@@ -18,7 +18,7 @@ export default function DialogDigest({ dialogs, unread }: { dialogs: DialogRowRe
       </div>
 
       { dialogs.length === 0 && <p className="ui-digest__empty">
-        Переписок пока нет. Написать можно со страницы автора — <Link href="/authors">к авторам</Link>.
+        Переписок пока нет — <Link href="/office/messages/new">напишите первым</Link>.
       </p> }
 
       { dialogs.map(dialog => (
@@ -34,7 +34,10 @@ export default function DialogDigest({ dialogs, unread }: { dialogs: DialogRowRe
         </Link>
       )) }
 
-      { dialogs.length > 0 && <Link href="/office/messages" className="ui-digest__more">Все сообщения<IconArrowRight size={14} stroke={2} /></Link> }
+      <div className="ui-digest__links">
+        <Link href="/office/messages/new" className="ui-digest__more"><IconMessagePlus size={14} stroke={2} />Написать сообщение</Link>
+        { dialogs.length > 0 && <Link href="/office/messages" className="ui-digest__more">Все сообщения<IconArrowRight size={14} stroke={2} /></Link> }
+      </div>
     </section>
   );
 }

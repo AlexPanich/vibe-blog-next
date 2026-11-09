@@ -60,3 +60,17 @@ export const dialogViewResource = z.object({
 })
 
 export type DialogViewResource = z.infer<typeof dialogViewResource>
+
+/*
+  Строка выбора собеседника (спека 50): author — роль, following — я читаю его, follower — он
+  читает меня (без связи его находит только staff), hasDialog — переписка уже есть (в том числе скрытая), blockReason — почему писать нельзя
+*/
+export const messagePickerRowResource = messagePeerResource.extend({
+  author: z.boolean(),
+  following: z.boolean(),
+  follower: z.boolean(),
+  hasDialog: z.boolean(),
+  blockReason: z.string().nullable()
+})
+
+export type MessagePickerRowResource = z.infer<typeof messagePickerRowResource>

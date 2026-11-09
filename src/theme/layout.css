@@ -17,7 +17,7 @@
    - страница фото: .ui-photo;
    - редактор поста: .ui-post-editor, .ui-crumbs, .ui-type-card, .ui-tag-field, .ui-cover-drop,
      .ui-md, .ui-publish-card, .ui-editor-tips, .ui-photos-card;
-   - сообщения: .ui-messenger, .ui-chat-list / .ui-chat-row, .ui-dialog, .ui-message, .ui-composer;
+   - сообщения: .ui-messenger, .ui-chat-list / .ui-chat-row, .ui-dialog, .ui-picker, .ui-message, .ui-composer;
    - подписки: .ui-follows, .ui-follow-list / .ui-follow-person, .ui-follow-card, .ui-find-authors;
    - комментарии в кабинете: .ui-office-comments / .ui-office-comment;
    - профиль в кабинете: .ui-account (секции), .ui-account-avatar, .ui-account-roles,
@@ -2741,6 +2741,12 @@ a.ui-tag:hover {
   padding-top: 0.5rem;
 }
 
+.ui-digest__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
 /* Рядом с тремя плитками по 11rem большой плитке нужно ~23rem (подпись + 7 столбиков): уже
    1360px окна их нет — она уходит на свою строку */
 @media (max-width: 1360px) {
@@ -4546,6 +4552,72 @@ a.ui-chat-row[data-active='true']:hover {
   border-top: 1px solid var(--line);
 }
 
+/* Выбор собеседника (спека 50): корень — .ui-dialog, на телефоне экран как у диалога */
+.ui-picker__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.ui-picker__search {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-picker__to {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.ui-picker__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ui-picker__body .ui-chat-list {
+  overflow: visible;
+}
+
+.ui-picker__group {
+  margin: 0;
+  padding: 1rem 1.25rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ui-picker__body .ui-chat-list__empty {
+  padding-inline: 1.25rem;
+}
+
+.ui-picker__badge {
+  flex: none;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper-tint);
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.ui-picker .ui-chat-row {
+  padding-inline: 1.25rem;
+}
+
+/* Писать нельзя и переписки нет: серая строка, причина целиком */
+.ui-chat-row[data-disabled='true'] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ui-chat-row[data-disabled='true'] .ui-chat-row__text {
+  white-space: normal;
+}
+
 /* Пузыри: чужие — фон страницы на сером, свои — фиолетовые */
 .ui-message {
   display: flex;
@@ -4689,8 +4761,19 @@ a.ui-chat-row[data-active='true']:hover {
   .ui-messenger:not(:has(.ui-dialog)) .ui-messenger__main,
   .ui-messenger:has(.ui-dialog) .ui-messenger__side,
   .ui-desk__main:has(.ui-dialog) .ui-office-head,
-  body:has(.ui-dialog) .ui-tabbar {
+  body:has(.ui-dialog) .ui-tabbar,
+  body:has(.ui-dialog) .ui-fab {
     display: none;
+  }
+
+  .ui-picker__search {
+    padding-inline: 1rem;
+  }
+
+  .ui-picker__group,
+  .ui-picker__body .ui-chat-list__empty,
+  .ui-picker .ui-chat-row {
+    padding-inline: 1rem;
   }
 
   body:has(.ui-dialog) {
