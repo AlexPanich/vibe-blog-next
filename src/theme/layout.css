@@ -1110,6 +1110,17 @@ a.ui-tag[data-tone]:not([data-tone='plain']):hover {
   gap: 0.35rem;
 }
 
+/* Страница поста: чипы размером с фильтр ленты (.ui-filter a) */
+.ui-tags--large {
+  gap: 0.5rem;
+}
+
+.ui-tags--large .ui-tag {
+  font-size: 0.88rem;
+  padding: 0.5em 1em;
+  border-radius: var(--radius-pill);
+}
+
 /* ---- Лента: поиск, управление, догрузка ---------------------------------- */
 
 .ui-search {

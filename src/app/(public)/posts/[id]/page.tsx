@@ -73,7 +73,7 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
 
       <div className="ui-post__column">
         { post.type === 'travel' && points.length > 0 && <PostRouteMap points={resource(routePointsResource, points)} travelDays={post.travelDays} /> }
-        { tags.length > 1 && <TagChips tags={tags} linked /> }
+        { tags.length > 1 && <TagChips tags={tags} linked large /> }
 
         <div className="ui-post__reactions">
           <PostRatingBlock post={resource(postRatingBlockResource, { ...post, rating })} />
