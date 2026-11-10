@@ -3,6 +3,7 @@ import { db } from "@/globals/db";
 import { commentReports, comments, posts, users } from "@/database/schema";
 import type { CommentReportRowResource } from "@/domains/comments/dto/commentResources";
 import { commentState } from "@/domains/comments/shared/commentState";
+import { isBanActive } from "@/shared/userBan";
 import { and, asc, count, desc, eq, isNotNull, isNull, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
@@ -86,6 +87,8 @@ async function loadGroups(where: SQL, order: 'open' | 'resolved'): Promise<Comme
     authorId: author.id,
     authorName: author.name,
     authorAvatarKey: author.avatarKey,
+    authorBannedAt: author.bannedAt,
+    authorBannedUntil: author.bannedUntil,
     parentContent: parent.content,
     parentHiddenAt: parent.hiddenAt,
     parentDeletedAt: parent.deletedAt,
@@ -103,6 +106,7 @@ async function loadGroups(where: SQL, order: 'open' | 'resolved'): Promise<Comme
     .orderBy(asc(commentReports.createdAt), asc(commentReports.id));
 
   const grouped = new Map<string, CommentReportRowResource>();
+  const now = new Date();
 
   for(const row of rows){
     const key = `${row.commentId}:${row.resolvedAt?.getTime() ?? ''}`;
@@ -120,7 +124,12 @@ async function loadGroups(where: SQL, order: 'open' | 'resolved'): Promise<Comme
       postTitle: row.postTitle,
       imageId: row.imageId,
       content: row.deletedAt ? null : row.content,
-      author: { id: row.authorId, name: row.authorName, avatarKey: row.authorAvatarKey },
+      author: {
+        id: row.authorId,
+        name: row.authorName,
+        avatarKey: row.authorAvatarKey,
+        ban: isBanActive({ bannedAt: row.authorBannedAt, bannedUntil: row.authorBannedUntil }, now) ? { until: row.authorBannedUntil } : null
+      },
       parent: parentOf(row),
       reporters: [ { id: row.reporterId, name: row.reporterName } ],
       firstAt: row.reportedAt,

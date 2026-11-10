@@ -5,6 +5,7 @@ import LocalDate from "@/components/general/LocalDate";
 import { PostResource } from "@/domains/posts/dto/postResources";
 import { formatRating } from "@/domains/posts/shared/formatRating";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
+import { routeSummary } from "@/domains/posts/shared/postRoute";
 import PostCover from "@/domains/posts/components/PostCover";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { IconArticle, IconLanguage, IconMapPin, IconMessageCircle, IconStar } from "@tabler/icons-react";
@@ -30,7 +31,8 @@ export default function PostCard({ post }: { post: PostResource }) {
         { post.cover ? <PostCover cover={post.cover} /> : <TypeIcon size={56} stroke={1.3} /> }
       </Link>
       { post.type !== 'simple' && <span className="ui-post-card__type">
-        <TypeIcon size={14} stroke={2} />{ POST_TYPE_LABELS[post.type] }
+        <TypeIcon size={14} stroke={2} />
+        <span className="ui-post-card__type-text">{ [ POST_TYPE_LABELS[post.type], ...routeSummary(post.routeKm, post.travelDays) ].join(' · ') }</span>
       </span> }
     </div>
 

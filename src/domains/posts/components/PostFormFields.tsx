@@ -10,8 +10,9 @@ import { TagListResource } from "@/domains/tags/exports/tagResources";
 import PostContentEditor from "@/domains/posts/components/editor/PostContentEditor";
 import PostTypeCards from "@/domains/posts/components/editor/PostTypeCards";
 import PostFieldLabel from "@/domains/posts/components/editor/PostFieldLabel";
-import PostLocationPicker from "@/domains/posts/components/map/PostLocationPicker";
-import { Input, NumberInput, SimpleGrid, Stack, Textarea, TextInput } from "@mantine/core";
+import PostRouteEditor, { type PostRouteErrors } from "@/domains/posts/components/map/PostRouteEditor";
+import { Input, Textarea, TextInput } from "@mantine/core";
+import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
 import type { ReactNode } from "react";
 
 type PostFormFieldsProps<T extends TagListResource> = {
@@ -19,7 +20,10 @@ type PostFormFieldsProps<T extends TagListResource> = {
   tagOptions: StrictResource<T, TagListResource>,
   errors?: FieldErrorProps['errors'],
   // Поле обложки: у черновика — загрузка в галерею, до первого сохранения — подсказка
-  cover: ReactNode
+  cover: ReactNode,
+  // Галерея для фото в тексте (спека 38); нет — пост ещё не сохранён
+  postId?: number,
+  images?: PostGalleryResource
 }
 
 /*
@@ -30,7 +34,9 @@ export default function PostFormFields<T extends TagListResource>({
   form: { nv, update, data },
   tagOptions,
   errors,
-  cover
+  cover,
+  postId,
+  images
 }: PostFormFieldsProps<T>) {
 
   return (
@@ -74,36 +80,14 @@ export default function PostFormFields<T extends TagListResource>({
         onChange={e => update('source', e.target.value)}
         error={detailsError(errors, 'source')}
       /> }
-      { data.type === 'travel' && <Input.Wrapper label="Место" description="Кликните по карте или введите координаты">
-        <Stack gap="xs" mt={6}>
-          <SimpleGrid cols={2} spacing="sm">
-            <NumberInput
-              aria-label="Широта"
-              placeholder="Широта"
-              decimalScale={6}
-              min={-90}
-              max={90}
-              {...nv('lat')}
-              onChange={value => update('lat', value)}
-              error={detailsError(errors, 'lat')}
-            />
-            <NumberInput
-              aria-label="Долгота"
-              placeholder="Долгота"
-              decimalScale={6}
-              min={-180}
-              max={180}
-              {...nv('lng')}
-              onChange={value => update('lng', value)}
-              error={detailsError(errors, 'lng')}
-            />
-          </SimpleGrid>
-          <PostLocationPicker
-            lat={data.lat}
-            lng={data.lng}
-            onChange={(lat, lng) => { update('lat', lat); update('lng', lng) }}
-          />
-        </Stack>
+      { data.type === 'travel' && <Input.Wrapper label="Маршрут">
+        <PostRouteEditor
+          points={data.points}
+          onChange={points => update('points', points)}
+          travelDays={data.travelDays}
+          onTravelDays={value => update('travelDays', value)}
+          errors={routeErrors(errors)}
+        />
       </Input.Wrapper> }
       <TagPicker
         options={tagOptions}
@@ -116,14 +100,42 @@ export default function PostFormFields<T extends TagListResource>({
         value={data.content}
         onChange={value => update('content', value)}
         error={fieldError(errors, 'content')}
+        postId={postId}
+        images={images}
       />
     </>
   );
 }
 
 // Ошибки details вложенные: { details: { source: { _errors } } }
-function detailsError(errors: FieldErrorProps['errors'], field: 'source' | 'lat' | 'lng'){
-  const details = errors?.details as Record<string, { _errors?: string[] }> | undefined;
+function detailsError(errors: FieldErrorProps['errors'], field: 'source'){
+  return detailsErrors(errors)?.[field]?._errors?.[0];
+}
 
-  return details?.[field]?._errors?.[0];
+/*
+  Ошибки маршрута (спека 37): список — details.points._errors, подпись точки —
+  details.points[i].label._errors (индекс массива приходит ключом), дни — details.travelDays
+*/
+function routeErrors(errors: FieldErrorProps['errors']): PostRouteErrors {
+  const details = detailsErrors(errors);
+  const points = details?.points as Record<string, NestedErrors & { label?: NestedErrors }> & NestedErrors | undefined;
+  const labels: (string | undefined)[] = [];
+
+  for(const [ key, value ] of Object.entries(points ?? {})){
+    if(/^\d+$/.test(key) && !Array.isArray(value)){
+      labels[Number(key)] = value.label?._errors?.[0];
+    }
+  }
+
+  return {
+    points: points?._errors?.[0],
+    labels,
+    travelDays: details?.travelDays?._errors?.[0]
+  };
+}
+
+type NestedErrors = { _errors?: string[] }
+
+function detailsErrors(errors: FieldErrorProps['errors']){
+  return errors?.details as Record<string, NestedErrors> | undefined;
 }

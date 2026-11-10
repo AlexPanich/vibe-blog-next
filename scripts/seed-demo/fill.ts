@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "../../src/database/schema.ts";
-import { people, tags } from "./people.ts";
+import { people, tags, type TagName } from "./people.ts";
 import { demoPosts } from "./posts.ts";
 import { comments as commentTrees } from "./comments.ts";
 import type { SeedImages } from "./images.ts";
@@ -11,7 +11,8 @@ import type { SeedComment } from "./types.ts";
   Демо-контент одной транзакцией: пользователи из people.ts (существующие по email
   обновляются, новые создаются с паролем password123), рубрики, посты всех типов и статусов
   с фото и модерацией (очередь — по времени отправки), оценки, просмотры, избранное, ветки комментариев (к постам и к фото, скрытые,
-  удалённые, с жалобами), жалобы на посты, подписки, блокировка, сообщения, заявки в авторы и уведомления —
+  удалённые, с жалобами, исправленные модератором), жалобы на посты, ревью в очереди, подписки, блокировка,
+  сообщения, заявки в авторы, баны и журнал admin, алиасы рубрик и уведомления —
   с группами и памятью антиспама, как их пишет notify (спека 51).
   Даты — от now. Остальной контент база должна не содержать: сид-dev сначала его стирает,
   прод-сид запускается только на пустой базе
@@ -53,6 +54,9 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       tagId[name] = tx.insert(schema.tags).values({ name, nameKey: name.toLocaleLowerCase('ru'), slug, createdAt: daysAgo(400) }).returning({ id: schema.tags.id }).get().id;
     }
 
+    // Следы слияния рубрик (спека 47): старые slug ведут на целевую, /tags/<slug>/rss.xml — 308
+    tx.insert(schema.tagAliases).values(TAG_ALIASES.map(([ slug, name, days ]) => ({ slug, tagId: tagId[name], createdAt: daysAgo(days) }))).run();
+
     // --- Посты, фото, модерация
     const postIds: Record<string, { id: number, userId: number, createdAt: number, status: schema.PostStatus, images: number[] }> = {};
 
@@ -65,6 +69,8 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       const submitted = status === 'draft' ? null : status === 'moderating' && post.submittedHoursAgo !== undefined ? now - post.submittedHoursAgo * HOUR : created;
       // Сохранение содержимого: черновик правили позже, остальные — при создании
       const updated = status === 'draft' ? Math.max(created, Math.min(now - 60_000, created + 2 * HOUR)) : created;
+      // Точки маршрута (спека 37): первая продублирована в posts.lat/lng
+      const points = post.route ?? (post.type === 'travel' ? [ { lat: post.lat!, lng: post.lng! } ] : []);
       const id = tx.insert(schema.posts).values({
         userId: uid[post.author],
         url: post.url,
@@ -74,13 +80,18 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         status,
         type: post.type ?? 'simple',
         source: post.source ?? null,
-        lat: post.lat ?? null,
-        lng: post.lng ?? null,
+        lat: points[0]?.lat ?? null,
+        lng: points[0]?.lng ?? null,
+        travelDays: post.travelDays ?? null,
         createdAt: new Date(created),
         submittedAt: submitted === null ? null : new Date(submitted),
         updatedAt: new Date(updated),
         publishedAt: published ? new Date(created + HOUR) : null,
       }).returning({ id: schema.posts.id }).get().id;
+
+      if(points.length > 0){
+        tx.insert(schema.postRoutePoints).values(points.map((point, position) => ({ postId: id, position, lat: point.lat, lng: point.lng, label: point.label ?? null }))).run();
+      }
 
       if(post.tags.length > 0){
         tx.insert(schema.postTags).values(post.tags.map(name => ({ postId: id, tagId: tagId[name] }))).run();
@@ -91,6 +102,21 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
         return tx.insert(schema.postImages).values({ postId: id, fileKey: file.key, width: file.width, height: file.height, caption: caption ?? null, createdAt: new Date(created) }).returning({ id: schema.postImages.id }).get().id;
       });
+
+      // Фото внутри текста (спека 38): маркер gallery:#N — N-е фото поста, id известен только сейчас
+      const content = post.content.replace(/\(gallery:#(\d+)\)/g, (_, n: string) => {
+        const imageId = images[Number(n) - 1];
+
+        if(imageId === undefined){
+          throw new Error(`${post.url}: в тексте фото №${n}, а у поста ${images.length} фото`);
+        }
+
+        return `(gallery:${imageId})`;
+      });
+
+      if(content !== post.content){
+        tx.update(schema.posts).set({ content }).where(eq(schema.posts.id, id)).run();
+      }
 
       if(published){
         tx.insert(schema.postModerations).values({ postId: id, userId: uid.some, decision: 'approved', createdAt: new Date(created + HOUR) }).run();
@@ -154,6 +180,15 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
     tx.update(schema.posts).set({ featuredAt: daysAgo(2), featuredBy: uid.some }).where(eq(schema.posts.id, editorsPick.id)).run();
     tx.insert(schema.notifications).values({ userId: editorsPick.userId, type: 'post.featured', actorId: uid.some, postId: editorsPick.id, readAt: daysAgo(1.5), createdAt: daysAgo(2) }).run();
+
+    // --- Ревью (спека 12): один пост в очереди ведёт Семён, другой — Алиса (у Семёна «Ревью ведёт …»,
+    // admin может перехватить), третий свободен. Взят через полчаса после отправки, но не позже, чем минуту назад
+    for(const [ url, reviewer ] of REVIEWS){
+      const post = tx.select({ submittedAt: schema.posts.submittedAt }).from(schema.posts).where(eq(schema.posts.id, postIds[url].id)).get();
+      const startedAt = new Date(Math.min(now - 60_000, post!.submittedAt!.getTime() + HOUR / 2));
+
+      tx.update(schema.posts).set({ reviewerId: uid[reviewer], reviewStartedAt: startedAt }).where(eq(schema.posts.id, postIds[url].id)).run();
+    }
 
     /*
       --- Оценки: у «Недели в горах Дагестана» лучшая за неделю — «Лучшее за неделю», пока нет ручного выбора.
@@ -258,6 +293,7 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     function addComment(post: typeof postIds[string], node: SeedComment, parent: { id: number, userId: number } | null, parentImage: number | null){
       const at = new Date(Math.min(now - 60_000, post.createdAt + HOUR + node.hours * HOUR));
       const imageIndex = node.image ?? parentImage;
+      const editedAt = new Date(Math.min(now - 30_000, at.getTime() + HOUR));
       const id = tx.insert(schema.comments).values({
         postId: post.id,
         userId: uid[node.by],
@@ -269,10 +305,18 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         hiddenAt: node.hidden ? new Date(at.getTime() + 2 * HOUR) : null,
         hiddenBy: node.hidden ? uid.some : null,
         hideReason: node.hidden ?? null,
+        editedAt: node.modEdited ? editedAt : null,
+        editedBy: node.modEdited ? uid.some : null,
       }).returning({ id: schema.comments.id }).get().id;
 
       if(node.hidden){
         tx.insert(schema.commentModerations).values({ commentId: id, userId: uid.some, decision: 'hidden', comment: node.hidden, createdAt: new Date(at.getTime() + 2 * HOUR) }).run();
+      }
+
+      // Правка модератором (спека 24): в журнале прежний текст, автору — прочитанное уведомление
+      if(node.modEdited){
+        tx.insert(schema.commentModerations).values({ commentId: id, userId: uid.some, decision: 'edited', comment: node.modEdited, createdAt: editedAt }).run();
+        tx.insert(schema.notifications).values({ userId: uid[node.by], type: 'comment.edited', actorId: uid.some, postId: post.id, commentId: id, readAt: new Date(Math.min(now, editedAt.getTime() + HOUR)), createdAt: editedAt }).run();
       }
 
       for(const [ list, value ] of [ [ node.likes, 1 ], [ node.dislikes, -1 ] ] as const){
@@ -483,6 +527,34 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.gleb, readAt: daysAgo(2), createdAt: daysAgo(2.5) }).run();
     tx.insert(schema.authorRequests).values({ userId: uid.artem, text: 'хочу писать', status: 'rejected', reason: 'Расскажите подробнее, о чём будете писать, и приложите пример текста.', decidedBy: uid.alice, decidedAt: daysAgo(3), createdAt: daysAgo(4) }).run();
     tx.insert(schema.notifications).values({ userId: uid.artem, type: 'author_request.rejected', actorId: uid.alice, readAt: daysAgo(2), createdAt: daysAgo(3) }).run();
+
+    /*
+      --- Журнал admin и баны (спеки 02, 26, 46). Артём: истёкший недельный бан, потом бессрочный.
+      Данил: действующий на 7 дней. Павел: забанен по ошибке и разблокирован. Роли: выдачи и снятие.
+      Свежие баны — час-два назад, позже всей активности пользователя в демо
+    */
+    for(const entry of ADMIN_LOG){
+      const createdAt = daysAgo(entry.days);
+      const until = entry.term ? new Date(createdAt.getTime() + entry.term * DAY) : null;
+
+      tx.insert(schema.userAdminActions).values({ userId: uid[entry.user], actorId: uid.alice, action: entry.action, role: entry.role ?? null, comment: entry.comment ?? null, until, createdAt }).run();
+
+      if(entry.action === 'banned' && entry.active){
+        tx.update(schema.users).set({ bannedAt: createdAt, banReason: entry.comment, bannedUntil: until }).where(eq(schema.users.id, uid[entry.user])).run();
+        // В dev-базе у учётки могли остаться сессии — бан их гасит, как banUserAction
+        tx.delete(schema.sessions).where(eq(schema.sessions.userId, uid[entry.user])).run();
+        // Оценки свежих постов прижаты к now и могут оказаться позже бана — сдвигаем до него
+        const beforeBan = new Date(createdAt.getTime() - 60_000);
+        tx.update(schema.postRatings).set({ createdAt: beforeBan, updatedAt: beforeBan }).where(and(eq(schema.postRatings.userId, uid[entry.user]), gt(schema.postRatings.createdAt, createdAt))).run();
+      }
+
+      if(entry.action === 'unbanned' || entry.action === 'role_granted' || entry.action === 'role_revoked'){
+        tx.insert(schema.notifications).values({ userId: uid[entry.user], type: `user.${entry.action}`, actorId: uid.alice, role: entry.role ?? null, readAt: daysAgo(entry.days - 0.5), createdAt }).run();
+      }
+    }
+
+    // Смена имени (спека 45): Нина переименовалась три часа назад — следующая смена через сутки
+    tx.update(schema.users).set({ nameChangedAt: daysAgo(0.125) }).where(eq(schema.users.id, uid.nina)).run();
   });
 }
 
@@ -494,6 +566,24 @@ const PASSWORD_HASH = '2c5ddde7a24416d978bf9c408a63f70e:9a2eab05d7b39193fd22f60a
   «Новый», часть — нет. У остальных NULL — вкладку не открывали, новые все
 */
 const COMMENTS_SEEN_DAYS: Record<string, number> = { anya: 3 };
+
+// Старые slug слитых рубрик: [ slug, целевая рубрика, дней назад ]
+const TAG_ALIASES: [ string, TagName, number ][] = [ [ 'velo', 'Велосипед', 40 ], [ 'puteshestvie', 'Путешествия', 90 ] ];
+
+// Посты в очереди, взятые на ревью: [ url, кто ведёт ]
+const REVIEWS: [ string, string ][] = [ [ 'osenniy-tbilisi', 'alice' ], [ 'rzhanoy-khleb-bez-drozhzhey', 'some' ] ];
+
+// Действия admin (Алиса) над пользователями, по времени; active — бан действует сейчас
+const ADMIN_LOG: { user: string, action: schema.UserAdminActionType, days: number, role?: schema.Role, comment?: string, term?: number, active?: boolean }[] = [
+  { user: 'liza', action: 'role_granted', role: 'moderator', days: 400 },
+  { user: 'seva', action: 'role_granted', role: 'author', days: 600 },
+  { user: 'liza', action: 'role_revoked', role: 'moderator', days: 150 },
+  { user: 'pavel', action: 'banned', days: 60, comment: 'Рассылка ссылок на казино в личных сообщениях' },
+  { user: 'pavel', action: 'unbanned', days: 59, comment: 'Аккаунт был взломан, пароль сменён — разблокирован' },
+  { user: 'artem', action: 'banned', days: 40, term: 7, comment: 'Оскорбления участников в комментариях' },
+  { user: 'artem', action: 'banned', days: 0.05, comment: 'Повторные оскорбления после недельной блокировки', active: true },
+  { user: 'dan', action: 'banned', days: 0.08, term: 7, comment: 'Флуд: одинаковые вопросы под каждым постом', active: true },
+];
 
 // Борис скрыл переписку с Глебом: уведомлений о ней нет
 const MESSAGE_IGNORES: [ string, string ][] = [ [ 'bob', 'gleb' ] ];

@@ -5,6 +5,7 @@ import { adminPosts, decidePostModeration, moderatePosts } from "@/domains/posts
 import { requireAuthUser } from "@/shared/auth";
 import type { AuthUser } from "@/shared/authUser";
 import { getPostImages } from "@/domains/posts/shared/postImages";
+import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { POST_STATUS_LABELS } from "@/domains/posts/shared/postStatuses";
 import PostReviewPreview from "@/domains/posts/components/PostReviewPreview";
@@ -51,7 +52,10 @@ export default async function ModerationPostsItem({ params }: PageProps<'/office
   }
 
   const me = await requireAuthUser();
-  const images = await getPostImages(post.id);
+  const [ images, points ] = await Promise.all([
+    getPostImages(post.id),
+    post.type === 'travel' ? getRoutePoints(post.id) : []
+  ]);
   const back = backlink(post.status);
   const reviewer = post.status === 'moderating' && post.reviewer && post.reviewStartedAt
     ? { name: post.reviewer.name, mine: post.reviewerId === me.id, startedAt: post.reviewStartedAt }
@@ -68,7 +72,7 @@ export default async function ModerationPostsItem({ params }: PageProps<'/office
       </Link>
 
       <div className="ui-review-page__columns">
-        <PostReviewPreview post={post} author={post.author} tags={pickTags(post)} images={images} />
+        <PostReviewPreview post={post} author={post.author} tags={pickTags(post)} images={images} points={points} />
 
         <aside className="ui-review-page__aside">
           <Decision post={post} me={me} />

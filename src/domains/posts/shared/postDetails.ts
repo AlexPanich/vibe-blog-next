@@ -8,7 +8,9 @@ export function postDetailsColumns(details: PostDetailsDto){
   return {
     type: details.type,
     source: details.type === 'translate' ? details.source : null,
-    lat: details.type === 'travel' ? details.lat : null,
-    lng: details.type === 'travel' ? details.lng : null
+    // У travel — первая точка маршрута, остальные в post_route_points (спека 37)
+    lat: details.type === 'travel' ? details.points[0].lat : null,
+    lng: details.type === 'travel' ? details.points[0].lng : null,
+    travelDays: details.type === 'travel' ? details.travelDays : null
   }
 }

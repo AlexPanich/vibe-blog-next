@@ -168,8 +168,11 @@ export const posts = sqliteTable('posts', {
   */
   type: text('type', { enum: POST_TYPES }).notNull().default('simple'),
   source: text('source'),
+  // У travel — первая точка маршрута (post_route_points, position 0): на них держится posts_type_fields_check
   lat: real('lat'),
   lng: real('lng'),
+  // Дней в пути (спека 37): вводит автор, только у travel; null — не указано
+  travelDays: integer('travel_days'),
   /*
     Кто из модераторов взял пост на ревью — мягкая блокировка внутри moderating, а не статус.
     Любая смена статуса её снимает (changePostStatus)
@@ -209,6 +212,7 @@ export const posts = sqliteTable('posts', {
     (${t.type} = 'translate' AND ${t.source} IS NOT NULL AND ${t.lat} IS NULL AND ${t.lng} IS NULL) OR
     (${t.type} = 'travel' AND ${t.source} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL)
   `),
+  check('posts_travel_days_check', sql`${t.travelDays} IS NULL OR (${t.type} = 'travel' AND ${t.travelDays} BETWEEN 1 AND 365)`),
   check('posts_lead_check', sql`${t.lead} IS NULL OR length(${t.lead}) BETWEEN 20 AND 200`),
   check('posts_featured_check', sql`(${t.featuredAt} IS NULL) = (${t.featuredBy} IS NULL)`),
 ]);
@@ -271,7 +275,7 @@ export const tags = sqliteTable('tags', {
 /*
   Старые slug слитых рубрик (спека 47): /tags/<slug>/rss.xml отдаёт 308 на целевую. При
   повторном слиянии алиасы переписываются на новую цель — цепочек нет. Удаление рубрики
-  удаляет и её алиасы (deleteTagAction), PRAGMA foreign_keys не включён
+  удаляет и её алиасы (deleteTagAction) явно: cascade у tagId нет
 */
 export const tagAliases = sqliteTable('tag_aliases', {
   slug: text('slug').primaryKey(),
@@ -282,8 +286,8 @@ export const tagAliases = sqliteTable('tag_aliases', {
 ]);
 
 /*
-  cascade на tagId — для схемы: PRAGMA foreign_keys в проекте не включён, поэтому
-  deleteTagAction чистит связи сам, а mergeTagAction переносит их на целевую рубрику
+  cascade на tagId срабатывает (внешние ключи проверяются), но deleteTagAction всё равно
+  чистит связи сам, а mergeTagAction переносит их на целевую рубрику
 */
 export const postTags = sqliteTable('post_tags', {
   postId: integer('post_id').notNull().references(() => posts.id),
@@ -424,6 +428,30 @@ export const postImages = sqliteTable('post_images', {
 }, t => [
   index('post_images_post_idx').on(t.postId),
 ]);
+
+/*
+  Точки маршрута путешествия (спека 37): 1–20, порядок — position с 0. Точка 0 продублирована
+  в posts.lat/lng. Сохранение поста пишет точки целиком (delete + insert) в своей транзакции;
+  посты не удаляются, а при уходе с travel точки стирает то же сохранение
+*/
+export const postRoutePoints = sqliteTable('post_route_points', {
+  postId: integer('post_id').notNull().references(() => posts.id),
+  position: integer('position').notNull(),
+  lat: real('lat').notNull(),
+  lng: real('lng').notNull(),
+  label: text('label'),
+}, t => [
+  primaryKey({ columns: [ t.postId, t.position ] }),
+  check('post_route_points_check', sql`
+    ${t.position} BETWEEN 0 AND 19 AND
+    ${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180 AND
+    (${t.label} IS NULL OR length(${t.label}) BETWEEN 1 AND 60)
+  `),
+]);
+
+export const postRoutePointsRelations = relations(postRoutePoints, ({ one }) => ({
+  post: one(posts, { fields: [postRoutePoints.postId], references: [posts.id] }),
+}));
 
 export const postImagesRelations = relations(postImages, ({ one }) => ({
   post: one(posts, { fields: [postImages.postId], references: [posts.id] }),
@@ -655,7 +683,8 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   moderations: many(postModerations),
   postTags:    many(postTags),
   comments:    many(comments),
-  images:      many(postImages)
+  images:      many(postImages),
+  routePoints: many(postRoutePoints)
 }));
 
 export const postModerationsRelations = relations(postModerations, ({ one }) => ({

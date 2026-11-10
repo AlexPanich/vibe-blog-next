@@ -7,12 +7,14 @@ import PostRatingBlock from "@/domains/posts/components/PostRatingBlock";
 import PostViewBeacon from "@/domains/posts/components/PostViewBeacon";
 import PostGallery from "@/domains/posts/components/PostGallery";
 import PostCardBridge from "@/domains/posts/components/PostCardBridge";
-import { coverOf, getPostImages } from "@/domains/posts/shared/postImages";
-import PostLocationMap from "@/domains/posts/components/map/PostLocationMap";
+import { coverOf, getPostImages, inlineCover } from "@/domains/posts/shared/postImages";
+import { galleryIdsInText } from "@/domains/posts/shared/postGalleryRefs";
+import PostRouteMap from "@/domains/posts/components/map/PostRouteMap";
+import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
 import { postRatingStats } from "@/domains/posts/shared/postRatings";
 import { postSummary, readingMinutes } from "@/domains/posts/shared/postText";
 import { authorMorePosts } from "@/domains/posts/shared/authorMorePosts";
-import { postRatingBlockResource, postResource } from "@/domains/posts/dto/postResources";
+import { postRatingBlockResource, postResource, routePointsResource } from "@/domains/posts/dto/postResources";
 import { resource } from "@/core/resource";
 import { imageUrl } from "@/core/imageUrl";
 import CommentsBlock from "@/domains/comments/exports/CommentsBlock";
@@ -32,15 +34,17 @@ export async function generateMetadata({ params }: PageProps<'/posts/[id]'>) {
 
 export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
   const post = await getPublishedPost(idOrFail((await params).id));
-  const [ tags, rating, comments, images, author, more ] = await Promise.all([
+  const [ tags, rating, comments, images, author, more, points ] = await Promise.all([
     getPostTags(post.id),
     postRatingStats(post.id),
     loadComments(post.id, null),
     getPostImages(post.id),
     getAuthor(post.userId),
-    authorMorePosts(post.userId, post.id)
+    authorMorePosts(post.userId, post.id),
+    post.type === 'travel' ? getRoutePoints(post.id) : []
   ]);
-  const cover = coverOf(post, images);
+  const inline = galleryIdsInText(post.content);
+  const cover = inlineCover(post, images, inline) ? null : coverOf(post, images);
 
   return <>
     <article className="ui-post">
@@ -60,16 +64,16 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
       </figure> }
 
       <div className="ui-post__body">
-        <PostMarkdown content={post.content} />
+        <PostMarkdown content={post.content} photos={{ postId: post.id, images, linked: true }} />
       </div>
 
       <div className="ui-post__wide">
-        <PostGallery postId={post.id} title={post.title} images={images} linked />
+        <PostGallery postId={post.id} title={post.title} images={images.filter(image => !inline.includes(image.id))} linked />
       </div>
 
       <div className="ui-post__column">
-        { post.type === 'travel' && post.lat !== null && post.lng !== null && <PostLocationMap lat={post.lat} lng={post.lng} /> }
-        { tags.length > 1 && <TagChips tags={tags} linked /> }
+        { post.type === 'travel' && points.length > 0 && <PostRouteMap points={resource(routePointsResource, points)} travelDays={post.travelDays} /> }
+        { tags.length > 1 && <TagChips tags={tags} linked large /> }
 
         <div className="ui-post__reactions">
           <PostRatingBlock post={resource(postRatingBlockResource, { ...post, rating })} />

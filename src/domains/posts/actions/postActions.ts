@@ -5,11 +5,13 @@ import { CONTAINER } from "@/globals/container";
 import { actionAuthClient, actionError } from "@/globals/actionClient";
 import { validate } from "@/shared/validation";
 import { db } from "@/globals/db";
-import { postTags, posts, tags } from "@/database/schema";
+import { postImages, postTags, posts, tags } from "@/database/schema";
 import { aiIdSchema, postEditorDto, postUpdateDto, PostOwnCreateDto } from "@/domains/posts/dto/postRequests";
 import { createPost, transitPost, workWithPost } from "@/domains/posts/policy";
 import { changePostStatus } from "@/domains/posts/shared/changePostStatus";
 import { postDetailsColumns } from "@/domains/posts/shared/postDetails";
+import { removeGalleryRefs } from "@/domains/posts/shared/postGalleryRefs";
+import { replaceRoutePoints, type DBTransaction } from "@/domains/posts/shared/postRoutePoints";
 import { and, eq, inArray } from "drizzle-orm";
 import { returnValidationErrors } from "next-safe-action";
 import { unique } from "drizzle-validator";
@@ -31,9 +33,13 @@ export const createPostAction = actionAuthClient
     await ensureTagsExist(parsedInput.tagIds);
 
     const { tagIds, details, submit, ...fields } = parsedInput;
+    // галереи у нового поста ещё нет — ссылкам на фото не на что указывать (спека 38)
+    fields.content = removeGalleryRefs(fields.content, () => false);
+
     const post = db.transaction(tx => {
       const created = tx.insert(posts).values({ ...fields, ...postDetailsColumns(details), userId: auth.id }).returning().get();
       replacePostTags(tx, created.id, tagIds);
+      replaceRoutePoints(tx, created.id, details.type === 'travel' ? details.points : []);
       return created;
     });
 
@@ -67,6 +73,13 @@ export const updatePostAction = actionAuthClient
       которым открыт редактор) проверяются в том же запросе; не совпало — причина по свежей строке
     */
     const { tagIds, details, submit, version, ...fields } = parsedInput;
+    /*
+      Фото, которых уже нет в галерее (удалили, пока была открыта форма), молча выбрасываются
+      (спека 38). Фото удаляют только в черновике и двигают updatedAt — гонку ловит версия
+    */
+    const imageIds = new Set((await db.select({ id: postImages.id }).from(postImages).where(eq(postImages.postId, post.id))).map(i => i.id));
+    fields.content = removeGalleryRefs(fields.content, imageId => imageIds.has(imageId));
+
     db.transaction(tx => {
       const updated = tx.update(posts)
         .set({ ...fields, ...postDetailsColumns(details), updatedAt: new Date() })
@@ -85,6 +98,8 @@ export const updatePostAction = actionAuthClient
       }
 
       replacePostTags(tx, post.id, tagIds);
+      // Уход с travel стирает маршрут той же транзакцией (спека 37)
+      replaceRoutePoints(tx, post.id, details.type === 'travel' ? details.points : []);
     });
 
     if(submit){
@@ -98,8 +113,6 @@ export const updatePostAction = actionAuthClient
 
     return { saved: true };
 	});
-
-type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function ensureTagsExist(tagIds: PostOwnCreateDto['tagIds']){
   if(tagIds.length === 0){

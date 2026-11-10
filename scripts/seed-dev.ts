@@ -40,11 +40,11 @@ const db = drizzle(sqlite, { schema });
 const keepEmails = people.map(p => p.email);
 
 db.transaction(tx => {
-  // Порядок неважен: PRAGMA foreign_keys в проекте выключен
+  // Порядок важен: внешние ключи проверяются (по умолчанию в better-sqlite3) — сначала зависимые таблицы
   for(const table of [
     schema.notifications, schema.notificationThrottles, schema.messages, schema.dialogs, schema.messageRestrictions, schema.messageIgnores,
     schema.postReports, schema.commentReports, schema.commentReactions, schema.commentModerations, schema.comments,
-    schema.postViewSeen, schema.postViewsDaily, schema.postRatings, schema.postFavorites, schema.postTags, schema.postImages, schema.postModerations, schema.posts,
+    schema.postViewSeen, schema.postViewsDaily, schema.postRatings, schema.postFavorites, schema.postTags, schema.postImages, schema.postRoutePoints, schema.postModerations, schema.posts,
     schema.tagFollows, schema.tagAliases, schema.tags, schema.userFollows, schema.userBlocks, schema.authorRequests, schema.userAdminActions,
   ]){
     tx.delete(table).run();

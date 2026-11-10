@@ -41,3 +41,13 @@ export function coverOf(post: { coverImageId: number | null }, images: Pick<Post
 
   return image ? { fileKey: image.fileKey, width: image.width, height: image.height } : null;
 }
+
+/*
+  Обложка поста (выбранная, иначе первое фото) стоит в тексте — верхнюю обложку на странице поста
+  и в превью модератора не показываем, фото остаётся в тексте с подписью (спека 38)
+*/
+export function inlineCover(post: { coverImageId: number | null }, images: Pick<PostImage, 'id'>[], inline: number[]){
+  const id = post.coverImageId ?? images[0]?.id;
+
+  return id !== undefined && inline.includes(id);
+}
