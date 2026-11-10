@@ -92,3 +92,8 @@
 - `global-error` рендерит `ColorSchemeScript` из клиентского компонента — в dev то же
   предупреждение «Encountered a script tag» (п. 7). Скрипт нужен при серверном рендере
   границы, чтобы тема не мигала.
+- В dev на каждой странице в консоли «…css was preloaded using link preload but not used
+  within a few seconds». Это CSS-чанк `global-not-found`: Turbopack в dev собирает его стили
+  отдельной точкой входа, а Next держит ресурсы глобальной 404 наготове на любой странице.
+  В production CSS общий, предупреждения нет (проверено `next start`). Убрать можно только
+  отказом от стилей в `global-not-found` — не чиним, как и «Encountered a script tag».
