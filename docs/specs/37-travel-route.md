@@ -59,8 +59,8 @@
 `post_route_points`: `post_id`, `position` (0–19), `lat`, `lng`, `label`; PK
 `(post_id, position)`. CHECK на диапазоны координат, `position` и длину `label` —
 таблица новая, пересборки нет. Сохранение поста пишет точки целиком (delete + insert) и
-`posts.lat/lng` = точка 0 в одной транзакции. `PRAGMA foreign_keys` не включён — при
-удалении поста точки удаляются явно.
+`posts.lat/lng` = точка 0 в одной транзакции. При удалении поста точки удаляются явно
+(внешние ключи проверяются — см. раздел 7).
 
 `posts.travel_days integer NULL`, CHECK `travel_days IS NULL OR (type = 'travel' AND
 travel_days BETWEEN 1 AND 365)` — на колонке, `ADD COLUMN` руками (как `0009_post_types.sql`).
@@ -97,9 +97,11 @@ Request: у варианта `travel` вместо `lat`/`lng` — `points: [{ l
   Чике-Таман → слияние Чуи и Катуни → Курай. Ладога — три точки: в тексте только старт,
   финиш и стоянки на островах.
 - **`scripts/seed-dev.ts`** чистит и `post_route_points`: сид упал на внешнем ключе. В
-  соединениях better-sqlite3 `PRAGMA foreign_keys` включён по умолчанию (проверено через
-  `sql-dev`: `1`) — это расходится с `CLAUDE.md` («не включён») и с комментарием в
-  `seed-dev.ts`; вопрос открыт, в рамках спеки не правилось.
+  соединениях better-sqlite3 `PRAGMA foreign_keys` включён по умолчанию — это расходилось с
+  `CLAUDE.md` («не включён») и с комментарием в `seed-dev.ts`. Проверка через `sql-dev` не
+  доказательство (MCP сам делает `foreign_keys = ON`); на чистом соединении `better-sqlite3`
+  тоже `1`. После проверки исправлены `CLAUDE.md` и комментарии в `seed-dev.ts`, `schema.ts`,
+  `tagActions.ts`; код не менялся.
 - **Плашка типа в карточке**: текст обёрнут в `.ui-post-card__type-text` — многоточие не
   работает на текстовом узле внутри `inline-flex`.
 - **Строки поста в кабинете** (`withRowData`) тоже получают `routeKm` — они идут через

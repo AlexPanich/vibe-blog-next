@@ -275,7 +275,7 @@ export const tags = sqliteTable('tags', {
 /*
   Старые slug слитых рубрик (спека 47): /tags/<slug>/rss.xml отдаёт 308 на целевую. При
   повторном слиянии алиасы переписываются на новую цель — цепочек нет. Удаление рубрики
-  удаляет и её алиасы (deleteTagAction), PRAGMA foreign_keys не включён
+  удаляет и её алиасы (deleteTagAction) явно: cascade у tagId нет
 */
 export const tagAliases = sqliteTable('tag_aliases', {
   slug: text('slug').primaryKey(),
@@ -286,8 +286,8 @@ export const tagAliases = sqliteTable('tag_aliases', {
 ]);
 
 /*
-  cascade на tagId — для схемы: PRAGMA foreign_keys в проекте не включён, поэтому
-  deleteTagAction чистит связи сам, а mergeTagAction переносит их на целевую рубрику
+  cascade на tagId срабатывает (внешние ключи проверяются), но deleteTagAction всё равно
+  чистит связи сам, а mergeTagAction переносит их на целевую рубрику
 */
 export const postTags = sqliteTable('post_tags', {
   postId: integer('post_id').notNull().references(() => posts.id),

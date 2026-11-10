@@ -63,7 +63,7 @@ export const renameTagAction = actionAuthClient
 
 /*
   Рубрика снимается с постов, посты остаются, подписки на неё и алиасы (спека 47) удаляются.
-  Связи чистим сами: PRAGMA foreign_keys не включён, и cascade из схемы не сработает
+  Связи чистим сами и до рубрики: внешние ключи проверяются, а cascade есть не у всех связей
 */
 export const deleteTagAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
