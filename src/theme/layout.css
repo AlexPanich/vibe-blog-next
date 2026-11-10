@@ -32,7 +32,8 @@
    - пользователь в админке: .ui-user-page, .ui-user-hero, .ui-user-card, .ui-user-roles,
      .ui-user-ban, .ui-user-avatar, .ui-user-cover__preview, .ui-user-log;
    - рубрики: .ui-tags-head, .ui-tags-section, .ui-tag-tile, .ui-tag-rest, .ui-tag-follow-toggle;
-   - страницы о блоге: .ui-site-pages, .ui-site-nav, .ui-site-page, .ui-site-contacts, .ui-site-cta.
+   - страницы о блоге: .ui-site-pages, .ui-site-nav, .ui-site-page, .ui-site-contacts, .ui-site-cta;
+   - страницы ошибок: .ui-error, .ui-error-page.
    ========================================================================== */
 
 /* ---- Каркас -------------------------------------------------------------- */
@@ -2354,6 +2355,110 @@ a.ui-tag[data-tone]:not([data-tone='plain']):hover {
 
 .ui-empty__actions svg {
   color: inherit;
+}
+
+/* ---- Страницы ошибок (спека 52) ------------------------------------------ */
+
+/* 404 / 403 / сбой рендера: плитки с кодом, заголовок, пояснение и следующий шаг */
+.ui-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 40rem;
+  padding-block: clamp(1rem, 6vw, 4.5rem);
+}
+
+/* Повёрнутые плитки цветов типов постов; цифры — шрифтом заголовков */
+.ui-error__code {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 0 1.9rem 0.25rem;
+}
+
+.ui-error__code span {
+  display: grid;
+  place-items: center;
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: 22px;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(6deg);
+}
+
+.ui-error__code span:nth-child(2) {
+  background: var(--sun);
+  color: var(--on-sun);
+  transform: rotate(-4deg);
+}
+
+.ui-error__code span:nth-child(3) {
+  background: var(--plum);
+  transform: rotate(3deg);
+}
+
+/* Сбой рендера: одна солнечная плитка «!» */
+.ui-error__code--alert span {
+  background: var(--sun);
+  color: var(--on-sun);
+}
+
+.ui-error .ui-kicker {
+  font-size: 0.875rem;
+  letter-spacing: 0.12em;
+}
+
+.ui-error__title {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.ui-error__text {
+  margin: 1rem 0 0;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.ui-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.9rem;
+}
+
+/* global-error: своя страница без шапки — колонка по центру экрана */
+.ui-error-page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+}
+
+.ui-error-page .ui-brand {
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 720px) {
+  .ui-error__code {
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ui-error__code span {
+    width: 3.75rem;
+    height: 3.75rem;
+    border-radius: 16px;
+    font-size: 1.9rem;
+  }
 }
 
 /* ---- «Начало» кабинета (спека 42) ----------------------------------------- */

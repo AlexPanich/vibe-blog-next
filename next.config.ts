@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['rate-limiter-flexible'],
   experimental: {
     authInterrupts: true,
+    // Свой 404 для адресов вне маршрутов: root layout'ов два, общего not-found нет (спека 52)
+    globalNotFound: true,
     // Картинки грузятся по одной, до 5 МБ — с запасом на обёртку запроса
     serverActions: { bodySizeLimit: '6mb' },
     optimizePackageImports: ['@mantine/core', '@mantine/hooks']
