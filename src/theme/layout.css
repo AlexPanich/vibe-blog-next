@@ -1046,6 +1046,12 @@ a.ui-tag {
   text-decoration: none;
 }
 
+/* Цвет рубрики (tagTone): мягкая подложка и основной текст; plain — как было, цветом ссылки */
+.ui-tag[data-tone='coral'] { background: var(--accent-soft); color: var(--ink); }
+.ui-tag[data-tone='mint'] { background: var(--mint-soft); color: var(--ink); }
+.ui-tag[data-tone='sun'] { background: var(--sun-soft); color: var(--ink); }
+.ui-tag[data-tone='plum'] { background: var(--plum-soft); color: var(--ink); }
+
 /* Блокировка на странице автора: пояснение и кнопка под текстом профиля. */
 .ui-block {
   display: flex;
@@ -1091,6 +1097,10 @@ a.ui-tag {
 
 a.ui-tag:hover {
   color: var(--ink);
+}
+
+a.ui-tag[data-tone]:not([data-tone='plain']):hover {
+  text-decoration: underline;
 }
 
 /* Ряд рубрик поста */
@@ -1439,6 +1449,12 @@ a.ui-tag:hover {
   white-space: nowrap;
   transition: background-color 0.15s ease;
 }
+
+/* Рубрика — своим цветом (tagTone), plain — серая подложка. До :hover и active, чтобы они перебивали */
+.ui-filter a[data-tone='coral'] { background: var(--accent-soft); }
+.ui-filter a[data-tone='mint'] { background: var(--mint-soft); }
+.ui-filter a[data-tone='sun'] { background: var(--sun-soft); }
+.ui-filter a[data-tone='plum'] { background: var(--plum-soft); }
 
 .ui-filter a:hover {
   background: var(--rule);
