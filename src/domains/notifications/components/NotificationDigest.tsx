@@ -25,7 +25,7 @@ export default function NotificationDigest<T extends NotificationItemResource[]>
     <section className="ui-digest ui-digest--filled">
       <div className="ui-digest__head">
         <h2 className="ui-digest__title">Уведомления</h2>
-        { unread > 0 && <button type="button" className="ui-digest__action" disabled={readAll.isPending} onClick={() => readAll.execute()}>
+        { unread > 0 && <button type="button" className="ui-digest__action" disabled={readAll.isPending} onClick={() => readAll.execute({})}>
           Прочитать все
         </button> }
       </div>

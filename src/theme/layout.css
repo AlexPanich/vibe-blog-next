@@ -5,7 +5,7 @@
    Префикс `ui-`. Блоки:
    - каркас: .ui-shell, .ui-main, .ui-masthead, .ui-nav, .ui-header-search, .ui-tabbar, .ui-footer;
    - кабинет: .ui-desk — левое меню и рабочая колонка, .ui-office-head, .ui-tabs, .ui-fab,
-     .ui-post-row, .ui-filter-bar, .ui-pager;
+     .ui-post-row, .ui-filter-bar, .ui-sort-pill, .ui-pager;
    - заголовок страницы: .ui-section-head, .ui-title, .ui-kicker, .ui-backlink;
    - содержимое: .ui-panel, .ui-rows, .ui-grid / .ui-card, .ui-article,
      .ui-empty, .ui-meta, .ui-tag, .ui-actions;
@@ -873,6 +873,31 @@
     flex-basis: 100%;
     max-width: none;
   }
+}
+
+/* Пилюля сортировки с меню («Сначала новые ▾»): справочник рубрик, избранное */
+.ui-sort-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--paper-tint);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-sort-pill:hover {
+  filter: brightness(0.97);
+}
+
+.ui-filter-bar .ui-sort-pill {
+  margin-left: auto;
 }
 
 /* Пагинация: круглые кнопки, текущая — тёмная */
@@ -11291,26 +11316,6 @@ span.ui-photo__arrow {
   border-color: var(--line);
 }
 
-.ui-tag-bar__sort {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.625rem 1rem;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--paper-tint);
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.ui-tag-bar__sort:hover {
-  filter: brightness(0.97);
-}
-
 .ui-tag-table {
   --tag-cols: minmax(0, 1fr) 12.5rem 6.875rem 6.875rem 7.5rem;
   overflow: hidden;
@@ -11429,7 +11434,7 @@ span.ui-photo__arrow {
 
 /* Телефон: без шапки и рамки — строки через линию «чип · цифры · …» */
 @media (max-width: 720px) {
-  .ui-tag-bar__sort {
+  .ui-tag-bar .ui-sort-pill {
     display: none;
   }
 

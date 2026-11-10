@@ -5,6 +5,7 @@ import NotificationRow from "@/domains/notifications/components/NotificationRow"
 import { loadNotificationsAction, readAllNotificationsAction, readNotificationAction, unreadNotificationsAction } from "@/domains/notifications/actions/notificationActions";
 import { notificationItemResource, type NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
 import { isReplacedBy } from "@/domains/notifications/shared/notificationGroup";
+import { NOTIFICATION_TAB_OF } from "@/domains/notifications/shared/notificationTabs";
 import useLiveEvent from "@/hooks/useLiveEvent";
 import useUser from "@/hooks/useUser";
 import { ActionIcon, Button, Indicator, Loader, Popover, PopoverDropdown, PopoverTarget, Text } from "@mantine/core";
@@ -84,7 +85,10 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
 
   useLiveEvent('notification.read', data => {
     setUnread(data.unread);
-    setItems(prev => prev && (data.id === null ? [] : prev.filter(item => item.id !== data.id)));
+    // «Прочитать все» на вкладке истории (спека 44) убирает из панели только строки той вкладки
+    setItems(prev => prev && prev.filter(item => data.id === null
+      ? data.tab !== null && NOTIFICATION_TAB_OF[item.type] !== data.tab
+      : item.id !== data.id));
   });
 
   if(!ready || !user){
@@ -124,7 +128,7 @@ export default function NotificationBell({ initialUnread }: NotificationBellProp
         <div className="ui-notifications">
           <div className="ui-notifications__head">
             Уведомления
-            { !!items?.length && <Button variant="subtle" size="compact-xs" color="gray" loading={readAll.isPending} onClick={() => readAll.execute()}>
+            { !!items?.length && <Button variant="subtle" size="compact-xs" color="gray" loading={readAll.isPending} onClick={() => readAll.execute({})}>
               Отметить прочитанными
             </Button> }
           </div>

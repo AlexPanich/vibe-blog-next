@@ -4,24 +4,27 @@ import { comments, messages, notifications, postRatings, postReports, posts, use
 import type { NotificationItemResource } from "@/domains/notifications/dto/notificationResources";
 import { describeLatest, describeNotification } from "@/domains/notifications/shared/notificationText";
 import { groupKeyOf } from "@/domains/notifications/shared/notificationGroup";
+import { emptyNotificationTabs, NOTIFICATION_TAB_OF, notificationTypesOf, type NotificationTab } from "@/domains/notifications/shared/notificationTabs";
 import { and, count, desc, eq, inArray, isNull, lt, sql, type SQL } from "drizzle-orm";
 
 export type NotificationRow = ReturnType<typeof loadNotificationRows>[number];
 
 const PAGE_SIZE = 20;
 
-// Порция колокольчика (unreadOnly) или истории: строки старше beforeId
-export function loadNotificationPage(userId: number, beforeId?: number, unreadOnly = false){
+// Порция колокольчика (unreadOnly) или истории (вкладка tab, спека 44): строки старше beforeId
+export function loadNotificationPage(userId: number, { beforeId, unreadOnly = false, tab }: { beforeId?: number, unreadOnly?: boolean, tab?: NotificationTab } = {}){
   const rows = loadNotificationRows(and(
     eq(notifications.userId, userId),
     beforeId === undefined ? undefined : lt(notifications.id, beforeId),
-    unreadOnly ? isNull(notifications.readAt) : undefined
+    unreadOnly ? isNull(notifications.readAt) : undefined,
+    tab ? inArray(notifications.type, notificationTypesOf(tab)) : undefined
   ), PAGE_SIZE + 1);
 
   return {
     items: rows.slice(0, PAGE_SIZE).map(toNotificationItem),
     hasMore: rows.length > PAGE_SIZE,
-    unread: countUnread(userId)
+    unread: countUnread(userId),
+    unreadTabs: countUnreadByTab(userId)
   };
 }
 
@@ -98,6 +101,26 @@ export function countUnread(userId: number){
     .from(notifications)
     .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
     .get()?.n ?? 0;
+}
+
+// Непрочитанные по вкладкам: один GROUP BY type, сумма по маппингу (спека 44, реш. 7)
+export function countUnreadByTab(userId: number): Record<NotificationTab, number> {
+  const rows = db.select({ type: notifications.type, n: count() })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
+    .groupBy(notifications.type)
+    .all();
+  const tabs = emptyNotificationTabs();
+
+  for(const row of rows){
+    const tab = NOTIFICATION_TAB_OF[row.type];
+
+    if(tab){
+      tabs[tab] += row.n;
+    }
+  }
+
+  return tabs;
 }
 
 export function loadNotificationItems(ids: number[]){

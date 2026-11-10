@@ -1,4 +1,5 @@
 import Link from "@/components/general/Link";
+import OfficeSearch from "@/components/general/OfficeSearch";
 import { plural } from "@/core/plural";
 import HomeWriteBand from "@/domains/posts/components/HomeWriteBand";
 import { tagsWithCounts } from "@/domains/posts/shared/feedOptions";
@@ -6,7 +7,6 @@ import { formatRating } from "@/domains/posts/shared/formatRating";
 import { lastPostCovers } from "@/domains/posts/shared/lastPostCovers";
 import { tagTone } from "@/domains/tags/exports/tagTone";
 import AuthorListRow from "@/domains/users/components/AuthorListRow";
-import AuthorsSearch from "@/domains/users/components/AuthorsSearch";
 import AuthorSpotlight from "@/domains/users/components/AuthorSpotlight";
 import { AuthorsSort, authorsFilterDto } from "@/domains/users/dto/userRequests";
 import { authorsDirectory, DirectoryAuthor } from "@/domains/users/shared/authorsDirectory";
@@ -66,7 +66,16 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
           )) }
         </nav>
         <div className="ui-authors-head__filters">
-          <AuthorsSearch filter={filter} />
+          <OfficeSearch
+            action="/authors"
+            q={filter.q}
+            placeholder="Найти автора по имени"
+            label="Поиск автора по имени"
+            hidden={{ sort: filter.sort !== 'popular' ? filter.sort : undefined, tag: filter.tag }}
+            clearHref={authorsUrl({ ...filter, q: undefined })}
+            className="ui-authors-search"
+            iconSize={17}
+          />
           { chips.length > 0 && <nav className="ui-authors-topics" aria-label="Пишут о">
             <span className="ui-authors-topics__label">Пишут о</span>
             <Link href={authorsUrl({ ...filter, tag: undefined })} className="ui-author-topic ui-author-topic--chip" data-tone={filter.tag ? 'plain' : 'ink'}>Все</Link>

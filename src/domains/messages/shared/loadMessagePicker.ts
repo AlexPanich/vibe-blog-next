@@ -5,7 +5,7 @@ import type { MessagePickerRowResource } from "@/domains/messages/dto/messageRes
 import { writeBlockReason } from "@/domains/messages/shared/messageAccess";
 import { blockedWithQueries } from "@/domains/users/exports/userBlocks";
 import type { AuthUser } from "@/shared/authUser";
-import { escapeLike } from "@/shared/escapeLike";
+import { textLike } from "@/shared/textLike";
 import { banActiveSql } from "@/shared/userBan";
 import { and, asc, desc, eq, ne, not, notInArray, or, sql } from "drizzle-orm";
 
@@ -50,7 +50,7 @@ export function loadMessagePicker(me: Pick<AuthUser, 'id' | 'roles'>, q: string 
       .where(and(
         ...common,
         everyone ? undefined : or(author, following, follower),
-        sql`lower_ru(${users.name}) LIKE ${`%${escapeLike(needle.toLocaleLowerCase('ru'))}%`} ESCAPE '\\'`
+        textLike(users.name, needle)
       ))
       .orderBy(asc(sql`sort_ru(${users.name})`), asc(users.id))
       .limit(MESSAGE_PICKER_LIMIT)

@@ -109,7 +109,7 @@ async function latestCards(where: SQL | undefined){
 
 // Вкладка избранного: новые закладки сверху, карточки уже с данными и рубриками
 async function favoriteCards(authorId: number){
-  const list = await loadFavorites(authorId, LATEST);
+  const list = await loadFavorites(authorId, { limit: LATEST });
 
   return list.map(item => item.post);
 }

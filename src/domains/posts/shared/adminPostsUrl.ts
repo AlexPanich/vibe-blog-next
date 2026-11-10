@@ -10,6 +10,10 @@ export function adminPostsUrl(filter: Partial<PostAdminFilterDto>){
     params.set('status', filter.status);
   }
 
+  if(filter.q){
+    params.set('q', filter.q);
+  }
+
   if(filter.page && filter.page > 1){
     params.set('page', String(filter.page));
   }

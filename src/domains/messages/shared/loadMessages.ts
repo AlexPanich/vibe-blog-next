@@ -6,7 +6,7 @@ import type { DialogRowResource, DialogViewResource, MessageItemResource, Messag
 import { isIgnored, isRestricted, MESSAGE_PAGE_SIZE, writeBlockReason, type DBTransaction } from "@/domains/messages/shared/messageAccess";
 import type { AuthUser } from "@/shared/authUser";
 import { messageSnippet } from "@/domains/messages/shared/messageSnippet";
-import { escapeLike } from "@/shared/escapeLike";
+import { textLike } from "@/shared/textLike";
 import { authorTopics } from "@/domains/users/exports/authorTopics";
 import { DIALOG_PAGE_SIZE } from "@/domains/messages/shared/dialogPage";
 import { and, asc, count, desc, eq, exists, gt, isNull, lt, ne, not, or, sql } from "drizzle-orm";
@@ -38,7 +38,7 @@ export function loadDialogRows(userId: number, cursor: DialogPageDto = {}): { it
       cursor.beforeAt !== undefined && cursor.beforeId !== undefined
         ? sql`(${dialogs.lastMessageAt}, ${dialogs.id}) < (${cursor.beforeAt}, ${cursor.beforeId})`
         : undefined,
-      cursor.q ? sql`lower_ru(${users.name}) LIKE ${`%${escapeLike(cursor.q.toLocaleLowerCase('ru'))}%`} ESCAPE '\\'` : undefined
+      cursor.q ? textLike(users.name, cursor.q) : undefined
     ))
     .orderBy(desc(dialogs.lastMessageAt), desc(dialogs.id))
     .limit(size + 1)

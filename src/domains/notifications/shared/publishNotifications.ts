@@ -1,20 +1,20 @@
 import 'server-only';
 import { liveBus } from "@/globals/liveBus";
-import { countUnread, loadNotificationItems } from "@/domains/notifications/shared/loadNotifications";
+import { countUnread, countUnreadByTab, loadNotificationItems } from "@/domains/notifications/shared/loadNotifications";
 
 /*
   После commit транзакции, в которой их создал notify: откаченное действие не должно
   успеть прилететь в браузер. Ошибки шины действие не роняют — liveBus снимает подписчика
 */
 export function publishNotifications(ids: number[]){
-  const unread = new Map<number, number>();
+  const counts = new Map<number, { unread: number, unreadTabs: ReturnType<typeof countUnreadByTab> }>();
 
   for(const { userId, item } of loadNotificationItems(ids)){
-    if(!unread.has(userId)){
-      unread.set(userId, countUnread(userId));
+    if(!counts.has(userId)){
+      counts.set(userId, { unread: countUnread(userId), unreadTabs: countUnreadByTab(userId) });
     }
 
-    liveBus.publish(userId, 'notification.created', { notification: item, unread: unread.get(userId)! });
+    liveBus.publish(userId, 'notification.created', { notification: item, ...counts.get(userId)! });
   }
 }
 
@@ -25,5 +25,6 @@ export function publishNotificationsRead(userId: number, ids: number[]){
   }
 
   const unread = countUnread(userId);
-  ids.forEach(id => liveBus.publish(userId, 'notification.read', { id, unread }));
+  const unreadTabs = countUnreadByTab(userId);
+  ids.forEach(id => liveBus.publish(userId, 'notification.read', { id, tab: null, unread, unreadTabs }));
 }

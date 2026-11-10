@@ -1,22 +1,26 @@
 import 'server-only';
 import { db } from "@/globals/db";
 import { posts, users } from "@/database/schema";
-import type { UserAdminFilterDto } from "@/domains/users/dto/userAdminRequests";
+import type { AdminUserTab, UserAdminFilterDto } from "@/domains/users/dto/userAdminRequests";
 import { parseRoles } from "@/domains/users/shared/userRoles";
 import { banActiveSql } from "@/shared/userBan";
-import { count, desc, eq, like, sql } from "drizzle-orm";
+import { textLike } from "@/shared/textLike";
+import { and, count, desc, eq, like, or, sql, type SQL } from "drizzle-orm";
 
 export const ADMIN_USERS_PAGE = 20;
 
 /*
-  «Пользователи» в админке (спека 42, шаг 18): страница пользователей вкладки с числом
-  постов, числа для вкладок и подзаголовка. Страница за пределами списка прижимается к
-  последней. «Заблокированные» — только с действующим баном (спека 46), now один на вызов
+  «Пользователи» в админке (спеки 42, 44): страница пользователей вкладки и поиска с числом
+  постов, числа для вкладок (с учётом поиска) и для подзаголовка (без него). Страница за
+  пределами списка прижимается к последней. «Заблокированные» — только с действующим
+  баном (спека 46), now один на вызов
 */
 export async function loadAdminUsers(filter: UserAdminFilterDto){
   const now = new Date();
-  const counts = countUsers(now);
-  const listed = filter.filter === 'banned' ? counts.banned : counts.total;
+  const search = filter.q ? or(textLike(users.name, filter.q), textLike(users.email, filter.q)) : undefined;
+  const all = countUsers(now, undefined);
+  const found = search ? countUsers(now, search) : all;
+  const listed = listedCount(found, filter.role);
   const pages = Math.max(1, Math.ceil(listed / ADMIN_USERS_PAGE));
   const page = Math.min(filter.page, pages);
 
@@ -35,7 +39,7 @@ export async function loadAdminUsers(filter: UserAdminFilterDto){
   })
     .from(users)
     .leftJoin(posts, eq(posts.userId, users.id))
-    .where(filter.filter === 'banned' ? banActiveSql(now) : undefined)
+    .where(and(search, tabWhere(filter.role, now)))
     .groupBy(users.id)
     .orderBy(desc(users.createdAt), desc(users.id))
     .limit(ADMIN_USERS_PAGE)
@@ -44,7 +48,8 @@ export async function loadAdminUsers(filter: UserAdminFilterDto){
 
   return {
     rows: rows.map(row => ({ ...row, roles: parseRoles(row.roles) })),
-    counts,
+    all,
+    found,
     page,
     pages,
   };
@@ -56,15 +61,47 @@ export type AdminUserRow = Awaited<ReturnType<typeof loadAdminUsers>>['rows'][nu
   Роли хранятся JSON-строкой с латинскими именами (serializeRoles), поэтому LIKE по
   '"author"' безопасен: кириллицы и регистра в нём нет
 */
-function countUsers(now: Date){
+function countUsers(now: Date, where: SQL | undefined){
   const [ row ] = db.select({
     total: count(),
     banned: sql<number>`count(case when ${banActiveSql(now)} then 1 end)`,
-    authors: sql<number>`count(case when ${like(users.roles, '%"author"%')} then 1 end)`,
-    moderators: sql<number>`count(case when ${like(users.roles, '%"moderator"%')} then 1 end)`,
+    authors: sql<number>`count(case when ${tabWhere('author', now)} then 1 end)`,
+    moderators: sql<number>`count(case when ${tabWhere('moderator', now)} then 1 end)`,
   })
     .from(users)
+    .where(where)
     .all();
 
   return row;
+}
+
+// «Заблокированные» — только banActiveSql (спека 44, реш. 15): голая проверка bannedAt захватила бы истёкшие
+function tabWhere(role: AdminUserTab | undefined, now: Date){
+  if(role === 'author'){
+    return like(users.roles, '%"author"%');
+  }
+  else if(role === 'moderator'){
+    return like(users.roles, '%"moderator"%');
+  }
+  else if(role === 'banned'){
+    return banActiveSql(now);
+  }
+  else{
+    return undefined;
+  }
+}
+
+function listedCount(counts: ReturnType<typeof countUsers>, role: AdminUserTab | undefined){
+  if(role === 'author'){
+    return counts.authors;
+  }
+  else if(role === 'moderator'){
+    return counts.moderators;
+  }
+  else if(role === 'banned'){
+    return counts.banned;
+  }
+  else{
+    return counts.total;
+  }
 }

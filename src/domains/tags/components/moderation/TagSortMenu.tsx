@@ -12,7 +12,7 @@ export default function TagSortMenu({ filter }: { filter: TagModerationFilterDto
   return (
     <Menu position="bottom-end" withinPortal>
       <MenuTarget>
-        <button type="button" className="ui-tag-bar__sort" aria-label={`Сортировка: ${TAG_SORT_LABELS[filter.sort]}`}>
+        <button type="button" className="ui-sort-pill" aria-label={`Сортировка: ${TAG_SORT_LABELS[filter.sort]}`}>
           { TAG_SORT_LABELS[filter.sort] }
           <IconChevronDown size={15} stroke={2} />
         </button>
