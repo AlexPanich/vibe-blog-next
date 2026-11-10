@@ -23,7 +23,7 @@ type CommentReportCardProps<T extends CommentReportRowResource> = {
   row: StrictResource<T, CommentReportRowResource>,
   // Свой комментарий модератор не разбирает — карточка без кнопок
   own: boolean,
-  // «Заблокировать автора» ведёт в админку пользователя: бан есть только у admin
+  // «Заблокировать автора» и метка бана ведут в админку пользователя: бан есть только у admin
   canBan: boolean
 }
 
@@ -32,7 +32,8 @@ type CommentReportCardProps<T extends CommentReportRowResource> = {
   когда последняя), комментарий с автором и постом, действия «Скрыть комментарий» (с
   причиной), «Править» (спека 24, жалобы остаются открытыми), «Отклонить жалобу», справа —
   «Заблокировать автора». На телефоне «Править» и бан — в меню «…». Рассмотренная — без
-  действий, с итогом в шапке
+  действий, с итогом в шапке. Уже заблокированному автору бан не предлагается: у имени —
+  метка «Заблокирован до …» (admin — ссылкой в админку), жалобы разбираются как обычно
 */
 export default function CommentReportCard<T extends CommentReportRowResource>({ row, own, canBan }: CommentReportCardProps<T>) {
   const router = useRouter();
@@ -53,6 +54,11 @@ export default function CommentReportCard<T extends CommentReportRowResource>({ 
   const banHref = `/office/admin/users/${row.author.id}` as const;
   const count = row.reporters.length;
   const open = row.resolution === null;
+  const banned = row.author.ban !== null;
+  const banLabel = row.author.ban && <>
+    <IconBan size={12} stroke={2.2} />Заблокирован{ ' ' }
+    { row.author.ban.until ? <>до <LocalDate value={row.author.ban.until} options={{ day: 'numeric', month: 'short' }} /></> : 'навсегда' }
+  </>;
 
   return (
     <article className="ui-report-card" data-resolved={!open}>
@@ -76,6 +82,9 @@ export default function CommentReportCard<T extends CommentReportRowResource>({ 
         <div className="ui-report-card__body">
           <div className="ui-report-card__top">
             <span className="ui-report-card__name">{ row.author.name }</span>
+            { banLabel && (canBan
+              ? <Link href={banHref} className="ui-role-pill ui-report-card__banned" data-role="banned">{ banLabel }</Link>
+              : <span className="ui-role-pill ui-report-card__banned" data-role="banned">{ banLabel }</span>) }
             <span className="ui-report-card__to">
               <span className="ui-report-card__to-long">{ row.imageId === null ? 'к посту' : 'к фото поста' } </span>
               <span className="ui-report-card__to-short">к </span>
@@ -146,7 +155,7 @@ export default function CommentReportCard<T extends CommentReportRowResource>({ 
         </Button>
         <Button size="sm" variant="default" loading={keep.isPending} onClick={() => keep.execute()}>Отклонить жалобу</Button>
 
-        { canBan && <Link href={banHref} className="ui-report-card__ban ui-report-card__desktop">
+        { canBan && !banned && <Link href={banHref} className="ui-report-card__ban ui-report-card__desktop">
           <IconBan size={15} stroke={2} />Заблокировать автора
         </Link> }
 
@@ -163,7 +172,7 @@ export default function CommentReportCard<T extends CommentReportRowResource>({ 
             <MenuItem leftSection={<IconExternalLink size={16} stroke={1.8} />} renderRoot={props => <Link {...props} href={href} />}>
               Открыть в посте
             </MenuItem>
-            { canBan && <MenuItem color="red" leftSection={<IconBan size={16} stroke={1.8} />} renderRoot={props => <Link {...props} href={banHref} />}>
+            { canBan && !banned && <MenuItem color="red" leftSection={<IconBan size={16} stroke={1.8} />} renderRoot={props => <Link {...props} href={banHref} />}>
               Заблокировать автора
             </MenuItem> }
           </MenuDropdown>

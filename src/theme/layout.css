@@ -11252,6 +11252,16 @@ span.ui-photo__arrow {
   text-decoration: underline;
 }
 
+/* Метка уже заблокированного автора у имени — пилюля из админки (.ui-role-pill) */
+.ui-report-card__banned {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.ui-report-card__banned:hover {
+  text-decoration: underline;
+}
+
 .ui-report-card__more {
   display: none;
   align-items: center;

@@ -51,5 +51,7 @@ export type SeedComment = {
   reports?: string[],
   // Жалобы разобраны: модератор оставил комментарий
   reportsKept?: boolean,
+  // Исправлен модератором (спека 24): прежний текст, text — уже исправленный
+  modEdited?: string,
   replies?: SeedComment[]
 }

@@ -45,7 +45,8 @@ export type CommentReportState = 'sent' | 'resolved'
 /*
   Карточка жалоб (спека 18, вид — спека 42): жалобы на один комментарий — одна карточка со
   списком жалобщиков. У родителя текст только видимого — модератору нужен контекст, а не
-  скрытое. Рассмотренные — та же карточка с итогом; у удалённого автором текста нет
+  скрытое. Рассмотренные — та же карточка с итогом; у удалённого автором текста нет.
+  author.ban — действующий бан автора сейчас (until null — навсегда), истёкший — null
 */
 export const commentReportRowResource = z.object({
   commentId: z.number(),
@@ -53,7 +54,12 @@ export const commentReportRowResource = z.object({
   postTitle: z.string(),
   imageId: z.number().nullable(),
   content: z.string().nullable(),
-  author: z.object({ id: z.number(), name: z.string(), avatarKey: z.string().nullable() }),
+  author: z.object({
+    id: z.number(),
+    name: z.string(),
+    avatarKey: z.string().nullable(),
+    ban: z.object({ until: z.date().nullable() }).nullable()
+  }),
   parent: z.object({
     authorName: z.string(),
     state: z.enum(COMMENT_STATES),
