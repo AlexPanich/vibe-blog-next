@@ -20,3 +20,11 @@ export const tagModerationFilterDto = z.object({
 })
 
 export type TagModerationFilterDto = z.infer<typeof tagModerationFilterDto>
+
+
+// Слияние рубрик (спека 47): исходная — bind-аргумент, целевая — здесь
+export const tagMergeDto = z.object({
+  targetId: z.int().positive()
+})
+
+export type TagMergeDto = z.infer<typeof tagMergeDto>

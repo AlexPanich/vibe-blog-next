@@ -269,8 +269,21 @@ export const tags = sqliteTable('tags', {
 });
 
 /*
+  Старые slug слитых рубрик (спека 47): /tags/<slug>/rss.xml отдаёт 308 на целевую. При
+  повторном слиянии алиасы переписываются на новую цель — цепочек нет. Удаление рубрики
+  удаляет и её алиасы (deleteTagAction), PRAGMA foreign_keys не включён
+*/
+export const tagAliases = sqliteTable('tag_aliases', {
+  slug: text('slug').primaryKey(),
+  tagId: integer('tag_id').notNull().references(() => tags.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, t => [
+  index('tag_aliases_tag_idx').on(t.tagId),
+]);
+
+/*
   cascade на tagId — для схемы: PRAGMA foreign_keys в проекте не включён, поэтому
-  deleteTagAction чистит связи сам
+  deleteTagAction чистит связи сам, а mergeTagAction переносит их на целевую рубрику
 */
 export const postTags = sqliteTable('post_tags', {
   postId: integer('post_id').notNull().references(() => posts.id),
@@ -387,7 +400,7 @@ export const authorRequestsRelations = relations(authorRequests, ({ one }) => ({
   decider: one(users, { fields: [authorRequests.decidedBy], references: [users.id], relationName: 'authorRequestDecider' })
 }));
 
-// Подписка на рубрику: удаляется вместе с рубрикой (deleteTagAction)
+// Подписка на рубрику: удаляется вместе с рубрикой (deleteTagAction), при слиянии переносится (mergeTagAction)
 export const tagFollows = sqliteTable('tag_follows', {
   userId: integer('user_id').notNull().references(() => users.id),
   tagId: integer('tag_id').notNull().references(() => tags.id),

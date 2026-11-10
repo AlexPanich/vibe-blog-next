@@ -6,9 +6,10 @@ import { plural } from "@/core/plural";
 import type { TagModerationRowResource } from "@/domains/tags/dto/tagModerationResources";
 import { deleteTagAction, renameTagAction } from "@/domains/tags/actions/tagActions";
 import TagFollowChip from "@/domains/tags/components/follows/TagFollowChip";
+import { useTagMerge } from "@/domains/tags/components/moderation/TagMergeProvider";
 import { fieldError } from "@/components/general/FieldError";
 import { Button, Group, Menu, MenuDropdown, MenuItem, MenuTarget, Modal, Text, TextInput } from "@mantine/core";
-import { IconDots, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconArrowMerge, IconDots, IconPencil, IconTrash } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 
@@ -18,8 +19,9 @@ type TagTableRowProps<T extends TagModerationRowResource> = {
 
 /*
   Строка справочника рубрик (спека 42, шаг 16): чип, slug, постов, подписчиков и действия.
-  Переименование — в ячейке названия, удаление — с подтверждением. На телефоне цифры
-  уходят строкой под чип, действия — в «…»
+  Переименование — в ячейке названия, удаление — с подтверждением, слияние — общий диалог
+  TagMergeProvider (спека 47). Похожая рубрика подсвечена, под чипом — «похожа на «…»» и
+  «Слить» с выбранной целью. На телефоне цифры уходят строкой под чип, действия — в «…»
 */
 export default function TagTableRow<T extends TagModerationRowResource>({ tag }: TagTableRowProps<T>) {
   const [ editing, setEditing ] = useState(false);
@@ -27,9 +29,10 @@ export default function TagTableRow<T extends TagModerationRowResource>({ tag }:
   const [ name, setName ] = useState(tag.name);
   const rename = useAction(renameTagAction.bind(null, tag.id), { onSuccess: () => setEditing(false) });
   const remove = useAction(deleteTagAction.bind(null, tag.id), { onSuccess: () => setConfirming(false) });
+  const merge = useTagMerge();
 
   return (
-    <div className="ui-tag-table__row" role="row" data-editing={editing || undefined}>
+    <div className="ui-tag-table__row" role="row" data-editing={editing || undefined} data-similar={tag.similarTo ? true : undefined}>
       <div className="ui-tag-table__name" role="cell">
         { editing ? (
           <form onSubmit={e => { e.preventDefault(); rename.execute({ name }) }} className="ui-tag-table__rename">
@@ -54,6 +57,10 @@ export default function TagTableRow<T extends TagModerationRowResource>({ tag }:
             <span className="ui-tag-table__mobile-meta">
               { tag.postsCount } { plural(tag.postsCount, [ 'пост', 'поста', 'постов' ]) } · { tag.followersCount } { plural(tag.followersCount, [ 'подписчик', 'подписчика', 'подписчиков' ]) }
             </span>
+            { tag.similarTo && <span className="ui-tag-table__similar">
+              похожа на «{ tag.similarTo.name }»
+              <button type="button" onClick={() => tag.similarTo && merge.open(tag, tag.similarTo.id)}>Слить</button>
+            </span> }
           </>
         ) }
       </div>
@@ -64,6 +71,9 @@ export default function TagTableRow<T extends TagModerationRowResource>({ tag }:
         { !editing && <>
           <button type="button" className="ui-tag-table__act" onClick={() => setEditing(true)} aria-label={`Переименовать «${tag.name}»`} title="Переименовать">
             <IconPencil size={14} stroke={1.8} />
+          </button>
+          <button type="button" className="ui-tag-table__act" onClick={() => merge.open(tag)} aria-label={`Слить «${tag.name}»`} title="Слить">
+            <IconArrowMerge size={14} stroke={1.8} />
           </button>
           <button type="button" className="ui-tag-table__act ui-tag-table__act--danger" onClick={() => setConfirming(true)} aria-label={`Удалить «${tag.name}»`} title="Удалить">
             <IconTrash size={14} stroke={1.8} />
@@ -77,6 +87,9 @@ export default function TagTableRow<T extends TagModerationRowResource>({ tag }:
             <MenuDropdown>
               <MenuItem leftSection={<IconPencil size={16} stroke={1.8} />} onClick={() => setEditing(true)}>
                 Переименовать
+              </MenuItem>
+              <MenuItem leftSection={<IconArrowMerge size={16} stroke={1.8} />} onClick={() => merge.open(tag)}>
+                Слить…
               </MenuItem>
               <MenuItem color="red" leftSection={<IconTrash size={16} stroke={1.8} />} onClick={() => setConfirming(true)}>
                 Удалить

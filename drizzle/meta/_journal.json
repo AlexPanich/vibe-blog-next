@@ -218,6 +218,13 @@
       "when": 1794261987066,
       "tag": "0030_richer_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1794278000584,
+      "tag": "0031_tag_aliases",
+      "breakpoints": true
     }
   ]
 }
