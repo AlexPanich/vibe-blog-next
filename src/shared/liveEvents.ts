@@ -22,7 +22,7 @@ export type LiveEvents = {
   'post.comments.changed': { postId: number, imageId: number | null },
   'comment.reactions': { postId: number, commentId: number, likes: number, dislikes: number },
   'post.rating': { postId: number, average: number | null, count: number },
-  // Тема автора: число подписчиков у всех, кто смотрит его страницу или пост
+  // Тема автора и тема authors: число подписчиков у всех, кто смотрит автора, его пост или список авторов
   'user.followers': { userId: number, followersCount: number },
 }
 
@@ -40,10 +40,13 @@ export const LIVE_TOPIC_EVENT_TYPES = [ 'post.comments.changed', 'comment.reacti
 
 export type LiveTopicEventType = (typeof LIVE_TOPIC_EVENT_TYPES)[number];
 
-// Тема — то, что смотрит вкладка: пост или автор. Поток открывается с ?topics=post:12,user:3
-export type LiveTopic = `post:${number}` | `user:${number}`;
+// Тема — то, что смотрит вкладка: пост, автор или список авторов (спека 53). Поток открывается с ?topics=post:12,user:3
+export type LiveTopic = `post:${number}` | `user:${number}` | 'authors';
 
-// Больше тем — 400: на странице их одна-две
+// Список авторов: user.followers всех авторов (спека 53)
+export const AUTHORS_TOPIC: LiveTopic = 'authors';
+
+// Больше тем — 400: на странице — до четырёх (главная)
 export const LIVE_TOPICS_LIMIT = 5;
 
 export function postTopic(postId: number): LiveTopic {
@@ -56,6 +59,10 @@ export function userTopic(userId: number): LiveTopic {
 
 // Только каноническая запись id, как idOrFail: иначе одна тема под разными именами
 export function isLiveTopic(value: string): value is LiveTopic {
+  if(value === AUTHORS_TOPIC){
+    return true;
+  }
+
   const match = /^(?:post|user):([1-9]\d*)$/.exec(value);
 
   return match !== null && Number.isSafeInteger(Number(match[1]));

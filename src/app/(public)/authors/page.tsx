@@ -1,5 +1,6 @@
 import Link from "@/components/general/Link";
 import OfficeSearch from "@/components/general/OfficeSearch";
+import Pager from "@/components/general/Pager";
 import { plural } from "@/core/plural";
 import HomeWriteBand from "@/domains/posts/components/HomeWriteBand";
 import { tagsWithCounts } from "@/domains/posts/shared/feedOptions";
@@ -9,16 +10,20 @@ import { tagTone } from "@/domains/tags/exports/tagTone";
 import AuthorListRow from "@/domains/users/components/AuthorListRow";
 import AuthorSpotlight from "@/domains/users/components/AuthorSpotlight";
 import { AuthorsSort, authorsFilterDto } from "@/domains/users/dto/userRequests";
-import { authorsDirectory, DirectoryAuthor } from "@/domains/users/shared/authorsDirectory";
+import { loadAuthorsPage, type DirectoryAuthor } from "@/domains/users/shared/loadAuthorsPage";
 import { authorsUrl } from "@/domains/users/shared/authorsUrl";
 import { authorCover } from "@/domains/users/shared/authorCover";
 import { IconUsers } from "@tabler/icons-react";
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Авторы' };
+export async function generateMetadata({ searchParams }: PageProps<'/authors'>) {
+  const filter = authorsFilterDto.parse(await searchParams);
+  const { page } = await loadAuthorsPage(filter.sort, filter.q, filter.tag, filter.page);
 
-const SPOTLIGHT = 3;
+  return { title: page > 1 ? `Авторы — страница ${page}` : 'Авторы' };
+}
+
 const CHIPS = 5;
 const SORTS: { value: AuthorsSort, label: string }[] = [
   { value: 'popular', label: 'Популярные' },
@@ -30,14 +35,18 @@ const SORTS: { value: AuthorsSort, label: string }[] = [
 /*
   Авторы (спека 30): заголовок с сортировками, поиск и «Пишут о» по рубрикам, три карточки
   самых читаемых, ниже — список остальных и баннер «Есть что рассказать?». С поиском или
-  рубрикой карточек нет — все найденные идут списком
+  рубрикой карточек нет — все найденные идут списком. Список — по 20 строк с Pager (спека 53),
+  карточки — только на первой странице. Ссылки сортировок, чипов и поиска строятся от base без
+  page — смена условий сбрасывает на первую страницу
 */
 export default async function Authors({ searchParams }: PageProps<'/authors'>) {
   const filter = authorsFilterDto.parse(await searchParams);
+  const base = { sort: filter.sort, q: filter.q, tag: filter.tag };
   const filtered = Boolean(filter.q || filter.tag);
-  const [ authors, tags ] = await Promise.all([ authorsDirectory(filter), tagsWithCounts() ]);
-  const spotlight = filtered ? [] : [ ...authors ].sort(byReaders).slice(0, SPOTLIGHT);
-  const rest = authors.filter(author => !spotlight.includes(author));
+  const [ { spotlight, rows, total, page, pages }, tags ] = await Promise.all([
+    loadAuthorsPage(filter.sort, filter.q, filter.tag, filter.page),
+    tagsWithCounts()
+  ]);
   // Обложка последнего поста — только тем, у кого нет своей (спека 41)
   const covers = await lastPostCovers(spotlight.filter(author => !author.coverKey).map(author => author.id));
   const chips = tags.filter(t => t.postsCount > 0).sort((a, b) => b.postsCount - a.postsCount).slice(0, CHIPS);
@@ -54,13 +63,13 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
           <h1 className="ui-title ui-title--lg">Авторы</h1>
           <p className="ui-authors-head__sub">
             { filtered
-              ? `${plural(authors.length, [ 'Нашёлся', 'Нашлось', 'Нашлось' ])} ${authors.length} ${plural(authors.length, [ 'автор', 'автора', 'авторов' ])}`
-              : `${authors.length} ${plural(authors.length, [ 'автор пишет', 'автора пишут', 'авторов пишут' ])} в Vibe` }
+              ? `${plural(total, [ 'Нашёлся', 'Нашлось', 'Нашлось' ])} ${total} ${plural(total, [ 'автор', 'автора', 'авторов' ])}`
+              : `${total} ${plural(total, [ 'автор пишет', 'автора пишут', 'авторов пишут' ])} в Vibe` }
           </p>
         </div>
         <nav className="ui-authors-sorts" aria-label="Сортировка">
           { SORTS.map(sort => (
-            <Link key={sort.value} href={authorsUrl({ ...filter, sort: sort.value })} data-active={filter.sort === sort.value || undefined}>
+            <Link key={sort.value} href={authorsUrl({ ...base, sort: sort.value })} data-active={filter.sort === sort.value || undefined}>
               { sort.label }
             </Link>
           )) }
@@ -72,17 +81,17 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
             placeholder="Найти автора по имени"
             label="Поиск автора по имени"
             hidden={{ sort: filter.sort !== 'popular' ? filter.sort : undefined, tag: filter.tag }}
-            clearHref={authorsUrl({ ...filter, q: undefined })}
+            clearHref={authorsUrl({ ...base, q: undefined })}
             className="ui-authors-search"
             iconSize={17}
           />
           { chips.length > 0 && <nav className="ui-authors-topics" aria-label="Пишут о">
             <span className="ui-authors-topics__label">Пишут о</span>
-            <Link href={authorsUrl({ ...filter, tag: undefined })} className="ui-author-topic ui-author-topic--chip" data-tone={filter.tag ? 'plain' : 'ink'}>Все</Link>
+            <Link href={authorsUrl({ ...base, tag: undefined })} className="ui-author-topic ui-author-topic--chip" data-tone={filter.tag ? 'plain' : 'ink'}>Все</Link>
             { chips.map(tag => (
               <Link
                 key={tag.id}
-                href={authorsUrl({ ...filter, tag: tag.slug })}
+                href={authorsUrl({ ...base, tag: tag.slug })}
                 className="ui-author-topic ui-author-topic--chip"
                 data-tone={tagTone(tag.id)}
                 data-active={tag.slug === filter.tag || undefined}
@@ -94,7 +103,7 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
         </div>
       </header>
 
-      { authors.length === 0 && <div className="ui-empty">
+      { total === 0 && <div className="ui-empty">
         <IconUsers size={26} stroke={1.6} />
         { filtered
           ? <p>Никого не нашли. <Link href={authorsUrl({ sort: filter.sort })}>Показать всех</Link></p>
@@ -113,7 +122,7 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
         </div>
       </section> }
 
-      { rest.length > 0 && <section className="ui-authors-list">
+      { rows.length > 0 && <section className="ui-authors-list">
         <h2 className="ui-authors-section-head__title">{ filtered ? 'Найденные авторы' : 'Все авторы' }</h2>
         <div className="ui-authors-list__head" aria-hidden>
           <span>Автор</span>
@@ -124,18 +133,15 @@ export default async function Authors({ searchParams }: PageProps<'/authors'>) {
           <span />
         </div>
         <ul className="ui-authors-list__rows">
-          { rest.map(author => <AuthorListRow key={author.id} author={author} rating={rating(author)} />) }
+          { rows.map(author => <AuthorListRow key={author.id} author={author} rating={rating(author)} />) }
         </ul>
       </section> }
+
+      <Pager page={page} pages={pages} href={n => authorsUrl({ ...base, page: n })} />
 
       <HomeWriteBand />
     </>
   );
-}
-
-// Карточки — по подписчикам, при равенстве — по постам, какая бы сортировка ни была выбрана
-function byReaders(a: DirectoryAuthor, b: DirectoryAuthor){
-  return b.followersCount - a.followersCount || b.postsCount - a.postsCount || a.name.localeCompare(b.name, 'ru');
 }
 
 function rating(author: DirectoryAuthor){

@@ -2,7 +2,7 @@ import { AuthorsFilterDto } from "@/domains/users/dto/userRequests";
 
 /*
   URL страницы авторов по условиям: порядок параметров фиксирован, значения по умолчанию
-  не пишутся
+  не пишутся, `page=1` тоже
 */
 export function authorsUrl(filter: Partial<AuthorsFilterDto>){
   const params = new URLSearchParams();
@@ -17,6 +17,10 @@ export function authorsUrl(filter: Partial<AuthorsFilterDto>){
 
   if(filter.tag){
     params.set('tag', filter.tag);
+  }
+
+  if(filter.page && filter.page > 1){
+    params.set('page', String(filter.page));
   }
 
   const query = params.toString();
