@@ -3,12 +3,12 @@ import { POST_STATUSES, type PostStatus } from "@/database/schema";
 import ButtonLink from "@/components/general/ButtonLink";
 import EmptyState from "@/components/general/EmptyState";
 import Link from "@/components/general/Link";
+import OfficeSearch from "@/components/general/OfficeSearch";
 import Pager from "@/components/general/Pager";
 import OfficeHead from "@/components/layout/OfficeHead";
 import OfficeFab from "@/components/navigation/OfficeFab";
 import PostRow from "@/domains/posts/components/PostRow";
-import MyPostsSearch from "@/domains/posts/components/MyPostsSearch";
-import PostStatusMoreTab from "@/domains/posts/components/PostStatusMoreTab";
+import PostMoreTab from "@/domains/posts/components/PostMoreTab";
 import { myPostsFilterDto } from "@/domains/posts/dto/postOfficeRequests";
 import { loadMyPosts } from "@/domains/posts/shared/loadMyPosts";
 import { myPostsUrl } from "@/domains/posts/shared/myPostsUrl";
@@ -78,12 +78,25 @@ export default async function OfficePosts({ searchParams }: PageProps<'/office/p
                   { POST_STATUS_TAB_LABELS[status] } <span className="ui-tabs__count">{ found[status] ?? 0 }</span>
                 </Link>
               )) }
-              { moreTabs.length > 0 && <PostStatusMoreTab
-                items={moreTabs.map(status => ({ status, href: myPostsUrl({ status, q: filter.q }), count: found[status] ?? 0 }))}
+              { moreTabs.length > 0 && <PostMoreTab
+                items={moreTabs.map(status => ({
+                  key: status,
+                  label: POST_STATUS_TAB_LABELS[status],
+                  href: myPostsUrl({ status, q: filter.q }),
+                  count: found[status] ?? 0
+                }))}
                 active={filter.status}
               /> }
             </nav>
-            <MyPostsSearch filter={filter} />
+            <OfficeSearch
+              action="/office/posts"
+              q={filter.q}
+              placeholder="Найти среди своих постов"
+              label="Поиск по заголовкам своих постов"
+              hidden={{ status: filter.status }}
+              clearHref={myPostsUrl({ status: filter.status })}
+              className="ui-filter-bar__search"
+            />
           </div>
 
           { rows.length === 0 ? (

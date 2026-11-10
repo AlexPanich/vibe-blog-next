@@ -1,4 +1,4 @@
-import type { NotificationItemResource } from "@/domains/notifications/exports/notificationResources";
+import type { NotificationItemResource, NotificationTab } from "@/domains/notifications/exports/notificationResources";
 import type { MessageItemResource, MessagePeerResource } from "@/domains/messages/exports/messageResources";
 
 /*
@@ -6,9 +6,10 @@ import type { MessageItemResource, MessagePeerResource } from "@/domains/message
   слушает useLiveEvent. Payload идёт JSON-ом: даты приходят строками
 */
 export type LiveEvents = {
-  'notification.created': { notification: NotificationItemResource, unread: number },
-  // id — прочитано одно; null — «Прочитать все»
-  'notification.read': { id: number | null, unread: number },
+  // unreadTabs — непрочитанные по вкладкам истории (спека 44), считает сервер
+  'notification.created': { notification: NotificationItemResource, unread: number, unreadTabs: Record<NotificationTab, number> },
+  // id — прочитано одно; null — «Прочитать все»: tab null — всё, иначе — вкладка (спека 44)
+  'notification.read': { id: number | null, tab: NotificationTab | null, unread: number, unreadTabs: Record<NotificationTab, number> },
   // Обоим участникам: отправителю — для других его вкладок. sender — тосту получателя (спека 29)
   'message.created': { dialogId: number, message: MessageItemResource, sender: MessagePeerResource },
   // dialogDeleted — удалено последнее сообщение, диалога больше нет

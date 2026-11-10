@@ -4,7 +4,7 @@ import { postRatings, postTags, posts, tags, userFollows, users } from "@/databa
 import { AuthorsFilterDto, AuthorsSort } from "@/domains/users/dto/userRequests";
 import { parseRoles } from "@/domains/users/shared/userRoles";
 import { authorTopics } from "@/domains/users/shared/authorTopics";
-import { escapeLike } from "@/shared/escapeLike";
+import { textLike } from "@/shared/textLike";
 import { and, asc, avg, count, desc, eq, exists, sql, type SQL } from "drizzle-orm";
 
 // Рубрик у автора в карточке и в строке списка — не больше
@@ -37,8 +37,7 @@ export async function authorsDirectory({ sort, q, tag }: AuthorsFilterDto){
   const conditions: (SQL | undefined)[] = [];
 
   if(q){
-    // lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts
-    conditions.push(sql`lower_ru(${users.name}) LIKE ${`%${escapeLike(q.toLocaleLowerCase('ru'))}%`} ESCAPE '\\'`);
+    conditions.push(textLike(users.name, q));
   }
 
   if(tag){

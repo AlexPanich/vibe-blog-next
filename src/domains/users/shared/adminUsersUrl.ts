@@ -6,8 +6,12 @@ import type { UserAdminFilterDto } from "@/domains/users/dto/userAdminRequests";
 export function adminUsersUrl(filter: Partial<UserAdminFilterDto>){
   const params = new URLSearchParams();
 
-  if(filter.filter){
-    params.set('filter', filter.filter);
+  if(filter.role){
+    params.set('role', filter.role);
+  }
+
+  if(filter.q){
+    params.set('q', filter.q);
   }
 
   if(filter.page && filter.page > 1){

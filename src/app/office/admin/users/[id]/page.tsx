@@ -9,6 +9,7 @@ import UserAvatarRemoveForm from "@/domains/users/components/admin/UserAvatarRem
 import UserCoverRemoveForm from "@/domains/users/components/admin/UserCoverRemoveForm";
 import { userBanFormResource, userRolesFormResource } from "@/domains/users/dto/userResources";
 import { loadAdminUser } from "@/domains/users/shared/loadAdminUser";
+import { adminUsersUrl } from "@/domains/users/shared/adminUsersUrl";
 import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
 import LocalDate from "@/components/general/LocalDate";
 import Link from "@/components/general/Link";
@@ -40,7 +41,7 @@ export default async function AdminUsersItem({ params }: PageProps<'/office/admi
   const { user, lastLoginAt, stats, events } = loaded;
   // Истёкший бан — как его нет (спека 46): форма бана и обычный список
   const banned = isBanActive(user);
-  const back = banned ? '/office/admin/users?filter=banned' as const : '/office/admin/users' as const;
+  const back = adminUsersUrl(banned ? { role: 'banned' } : {});
   const manageable = manageUser(me, user);
   const log = (
     <UserAdminCard title="Последние действия">

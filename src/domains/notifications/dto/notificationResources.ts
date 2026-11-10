@@ -30,11 +30,23 @@ export const notificationItemResource = z.object({
 
 export type NotificationItemResource = z.infer<typeof notificationItemResource>
 
-// Первая порция истории (office/notifications) и число непрочитанных для подзаголовка
+// Непрочитанные по вкладкам истории (спека 44): группа — одна строка
+export const notificationUnreadTabsResource = z.object({
+  posts: z.number(),
+  comments: z.number(),
+  followers: z.number(),
+  moderation: z.number()
+})
+
+/*
+  Первая порция истории (office/notifications), число непрочитанных для подзаголовка и
+  числа вкладок
+*/
 export const notificationPageResource = z.object({
   items: z.array(notificationItemResource),
   hasMore: z.boolean(),
-  unread: z.number()
+  unread: z.number(),
+  unreadTabs: notificationUnreadTabsResource
 })
 
 export type NotificationPageResource = z.infer<typeof notificationPageResource>

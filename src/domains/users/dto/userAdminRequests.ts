@@ -36,12 +36,18 @@ export const userRemoveImageDto = z.object({
   expected: z.string()
 })
 
+// Вкладки «Пользователей» кроме «Все» (спека 44): роль или действующий бан
+export const ADMIN_USER_TABS = [ 'author', 'moderator', 'banned' ] as const;
+
+export type AdminUserTab = (typeof ADMIN_USER_TABS)[number];
+
 /*
-  Фильтр списка пользователей из searchParams (спека 42, шаг 18): вкладка и номер страницы.
-  Мусор в URL — значение по умолчанию, а не 404. Вкладки по ролям и поиск — спека 44
+  Фильтр списка пользователей из searchParams (спеки 42, 44): вкладка, поиск по имени или
+  email и номер страницы. Мусор в URL — значение по умолчанию, а не 404
 */
 export const userAdminFilterDto = z.object({
-  filter: z.enum([ 'banned' ]).optional().catch(undefined),
+  role: z.enum(ADMIN_USER_TABS).optional().catch(undefined),
+  q: z.string().trim().max(100).optional().transform(v => v || undefined).catch(undefined),
   page: z.coerce.number().int().min(1).catch(1).default(1),
 })
 

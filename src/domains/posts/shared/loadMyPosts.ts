@@ -5,8 +5,8 @@ import type { MyPostsFilterDto } from "@/domains/posts/dto/postOfficeRequests";
 import { POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRowData } from "@/domains/posts/shared/postRows";
 import { postViewTotals } from "@/domains/posts/shared/postViews";
-import { escapeLike } from "@/shared/escapeLike";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { textLike } from "@/shared/textLike";
+import { and, count, desc, eq } from "drizzle-orm";
 
 export const MY_POSTS_PAGE = 20;
 
@@ -17,7 +17,7 @@ export const MY_POSTS_PAGE = 20;
 */
 export async function loadMyPosts(userId: number, filter: MyPostsFilterDto){
   const mine = eq(posts.userId, userId);
-  const search = filter.q ? titleLike(filter.q) : undefined;
+  const search = filter.q ? textLike(posts.title, filter.q) : undefined;
   const all = countByStatus(mine);
   const found = search ? countByStatus(and(mine, search)) : all;
   const total = filter.status ? (found[filter.status] ?? 0) : sum(found);
@@ -45,11 +45,6 @@ function countByStatus(where: ReturnType<typeof and>){
     .all();
 
   return Object.fromEntries(rows.map(row => [ row.status, row.n ])) as Partial<Record<PostStatus, number>>;
-}
-
-// lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts
-function titleLike(q: string){
-  return sql`lower_ru(${posts.title}) LIKE ${`%${escapeLike(q.toLocaleLowerCase('ru'))}%`} ESCAPE '\\'`;
 }
 
 function sum(counts: Partial<Record<PostStatus, number>>){
