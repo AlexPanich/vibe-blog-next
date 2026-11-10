@@ -30,9 +30,8 @@ export default function UserBox() {
             component={Link}
             href="/auth/signup"
             size="sm"
-            className="ui-ink-button"
+            className="ui-ink-button ui-userbox__signup"
             leftSection={<IconPencil size={16} />}
-            visibleFrom="sm"
           >
             Писать в Vibe
           </Button>
