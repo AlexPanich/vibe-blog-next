@@ -75,11 +75,11 @@ const postLead = z.string()
   .pipe(z.string().min(POST_LEAD_MIN, leadMessage).max(POST_LEAD_MAX, leadMessage).nullable());
 
 export const postOwnCreateDto = z.object({
-  url: z.string().min(5).max(POST_URL_MAX),
-  title: z.string().min(5).max(POST_TITLE_MAX),
+  url: z.string().min(5, 'Не короче 5 символов').max(POST_URL_MAX, `Не длиннее ${POST_URL_MAX} символов`),
+  title: z.string().min(5, 'Не короче 5 символов').max(POST_TITLE_MAX, `Не длиннее ${POST_TITLE_MAX} символов`),
   lead: postLead,
   // Картинки — только фото галереи, каждое один раз (спека 38); чужие id вычищает action
-  content: z.string().min(5).superRefine((value, ctx) => {
+  content: z.string().min(5, 'Текст поста — не короче 5 символов').superRefine((value, ctx) => {
     const problem = contentImageProblem(value);
 
     if(problem){

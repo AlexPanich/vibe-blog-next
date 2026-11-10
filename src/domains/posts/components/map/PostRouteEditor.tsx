@@ -119,6 +119,8 @@ export default function PostRouteEditor({ points, onChange, travelDays, onTravel
         placeholder="Необязательно"
         min={1}
         max={TRAVEL_DAYS_MAX}
+        // Не подменять 0 / 366 на границу молча: значение уходит как есть, сервер отвечает «От 1 до 365»
+        clampBehavior="none"
         allowDecimal={false}
         allowNegative={false}
         value={travelDays}

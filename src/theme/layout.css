@@ -11400,7 +11400,7 @@ a.ui-report-card__banned:hover {
     display: none;
   }
 
-  /* «Скрыть», «Отклонить жалобу» и «…» — одной строкой, кнопки делят ширину */
+  /* «Скрыть», «Отклонить» и «…» — одной строкой, кнопки делят ширину (длинные подписи — в .ui-report-card__desktop) */
   .ui-report-card__actions:not(.ui-report-card__form) {
     flex-wrap: nowrap;
   }

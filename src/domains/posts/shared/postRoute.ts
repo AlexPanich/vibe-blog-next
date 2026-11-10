@@ -1,8 +1,9 @@
 import { plural } from "@/core/plural";
 
-// «≈ 412 км», меньше 1 км — «< 1 км»
+// «≈ 412 км», «≈ 5 695 км» (разряды — неразрывным пробелом), меньше 1 км — «< 1 км».
+// Локаль задана явно: сервер и браузер форматируют одинаково
 export function formatRouteKm(km: number): string {
-  return km < 1 ? '< 1 км' : `≈ ${Math.round(km)} км`;
+  return km < 1 ? '< 1 км' : `≈ ${Math.round(km).toLocaleString('ru-RU')} км`;
 }
 
 // «1 день / 3 дня / 5 дней»

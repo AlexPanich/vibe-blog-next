@@ -31,7 +31,7 @@ type CommentReportCardProps<T extends CommentReportRowResource> = {
   Карточка жалоб на комментарий (спека 42, шаг 15): коралловая шапка (сколько жалоб, кто,
   когда последняя), комментарий с автором и постом, действия «Скрыть комментарий» (с
   причиной), «Править» (спека 24, жалобы остаются открытыми), «Отклонить жалобу», справа —
-  «Заблокировать автора». На телефоне «Править» и бан — в меню «…». Рассмотренная — без
+  «Заблокировать автора». На телефоне «Править» и бан — в меню «…», подписи короче («Скрыть», «Отклонить»). Рассмотренная — без
   действий, с итогом в шапке. Уже заблокированному автору бан не предлагается: у имени —
   метка «Заблокирован до …» (admin — ссылкой в админку), жалобы разбираются как обычно
 */
@@ -153,7 +153,9 @@ export default function CommentReportCard<T extends CommentReportRowResource>({ 
         >
           Править
         </Button>
-        <Button size="sm" variant="default" loading={keep.isPending} onClick={() => keep.execute()}>Отклонить жалобу</Button>
+        <Button size="sm" variant="default" loading={keep.isPending} onClick={() => keep.execute()}>
+          Отклонить<span className="ui-report-card__desktop">&nbsp;жалобу</span>
+        </Button>
 
         { canBan && !banned && <Link href={banHref} className="ui-report-card__ban ui-report-card__desktop">
           <IconBan size={15} stroke={2} />Заблокировать автора
