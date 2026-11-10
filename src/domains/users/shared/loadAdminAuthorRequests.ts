@@ -71,6 +71,7 @@ function selectRequests(){
   return db.select({
     id: authorRequests.id,
     text: authorRequests.text,
+    link: authorRequests.link,
     status: authorRequests.status,
     reason: authorRequests.reason,
     createdAt: authorRequests.createdAt,
@@ -97,6 +98,7 @@ function toRequest(row: ReturnType<ReturnType<typeof selectRequests>['all']>[num
   return {
     id: row.id,
     text: row.text,
+    link: row.link,
     status: row.status,
     reason: row.reason,
     createdAt: row.createdAt,

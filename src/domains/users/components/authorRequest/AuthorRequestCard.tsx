@@ -4,6 +4,7 @@ import { plural } from "@/core/plural";
 import type { Role } from "@/database/schema";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import UserRolePills from "@/domains/users/components/UserRolePills";
+import AuthorRequestLink from "@/domains/users/components/authorRequest/AuthorRequestLink";
 import AuthorRequestDecision from "@/domains/users/components/authorRequest/AuthorRequestDecision";
 import { formatMonthSince } from "@/domains/users/shared/formatMonthSince";
 import type { AdminAuthorRequest } from "@/domains/users/shared/loadAdminAuthorRequests";
@@ -16,7 +17,8 @@ type AuthorRequestCardProps = {
 
 /*
   Ожидающая заявка в админке (спека 42, шаг 20): фиолетовая рамка, кто подал (роль, с
-  какого месяца с нами, сколько комментариев, когда подана), текст заявки на подложке,
+  какого месяца с нами, сколько комментариев, когда подана), текст заявки на подложке
+  и под ним ссылка «Где почитать» (спека 48),
   поле «Причина отказа» и «Отклонить» / «Выдать роль автора». На телефоне в строке о
   заявителе — только роль и когда подана
 */
@@ -45,6 +47,7 @@ export default function AuthorRequestCard({ request, own }: AuthorRequestCardPro
       <div className="ui-request-review__quote">
         <span className="ui-request-review__label">О чём хочет писать</span>
         <p className="ui-request-review__text">{ request.text }</p>
+        <AuthorRequestLink link={request.link} />
       </div>
 
       { own

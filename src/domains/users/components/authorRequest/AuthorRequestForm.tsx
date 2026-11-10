@@ -3,19 +3,20 @@
 import 'client-only';
 import { createAuthorRequestAction } from "@/domains/users/actions/authorRequestActions";
 import { AUTHOR_REQUEST_PAUSE_DAYS, AUTHOR_REQUEST_TEXT_MAX } from "@/domains/users/dto/authorRequestRequests";
+import { AUTHOR_REQUEST_LINK_MAX } from "@/domains/users/shared/authorRequestLink";
 import { fieldError } from "@/components/general/FieldError";
 import useForm from "@/hooks/useForm";
-import { Button, Text, Textarea } from "@mantine/core";
+import { Button, Text, TextInput, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 
 /*
-  Заявка на роль автора: один текст, решение — у администратора. Поле «Где почитать ваши
-  тексты» из макета — спека 48
+  Заявка на роль автора: текст и необязательная ссылка «Где почитать ваши тексты»
+  (спека 48), решение — у администратора
 */
 export default function AuthorRequestForm() {
   const action = useAction(createAuthorRequestAction);
-  const form = useForm({ text: '' });
+  const form = useForm({ text: '', link: '' });
   const serverError = action.result.serverError?.message;
 
   return (
@@ -32,6 +33,16 @@ export default function AuthorRequestForm() {
         {...form.nv('text')}
         onChange={e => form.update('text', e.target.value)}
         error={fieldError(action.result.validationErrors, 'text')}
+      />
+      <TextInput
+        label={<span className="ui-account-count">Где почитать ваши тексты <small>необязательно</small></span>}
+        labelProps={{ className: 'ui-account-count__label' }}
+        placeholder="t.me/name или ссылка на блог"
+        radius={14}
+        maxLength={AUTHOR_REQUEST_LINK_MAX}
+        {...form.nv('link')}
+        onChange={e => form.update('link', e.target.value)}
+        error={fieldError(action.result.validationErrors, 'link')}
       />
       { serverError && <Text c="red" size="sm">{ serverError }</Text> }
       <div className="ui-request-card__foot">

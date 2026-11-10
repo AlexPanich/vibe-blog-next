@@ -475,11 +475,11 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
     }
 
     // --- Заявки в авторы: Ева, Катя и Глеб ждут (спека 49 — несколько ожидающих), Артёму отказали
-    tx.insert(schema.authorRequests).values({ userId: uid.eva, text: 'Хочу писать о походах выходного дня под Москвой: маршруты от электрички, снаряжение, где переночевать. Есть фото и треки за два года.', createdAt: daysAgo(1) }).run();
+    tx.insert(schema.authorRequests).values({ userId: uid.eva, text: 'Хочу писать о походах выходного дня под Москвой: маршруты от электрички, снаряжение, где переночевать. Есть фото и треки за два года.', link: 'https://eva-hikes.example.org', createdAt: daysAgo(1) }).run();
     tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.eva, createdAt: daysAgo(1) }).run();
     tx.insert(schema.authorRequests).values({ userId: uid.katya, text: 'Хочу писать длинные тексты о дорогах: трассы, придорожные кафе и города, где останавливаешься на ночь. Пишу для себя три года, могу показать примеры.', createdAt: daysAgo(0.4) }).run();
     tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.katya, createdAt: daysAgo(0.4) }).run();
-    tx.insert(schema.authorRequests).values({ userId: uid.gleb, text: 'Велосипедные маршруты выходного дня по Подмосковью: треки, покрытие, где перекусить. Езжу каждые выходные с 2019 года.', createdAt: daysAgo(2.5) }).run();
+    tx.insert(schema.authorRequests).values({ userId: uid.gleb, text: 'Велосипедные маршруты выходного дня по Подмосковью: треки, покрытие, где перекусить. Езжу каждые выходные с 2019 года.', link: 'https://gleb-bike.example.com/routes', createdAt: daysAgo(2.5) }).run();
     tx.insert(schema.notifications).values({ userId: uid.alice, type: 'author_request.created', actorId: uid.gleb, readAt: daysAgo(2), createdAt: daysAgo(2.5) }).run();
     tx.insert(schema.authorRequests).values({ userId: uid.artem, text: 'хочу писать', status: 'rejected', reason: 'Расскажите подробнее, о чём будете писать, и приложите пример текста.', decidedBy: uid.alice, decidedAt: daysAgo(3), createdAt: daysAgo(4) }).run();
     tx.insert(schema.notifications).values({ userId: uid.artem, type: 'author_request.rejected', actorId: uid.alice, readAt: daysAgo(2), createdAt: daysAgo(3) }).run();

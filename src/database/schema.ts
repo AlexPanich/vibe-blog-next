@@ -381,6 +381,8 @@ export const authorRequests = sqliteTable('author_requests', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   userId: integer('user_id').notNull().references(() => users.id),
   text: text('text').notNull(),
+  // «Где почитать ваши тексты» (спека 48): нормализованная, со схемой http(s); null — не указана
+  link: text('link'),
   status: text('status', { enum: AUTHOR_REQUEST_STATUSES }).notNull().default('pending'),
   reason: text('reason'),
   decidedBy: integer('decided_by').references(() => users.id),
@@ -393,6 +395,7 @@ export const authorRequests = sqliteTable('author_requests', {
   check('author_requests_status', sql`${t.status} IN ('pending', 'approved', 'rejected')`),
   check('author_requests_reason', sql`${t.status} <> 'rejected' OR length(trim(coalesce(${t.reason}, ''))) > 0`),
   check('author_requests_decided', sql`(${t.status} = 'pending') = (${t.decidedAt} IS NULL)`),
+  check('author_requests_link', sql`${t.link} IS NULL OR length(${t.link}) <= 300`),
 ]);
 
 export const authorRequestsRelations = relations(authorRequests, ({ one }) => ({
