@@ -1,4 +1,5 @@
 import LocalDate from "@/components/general/LocalDate";
+import AuthorRequestLink from "@/domains/users/components/authorRequest/AuthorRequestLink";
 import type { AuthorRequest } from "@/database/types";
 import { IconInfoCircle } from "@tabler/icons-react";
 
@@ -9,8 +10,8 @@ type AuthorRequestHistoryProps = {
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
 
 /*
-  «Рассмотренные» заявки пользователя: статус, даты, текст и причина отказа. На телефоне —
-  только статус, дата решения и причина
+  «Рассмотренные» заявки пользователя: статус, даты, текст, ссылка «Где почитать» (спека 48) и
+  причина отказа. На телефоне — только статус, дата решения и причина
 */
 export default function AuthorRequestHistory({ requests }: AuthorRequestHistoryProps) {
   if(requests.length === 0){
@@ -39,6 +40,7 @@ export default function AuthorRequestHistory({ requests }: AuthorRequestHistoryP
               </span>
             </div>
             <p className="ui-request-item__text">«{ request.text }»</p>
+            <AuthorRequestLink link={request.link} />
             { !approved && request.reason && <p className="ui-request-item__reason">
               <IconInfoCircle size={15} stroke={2} />
               <span>Причина<span className="ui-request-item__long"> отказа</span>: { request.reason }</span>

@@ -4,6 +4,7 @@ import { requireAuthUser } from "@/shared/auth";
 import LocalDate from "@/components/general/LocalDate";
 import AuthorRequestForm from "@/domains/users/components/authorRequest/AuthorRequestForm";
 import AuthorRequestHero from "@/domains/users/components/authorRequest/AuthorRequestHero";
+import AuthorRequestLink from "@/domains/users/components/authorRequest/AuthorRequestLink";
 import AuthorRequestHistory from "@/domains/users/components/authorRequest/AuthorRequestHistory";
 import AuthorRequestWithdraw from "@/domains/users/components/authorRequest/AuthorRequestWithdraw";
 import { authorRequestState } from "@/domains/users/shared/authorRequests";
@@ -60,6 +61,7 @@ export default async function OfficeAuthorRequest() {
         <section className="ui-request-card">
           <h2 className="ui-request-card__title">Ваша заявка</h2>
           <p className="ui-request-card__text">{ pending.text }</p>
+          <AuthorRequestLink link={pending.link} />
           <div className="ui-request-card__foot">
             <p className="ui-request-card__hint">Отозванная заявка удаляется — новую можно подать сразу</p>
             <AuthorRequestWithdraw />

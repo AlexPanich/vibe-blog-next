@@ -45,7 +45,7 @@ db.transaction(tx => {
     schema.notifications, schema.notificationThrottles, schema.messages, schema.dialogs, schema.messageRestrictions, schema.messageIgnores,
     schema.postReports, schema.commentReports, schema.commentReactions, schema.commentModerations, schema.comments,
     schema.postViewSeen, schema.postViewsDaily, schema.postRatings, schema.postFavorites, schema.postTags, schema.postImages, schema.postModerations, schema.posts,
-    schema.tagFollows, schema.tags, schema.userFollows, schema.userBlocks, schema.authorRequests, schema.userAdminActions,
+    schema.tagFollows, schema.tagAliases, schema.tags, schema.userFollows, schema.userBlocks, schema.authorRequests, schema.userAdminActions,
   ]){
     tx.delete(table).run();
   }

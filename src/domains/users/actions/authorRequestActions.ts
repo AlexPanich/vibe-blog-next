@@ -35,7 +35,7 @@ export const createAuthorRequestAction = actionAuthClient
         actionError(409, `После отказа новую заявку можно подать через ${AUTHOR_REQUEST_PAUSE_DAYS} дней`);
       }
 
-      tx.insert(authorRequests).values({ userId: auth.id, text: parsedInput.text }).run();
+      tx.insert(authorRequests).values({ userId: auth.id, text: parsedInput.text, link: parsedInput.link }).run();
 
       return notify(tx, 'author_request.created', adminIds(tx), { actorId: auth.id });
     });
