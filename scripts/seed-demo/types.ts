@@ -13,6 +13,10 @@ export type SeedPost = {
   type?: PostType,
   lat?: number,
   lng?: number,
+  // Маршрут путешествия (спека 37), порядок — как в тексте; нет — одна точка lat/lng
+  route?: { lat: number, lng: number, label?: string }[],
+  // Дней в пути, 1–365
+  travelDays?: number,
   source?: string,
   status?: PostStatus,
   // Причина для rejected / blocked — уходит в post_moderations; у moderating — прежний отказ (отправлен повторно)

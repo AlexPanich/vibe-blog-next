@@ -7,6 +7,7 @@ import {
   BoldItalicUnderlineToggles,
   CreateLink,
   headingsPlugin,
+  imagePlugin,
   InsertThematicBreak,
   linkDialogPlugin,
   linkPlugin,
@@ -19,13 +20,21 @@ import {
   toolbarPlugin,
   UndoRedo
 } from "@mdxeditor/editor";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { imageUrl } from "@/core/imageUrl";
+import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
+import { galleryIdsInText, galleryImageId } from "@/domains/posts/shared/postGalleryRefs";
+import { PostPhotosContext } from "@/domains/posts/components/editor/PostPhotosContext";
+import PostPhotoButton from "@/domains/posts/components/editor/PostPhotoButton";
+import PostPhotoPicker from "@/domains/posts/components/editor/PostPhotoPicker";
 
 export type PostEditorViewProps = {
   value: string,
   onChange: (markdown: string) => void,
   // Редактор не разобрал markdown — показать запасное поле
-  onError: () => void
+  onError: () => void,
+  // Фото галереи для вставки в текст (спека 38); нет — пост ещё не сохранён
+  images?: PostGalleryResource
 }
 
 /*
@@ -33,42 +42,55 @@ export type PostEditorViewProps = {
   dynamic(..., { ssr: false }) из PostContentEditor. Значение — строка markdown, та же,
   что в колонке content
 */
-export default function PostEditorView({ value, onChange, onError }: PostEditorViewProps) {
+export default function PostEditorView({ value, onChange, onError, images }: PostEditorViewProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Плагин получает свежий обработчик через свой update; новый — только при смене галереи, и тогда
+  // фото в поле перечитываются: удалённое сразу становится заглушкой
+  const preview = useCallback(async (src: string) => previewSrc(src, images), [ images ]);
 
   useCenteredLinkDialog(rootRef);
 
   return (
     <div ref={rootRef} className="ui-editor">
-      <MDXEditor
-        markdown={value}
-        // Нормализация markdown при монтировании — не правка: форма не должна стать «грязной» (спека 49)
-        onChange={(markdown, initialNormalize) => initialNormalize || onChange(markdown)}
-        onError={onError}
-        contentEditableClassName="ui-prose ui-editor__content"
-        translation={translate}
-        plugins={[
-          toolbarPlugin({
-            toolbarContents: () => <>
-              <BoldItalicUnderlineToggles options={[ 'Bold', 'Italic' ]} />
-              <BlockTypeSelect />
-              <ListsToggle options={[ 'bullet', 'number' ]} />
-              <CreateLink />
-              <Separator />
-              <InsertThematicBreak />
-              <UndoRedo />
-            </>
-          }),
-          // Уровни 1 и 2: рендер сдвигает их в h2 / h3 — то же, что видно в поле
-          headingsPlugin({ allowedHeadingLevels: [ 1, 2 ] }),
-          // Без отдельных плагинов кнопки нажимаются и ничего не делают
-          listsPlugin(),
-          quotePlugin(),
-          linkPlugin(),
-          linkDialogPlugin(),
-          thematicBreakPlugin()
-        ]}
-      />
+      <PostPhotosContext value={{ images, used: galleryIdsInText(value) }}>
+        <MDXEditor
+          markdown={value}
+          // Нормализация markdown при монтировании — не правка: форма не должна стать «грязной» (спека 49)
+          onChange={(markdown, initialNormalize) => initialNormalize || onChange(markdown)}
+          onError={onError}
+          contentEditableClassName="ui-prose ui-editor__content"
+          translation={translate}
+          plugins={[
+            toolbarPlugin({
+              toolbarContents: () => <>
+                <BoldItalicUnderlineToggles options={[ 'Bold', 'Italic' ]} />
+                <BlockTypeSelect />
+                <ListsToggle options={[ 'bullet', 'number' ]} />
+                <CreateLink />
+                <PostPhotoButton />
+                <Separator />
+                <InsertThematicBreak />
+                <UndoRedo />
+              </>
+            }),
+            // Уровни 1 и 2: рендер сдвигает их в h2 / h3 — то же, что видно в поле
+            headingsPlugin({ allowedHeadingLevels: [ 1, 2 ] }),
+            // Без отдельных плагинов кнопки нажимаются и ничего не делают
+            listsPlugin(),
+            quotePlugin(),
+            linkPlugin(),
+            linkDialogPlugin(),
+            thematicBreakPlugin(),
+            // Только фото галереи: своё окно выбора, загрузки файлов мимо галереи нет (imageUploadHandler не задан)
+            imagePlugin({
+              imagePreviewHandler: preview,
+              ImageDialog: PostPhotoPicker,
+              disableImageResize: true,
+              disableImageSettingsButton: true
+            })
+          ]}
+        />
+      </PostPhotosContext>
     </div>
   );
 }
@@ -105,7 +127,9 @@ const RU: Record<string, string> = {
   'linkPreview.edit': 'Изменить ссылку',
   'linkPreview.copyToClipboard': 'Скопировать',
   'linkPreview.copied': 'Скопировано',
-  'linkPreview.remove': 'Убрать ссылку'
+  'linkPreview.remove': 'Убрать ссылку',
+  'imageEditor.deleteImage': 'Убрать фото из текста',
+  'imageEditor.editImage': 'Настройки'
 }
 
 const HEADING_LABELS: Record<number, string> = { 1: 'Заголовок', 2: 'Подзаголовок' }
@@ -158,4 +182,25 @@ function useCenteredLinkDialog(rootRef: React.RefObject<HTMLDivElement | null>){
       window.removeEventListener('resize', schedule);
     };
   }, [ rootRef ]);
+}
+
+// gallery:<id> → вариант 800 для показа в поле; удалённое фото и чужой адрес — заглушка с пояснением
+function previewSrc(src: string, images: PostGalleryResource | undefined){
+  const id = galleryImageId(src);
+
+  if(id === null){
+    return placeholder('Картинка не из галереи');
+  }
+
+  const image = images?.find(i => i.id === id);
+
+  return image ? imageUrl(image.fileKey, 800) : placeholder('Фото удалено');
+}
+
+function placeholder(text: string){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200">`
+    + `<rect width="800" height="200" rx="12" fill="#8881"/>`
+    + `<text x="400" y="108" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#888">${text}</text></svg>`;
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }

@@ -199,7 +199,10 @@ Route — `force-dynamic`, готовый XML кэшируется в памят
 `dynamic(..., { ssr: false })` с заглушкой той же высоты. Тайлы — OpenStreetMap без ключа,
 тёмная тема затемняет их CSS-фильтром (`.ui-map` в `layout.css`); CARTO без ключа больше
 не отдаёт тайлы. Метки — без картинок (`CircleMarker`, `divIcon`): стандартная иконка
-Leaflet ломается в бандле.
+Leaflet ломается в бандле. Маршрут путешествия (спека 37) — `post_route_points`: сохранение
+поста пишет точки целиком (delete + insert в своей транзакции, `shared/postRoutePoints.ts`),
+`posts.lat/lng` = точка 0 ради `posts_type_fields_check`. Длина по прямой — `core/geo.ts`, не
+хранится; номерные метки — `divIcon` с числом в `html` (не пользовательский текст).
 
 Загруженные картинки — webp-варианты в `storage/uploads/` (`config/uploads.ts`), обработка —
 `sharp` в `shared/images.ts` (формат по содержимому, лимит пикселей, EXIF снимается).

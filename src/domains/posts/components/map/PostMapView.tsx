@@ -2,29 +2,33 @@
 
 import 'client-only';
 import 'leaflet/dist/leaflet.css';
-import { divIcon, type LatLngTuple } from "leaflet";
-import { CircleMarker, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { useEffect } from "react";
+import type { GeoPoint } from "@/core/geo";
+import { divIcon, latLngBounds, type LatLngTuple } from "leaflet";
+import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { useEffect, useMemo } from "react";
 
 export type PostMapViewProps = {
-  lat: number | null,
-  lng: number | null,
-  // Без onChange карта только показывает точку
-  onChange?: (lat: number, lng: number) => void
+  points: GeoPoint[],
+  // Редактор: клик добавляет точку, метки перетаскиваются; без них карта только показывает
+  onAdd?: (lat: number, lng: number) => void,
+  onMove?: (index: number, lat: number, lng: number) => void
 }
 
 /*
   Сама карта Leaflet. Leaflet трогает window при импорте, поэтому файл грузится только
-  через dynamic(..., { ssr: false }) — PostLocationMap / PostLocationPicker
+  через dynamic(..., { ssr: false }) — PostRouteMap / PostRouteEditor.
+  Одна точка в показе — круглая метка; маршрут и редактор — линия и номерные метки (спека 37)
 */
-export default function PostMapView({ lat, lng, onChange }: PostMapViewProps) {
-  const point: LatLngTuple | null = lat !== null && lng !== null ? [ lat, lng ] : null;
+export default function PostMapView({ points, onAdd, onMove }: PostMapViewProps) {
+  const positions = points.map(point => [ point.lat, point.lng ] as LatLngTuple);
+  const editable = onAdd !== undefined || onMove !== undefined;
+  const icons = useMemo(() => numberIcons(positions.length), [ positions.length ]);
 
   return (
     <MapContainer
-      className="ui-map"
-      center={point ?? EUROPE}
-      zoom={point ? POINT_ZOOM : 3}
+      className={editable ? 'ui-map ui-map--edit' : 'ui-map'}
+      center={positions[0] ?? EUROPE}
+      zoom={positions.length > 0 ? POINT_ZOOM : 3}
       // Колесо не зумирует, пока по карте не кликнули: иначе страница перестаёт прокручиваться
       scrollWheelZoom={false}
     >
@@ -35,16 +39,18 @@ export default function PostMapView({ lat, lng, onChange }: PostMapViewProps) {
         maxZoom={19}
       />
       <WheelOnFocus />
-      <FollowPoint point={point} />
-      { onChange ? <>
-        <PickOnClick onChange={onChange} />
-        { point && <Marker
-          position={point}
-          icon={PIN}
-          draggable
-          eventHandlers={{ dragend: e => { const { lat, lng } = e.target.getLatLng().wrap(); onChange(lat, lng) } }}
-        /> }
-      </> : point && <CircleMarker center={point} radius={9} className="ui-map__marker" /> }
+      <FitOnMount points={positions} />
+      { onAdd && <PickOnClick onAdd={onAdd} /> }
+      { positions.length > 1 && <Polyline positions={positions} className="ui-map__route" /> }
+      { !editable && positions.length === 1
+        ? <CircleMarker center={positions[0]} radius={9} className="ui-map__marker" />
+        : positions.map((position, index) => <Marker
+          key={index}
+          position={position}
+          icon={icons[index]}
+          draggable={onMove !== undefined}
+          eventHandlers={onMove && { dragend: e => { const { lat, lng } = e.target.getLatLng().wrap(); onMove(index, lat, lng) } }}
+        />) }
     </MapContainer>
   );
 }
@@ -53,12 +59,22 @@ const EUROPE: LatLngTuple = [ 50, 15 ];
 
 const POINT_ZOOM = 10;
 
-// CircleMarker не перетаскивается, а стандартная картинка Marker ломается в бандле — своя метка на CSS
-const PIN = divIcon({ className: 'ui-map__pin', iconSize: [ 20, 20 ], iconAnchor: [ 10, 10 ] });
+/*
+  Номерная метка: CircleMarker не перетаскивается и не несёт текст, а стандартная картинка
+  Marker ломается в бандле — divIcon на CSS. В html только число, не пользовательский текст
+*/
+function numberIcons(count: number){
+  return Array.from({ length: count }, (_, index) => divIcon({
+    className: 'ui-map__num',
+    html: String(index + 1),
+    iconSize: [ 26, 26 ],
+    iconAnchor: [ 13, 13 ]
+  }));
+}
 
-function PickOnClick({ onChange }: { onChange: (lat: number, lng: number) => void }){
+function PickOnClick({ onAdd }: { onAdd: (lat: number, lng: number) => void }){
   // wrap: за краем карты мир повторяется, и долгота уходит за ±180
-  useMapEvents({ click: e => { const { lat, lng } = e.latlng.wrap(); onChange(lat, lng) } });
+  useMapEvents({ click: e => { const { lat, lng } = e.latlng.wrap(); onAdd(lat, lng) } });
 
   return null;
 }
@@ -72,20 +88,16 @@ function WheelOnFocus(){
   return null;
 }
 
-// Координаты ввели в поля — карта едет к точке, зум не сбрасывается
-function FollowPoint({ point }: { point: LatLngTuple | null }){
+// Границы — один раз при открытии: после клика или перетаскивания в редакторе карта не прыгает
+function FitOnMount({ points }: { points: LatLngTuple[] }){
   const map = useMap();
-  const [ lat, lng ] = point ?? [];
 
   useEffect(() => {
-    if(lat === undefined || lng === undefined){
-      return;
+    if(points.length > 1){
+      map.fitBounds(latLngBounds(points), { padding: [ 24, 24 ], maxZoom: POINT_ZOOM });
     }
-
-    if(!map.getBounds().contains([ lat, lng ])){
-      map.setView([ lat, lng ], Math.max(map.getZoom(), POINT_ZOOM));
-    }
-  }, [ map, lat, lng ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ map ]);
 
   return null;
 }

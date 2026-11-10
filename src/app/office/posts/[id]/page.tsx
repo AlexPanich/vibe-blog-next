@@ -13,6 +13,9 @@ import TagChips from "@/domains/tags/exports/TagChips";
 import PostTypeMeta from "@/domains/posts/components/PostTypeMeta";
 import PostGallery from "@/domains/posts/components/PostGallery";
 import { getPostImages } from "@/domains/posts/shared/postImages";
+import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
+import { routeKm } from "@/core/geo";
+import { galleryIdsInText } from "@/domains/posts/shared/postGalleryRefs";
 import { resource } from "@/core/resource";
 import { requireAuthUser } from "@/shared/auth";
 import { idOrFail } from "@/shared/params";
@@ -48,6 +51,11 @@ export default async function OfficePostsItem({ params }: PageProps<'/office/pos
   const decision = noteLabel ? await getLastModeration(post.id) : undefined;
   const hint = STATUS_HINTS[post.status];
   const tags = await getPostTags(post.id);
+  const images = await getPostImages(post.id);
+  // Карты в кабинете нет — только длина маршрута в мета-строке (спека 37)
+  const points = post.type === 'travel' ? await getRoutePoints(post.id) : [];
+  // фото из текста стоят на своих местах, в сетке после текста — остальные (спека 38)
+  const inline = galleryIdsInText(post.content);
   // Автор видит, что пост уже смотрят — и кто
   const reviewer = post.status === 'moderating' && post.reviewerId
     ? await db.query.users.findFirst({ where: eq(users.id, post.reviewerId), columns: { name: true } })
@@ -71,7 +79,7 @@ export default async function OfficePostsItem({ params }: PageProps<'/office/pos
           <IconCalendar size={14} stroke={1.8} />
           <LocalDate value={post.createdAt} />
         </span>
-        <PostTypeMeta post={post} />
+        <PostTypeMeta post={{ ...post, routeKm: routeKm(points) }} />
         <TagChips tags={tags} />
       </div>
 
@@ -84,9 +92,9 @@ export default async function OfficePostsItem({ params }: PageProps<'/office/pos
 
       { reviewer && <div className="ui-note">Пост смотрит модератор { reviewer.name }.</div> }
 
-      <div className="ui-article__body"><PostMarkdown content={post.content} /></div>
+      <div className="ui-article__body"><PostMarkdown content={post.content} photos={{ postId: post.id, images }} /></div>
 
-      <PostGallery postId={post.id} title={post.title} images={await getPostImages(post.id)} />
+      <PostGallery postId={post.id} title={post.title} images={images.filter(image => !inline.includes(image.id))} />
 
       <div className="ui-actions">
         { post.status === 'draft'

@@ -65,6 +65,8 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
       const submitted = status === 'draft' ? null : status === 'moderating' && post.submittedHoursAgo !== undefined ? now - post.submittedHoursAgo * HOUR : created;
       // Сохранение содержимого: черновик правили позже, остальные — при создании
       const updated = status === 'draft' ? Math.max(created, Math.min(now - 60_000, created + 2 * HOUR)) : created;
+      // Точки маршрута (спека 37): первая продублирована в posts.lat/lng
+      const points = post.route ?? (post.type === 'travel' ? [ { lat: post.lat!, lng: post.lng! } ] : []);
       const id = tx.insert(schema.posts).values({
         userId: uid[post.author],
         url: post.url,
@@ -74,13 +76,18 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         status,
         type: post.type ?? 'simple',
         source: post.source ?? null,
-        lat: post.lat ?? null,
-        lng: post.lng ?? null,
+        lat: points[0]?.lat ?? null,
+        lng: points[0]?.lng ?? null,
+        travelDays: post.travelDays ?? null,
         createdAt: new Date(created),
         submittedAt: submitted === null ? null : new Date(submitted),
         updatedAt: new Date(updated),
         publishedAt: published ? new Date(created + HOUR) : null,
       }).returning({ id: schema.posts.id }).get().id;
+
+      if(points.length > 0){
+        tx.insert(schema.postRoutePoints).values(points.map((point, position) => ({ postId: id, position, lat: point.lat, lng: point.lng, label: point.label ?? null }))).run();
+      }
 
       if(post.tags.length > 0){
         tx.insert(schema.postTags).values(post.tags.map(name => ({ postId: id, tagId: tagId[name] }))).run();
@@ -91,6 +98,21 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
 
         return tx.insert(schema.postImages).values({ postId: id, fileKey: file.key, width: file.width, height: file.height, caption: caption ?? null, createdAt: new Date(created) }).returning({ id: schema.postImages.id }).get().id;
       });
+
+      // Фото внутри текста (спека 38): маркер gallery:#N — N-е фото поста, id известен только сейчас
+      const content = post.content.replace(/\(gallery:#(\d+)\)/g, (_, n: string) => {
+        const imageId = images[Number(n) - 1];
+
+        if(imageId === undefined){
+          throw new Error(`${post.url}: в тексте фото №${n}, а у поста ${images.length} фото`);
+        }
+
+        return `(gallery:${imageId})`;
+      });
+
+      if(content !== post.content){
+        tx.update(schema.posts).set({ content }).where(eq(schema.posts.id, id)).run();
+      }
 
       if(published){
         tx.insert(schema.postModerations).values({ postId: id, userId: uid.some, decision: 'approved', createdAt: new Date(created + HOUR) }).run();

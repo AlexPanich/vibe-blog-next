@@ -12,6 +12,7 @@ import { IMAGE_WIDTHS } from "@/core/imageUrl";
 import { aiIdSchema } from "@/domains/posts/dto/postRequests";
 import { postImageCaptionDto, postImageUploadDto } from "@/domains/posts/dto/postImageRequests";
 import { workWithPost } from "@/domains/posts/policy";
+import { removeGalleryRefs } from "@/domains/posts/shared/postGalleryRefs";
 import { readImage, saveImageVariants } from "@/shared/images";
 import { deleteCommentNotifications } from "@/domains/notifications/exports/notify";
 import { eraseEditedTexts } from "@/domains/comments/exports/eraseEditedTexts";
@@ -101,8 +102,8 @@ export const setPostCoverAction = actionAuthClient
 
 /*
   Вместе с картинкой уходят её комментарии, их реакции, жалобы и уведомления; журнал модерации
-  остаётся, но прежние тексты правок модератора из него стираются (спека 24).
-  foreign_keys выключен — всё явно в транзакции, файлы — после неё
+  остаётся, но прежние тексты правок модератора из него стираются (спека 24); блоки фото
+  вычищаются из текста (спека 38). foreign_keys выключен — всё явно в транзакции, файлы — после неё
 */
 export const deletePostImageAction = actionAuthClient
   .bindArgsSchemas([ aiIdSchema ])
@@ -124,6 +125,13 @@ export const deletePostImageAction = actionAuthClient
 
       tx.delete(postImages).where(eq(postImages.id, imageId)).run();
       tx.update(posts).set({ coverImageId: null }).where(and(eq(posts.id, image.postId), eq(posts.coverImageId, imageId))).run();
+
+      const { content } = tx.select({ content: posts.content }).from(posts).where(eq(posts.id, image.postId)).get()!;
+      const cleaned = removeGalleryRefs(content, id => id !== imageId);
+
+      if(cleaned !== content){
+        tx.update(posts).set({ content: cleaned }).where(eq(posts.id, image.postId)).run();
+      }
     });
 
     await removeUploads(image.fileKey, IMAGE_WIDTHS);

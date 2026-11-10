@@ -6,6 +6,7 @@ import PostCoverField from "@/domains/posts/components/editor/PostCoverField";
 import PostPhotosCard from "@/domains/posts/components/editor/PostPhotosCard";
 import PostGalleryManager from "@/domains/posts/components/PostGalleryManager";
 import { getPostImages } from "@/domains/posts/shared/postImages";
+import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
 import { resource } from "@/core/resource";
 import { postCoverResource, postGalleryResource, postOfficeResource } from "@/domains/posts/dto/postResources";
 import { getPost } from "@/domains/posts/shared/getPost";
@@ -38,14 +39,14 @@ export default async function OfficePostsEdit({ params }: PageProps<'/office/pos
     return redirect(`/office/posts/${post.id}`);
   }
 
-  const [ tags, images ] = await Promise.all([ getTagOptions(), getPostImages(post.id) ]);
+  const [ tags, images, points ] = await Promise.all([ getTagOptions(), getPostImages(post.id), getRoutePoints(post.id) ]);
   const tagIds = (await db.select({ tagId: postTags.tagId }).from(postTags).where(eq(postTags.postId, post.id))).map(pt => pt.tagId);
   const cover = images.find(image => image.id === post.coverImageId) ?? images[0] ?? null;
 
   return (
     <>
       <PostEditorForm
-        post={resource(postOfficeResource, { ...post, tagIds })}
+        post={resource(postOfficeResource, { ...post, tagIds, points })}
         tags={resource(tagListResource, tags)}
         head={<>
           <OfficeCrumbs items={[
@@ -60,6 +61,7 @@ export default async function OfficePostsEdit({ params }: PageProps<'/office/pos
           cover={cover && resource(postCoverResource, cover)}
           full={images.length >= uploadsConfig.postImagesPerPost}
         />}
+        images={resource(postGalleryResource, images)}
         photos={<PostPhotosCard images={resource(postGalleryResource, images)} anchor="photos" />}
       />
 

@@ -5,7 +5,7 @@ import type { Post } from "@/database/types";
 import { StrictResource } from "@/core/resource";
 import { createPostAction, updatePostAction } from "@/domains/posts/actions/postActions";
 import usePostForm from "@/domains/posts/hooks/usePostForm";
-import { PostDetailsResource } from "@/domains/posts/dto/postResources";
+import { PostDetailsResource, type PostGalleryResource, type RoutePointResource } from "@/domains/posts/dto/postResources";
 import PostFormFields from "@/domains/posts/components/PostFormFields";
 import PostPublishCard, { type PostEditorIntent } from "@/domains/posts/components/editor/PostPublishCard";
 import PostEditorTips from "@/domains/posts/components/editor/PostEditorTips";
@@ -17,9 +17,9 @@ import { IconCircleCheck, IconSend } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState, type ReactNode } from "react";
 
-type PostFields = Pick<Post, 'id' | 'url' | 'title' | 'lead' | 'content' | 'updatedAt'> & { tagIds: number[] } & PostDetailsResource
+type PostFields = Pick<Post, 'id' | 'url' | 'title' | 'lead' | 'content' | 'updatedAt'> & { tagIds: number[], points: RoutePointResource[] } & PostDetailsResource
 
-type PostEditorFormProps<T extends PostFields, U extends TagListResource> = {
+type PostEditorFormProps<T extends PostFields, U extends TagListResource, G extends PostGalleryResource> = {
   // Нет поста — создание
   post?: StrictResource<T, PostFields>,
   tags: StrictResource<U, TagListResource>,
@@ -27,10 +27,12 @@ type PostEditorFormProps<T extends PostFields, U extends TagListResource> = {
   head: ReactNode,
   cover: ReactNode,
   // Карточка «Фото к посту» в правой колонке
-  photos: ReactNode
+  photos: ReactNode,
+  // Галерея для фото в тексте (спека 38); у нового поста её нет
+  images?: StrictResource<G, PostGalleryResource>
 }
 
-const EMPTY = { url: '', title: '', lead: '', content: '', tagIds: [] }
+const EMPTY = { url: '', title: '', lead: '', content: '', tagIds: [], points: [] }
 
 /*
   Редактор поста (спека 42): поля слева, справа карточка публикации, подсказки и фото.
@@ -39,13 +41,14 @@ const EMPTY = { url: '', title: '', lead: '', content: '', tagIds: [] }
   повторном открытии); отправленный уходит на карточку поста. Уход с несохранёнными правками
   спрашивает подтверждение (спека 49). На телефоне кнопки — в закреплённой снизу панели
 */
-export default function PostEditorForm<T extends PostFields, U extends TagListResource>({
+export default function PostEditorForm<T extends PostFields, U extends TagListResource, G extends PostGalleryResource>({
   post,
   tags,
   head,
   cover,
-  photos
-}: PostEditorFormProps<T, U>) {
+  photos,
+  images
+}: PostEditorFormProps<T, U, G>) {
   const form = usePostForm(post ?? EMPTY);
   // Сохранённое состояние формы: от него считается «есть несохранённые правки»
   const [ baseline, setBaseline ] = useState(() => JSON.stringify(form.payload()));
@@ -86,7 +89,7 @@ export default function PostEditorForm<T extends PostFields, U extends TagListRe
 
       <div className="ui-post-editor__columns">
         <div className="ui-post-editor__fields">
-          <PostFormFields form={form} tagOptions={tags} errors={action.result.validationErrors} cover={cover} />
+          <PostFormFields form={form} tagOptions={tags} errors={action.result.validationErrors} cover={cover} postId={post?.id} images={images} />
         </div>
 
         <aside className="ui-post-editor__aside">

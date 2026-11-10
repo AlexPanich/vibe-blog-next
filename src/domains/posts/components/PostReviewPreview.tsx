@@ -1,10 +1,14 @@
-import type { PostDetailsResource, PostGalleryResource } from "@/domains/posts/dto/postResources";
+import { routePointsResource, type PostDetailsResource, type PostGalleryResource, type RoutePointsResource } from "@/domains/posts/dto/postResources";
+import PostRouteMap from "@/domains/posts/components/map/PostRouteMap";
+import { routeKm } from "@/core/geo";
+import { resource } from "@/core/resource";
 import LocalDate from "@/components/general/LocalDate";
 import PostGallery from "@/domains/posts/components/PostGallery";
 import PostMarkdown from "@/domains/posts/components/PostMarkdown";
 import PostStatusTag from "@/domains/posts/components/PostStatusTag";
 import PostTypeMeta from "@/domains/posts/components/PostTypeMeta";
-import { coverOf } from "@/domains/posts/shared/postImages";
+import { coverOf, inlineCover } from "@/domains/posts/shared/postImages";
+import { galleryIdsInText } from "@/domains/posts/shared/postGalleryRefs";
 import { readingMinutes } from "@/domains/posts/shared/postText";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
@@ -25,16 +29,19 @@ type PostReviewPreviewProps = {
   },
   author: { name: string, avatarKey: string | null },
   tags: { id: number, name: string }[],
-  images: PostGalleryResource
+  images: PostGalleryResource,
+  // Маршрут путешествия (спека 37); у других типов — []
+  points: RoutePointsResource
 }
 
 /*
   Пост на ревью так, как его увидит читатель (спека 42, шаг 14): тип и рубрики, заголовок,
-  подзаголовок, автор, обложка, текст, галерея. Если фото есть — напоминание проверить
+  подзаголовок, автор, обложка, текст, галерея, карта маршрута. Если фото есть — напоминание проверить
   авторство. Без 'use client' — рендерит серверная страница
 */
-export default function PostReviewPreview({ post, author, tags, images }: PostReviewPreviewProps) {
-  const cover = coverOf(post, images);
+export default function PostReviewPreview({ post, author, tags, images, points }: PostReviewPreviewProps) {
+  const inline = galleryIdsInText(post.content);
+  const cover = inlineCover(post, images, inline) ? null : coverOf(post, images);
   const minutes = readingMinutes(post.content);
 
   return (
@@ -58,7 +65,7 @@ export default function PostReviewPreview({ post, author, tags, images }: PostRe
             <span className="ui-review-post__desk-only"> · /{ post.url }</span>
             { tags[0] && <span className="ui-review-post__phone-only"> · #{ tags[0].name }</span> }
           </span>
-          { post.type !== 'simple' && <span className="ui-review-post__links"><PostTypeMeta post={post} /></span> }
+          { post.type !== 'simple' && <span className="ui-review-post__links"><PostTypeMeta post={{ ...post, routeKm: routeKm(points) }} /></span> }
         </span>
       </div>
 
@@ -73,7 +80,7 @@ export default function PostReviewPreview({ post, author, tags, images }: PostRe
       /> }
 
       <div className="ui-review-post__body">
-        <PostMarkdown content={post.content} />
+        <PostMarkdown content={post.content} photos={{ postId: post.id, images }} />
       </div>
 
       { images.length > 0 && <p className="ui-review-post__flag">
@@ -81,7 +88,9 @@ export default function PostReviewPreview({ post, author, tags, images }: PostRe
         В посте { images.length } фото — проверьте, что у сторонних указан автор
       </p> }
 
-      <PostGallery postId={post.id} title={post.title} images={images} />
+      <PostGallery postId={post.id} title={post.title} images={images.filter(image => !inline.includes(image.id))} />
+
+      { post.type === 'travel' && points.length > 0 && <PostRouteMap points={resource(routePointsResource, points)} travelDays={post.travelDays} /> }
     </article>
   );
 }

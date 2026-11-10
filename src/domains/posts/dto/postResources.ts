@@ -18,10 +18,27 @@ export const postDetailsResource = z.object({
   type: z.enum(POST_TYPES),
   source: z.string().nullable(),
   lat: z.number().nullable(),
-  lng: z.number().nullable()
+  lng: z.number().nullable(),
+  // Дней в пути (спека 37), только у travel
+  travelDays: z.number().nullable()
 })
 
 export type PostDetailsResource = z.infer<typeof postDetailsResource>
+
+/*
+  Точка маршрута путешествия (спека 37), по порядку
+*/
+export const routePointResource = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  label: z.string().nullable()
+})
+
+export type RoutePointResource = z.infer<typeof routePointResource>
+
+export const routePointsResource = z.array(routePointResource);
+
+export type RoutePointsResource = z.infer<typeof routePointsResource>
 
 export const postCoverResource = z.object({
   fileKey: z.string(),
@@ -62,6 +79,8 @@ export const postResource = z.object({
   excerpt: z.string(),
   readingMinutes: z.number(),
   commentsCount: z.number(),
+  // Длина маршрута по прямой, км; null — не travel или одна точка
+  routeKm: z.number().nullable(),
   ...postDetailsResource.shape
 })
 
@@ -109,6 +128,7 @@ export const postOfficeResource = z.object({
   tagIds: z.array(z.number()),
   // Последнее сохранение содержимого — «Сохранено …» в редакторе (спека 49)
   updatedAt: z.date(),
+  points: routePointsResource,
   ...postDetailsResource.shape
 })
 

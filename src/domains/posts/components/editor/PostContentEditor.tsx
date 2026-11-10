@@ -6,6 +6,7 @@ import PostMarkdownField from "@/domains/posts/components/PostMarkdownField";
 import PostFieldLabel from "@/domains/posts/components/editor/PostFieldLabel";
 import { plainText, readingMinutes } from "@/domains/posts/shared/postText";
 import { plural } from "@/core/plural";
+import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
 import { Input } from "@mantine/core";
 import dynamic from "next/dynamic";
 import { useState } from "react";
@@ -19,7 +20,10 @@ const PostEditorView = dynamic(() => import('@/domains/posts/components/editor/P
 type PostContentEditorProps = {
   value: string,
   onChange: (value: string) => void,
-  error?: string
+  error?: string,
+  // Галерея поста для фото в тексте (спека 38); на странице создания поста её нет
+  postId?: number,
+  images?: PostGalleryResource
 }
 
 type Mode = 'text' | 'preview'
@@ -29,7 +33,7 @@ type Mode = 'text' | 'preview'
   чтения». Превью — тот же рендер, что на сайте; редактор при этом не размонтируется, только
   прячется — история правок и курсор остаются. Если markdown не разобрался — прежнее поле
 */
-export default function PostContentEditor({ value, onChange, error }: PostContentEditorProps) {
+export default function PostContentEditor({ value, onChange, error, postId, images }: PostContentEditorProps) {
   const [ broken, setBroken ] = useState(false);
   const [ mode, setMode ] = useState<Mode>('text');
   const words = plainText(value).split(' ').filter(Boolean).length;
@@ -37,7 +41,7 @@ export default function PostContentEditor({ value, onChange, error }: PostConten
   if(broken){
     return <>
       <div className="ui-note">Текст не открылся в визуальном редакторе — правьте разметку.</div>
-      <PostMarkdownField value={value} onChange={onChange} error={error} />
+      <PostMarkdownField value={value} onChange={onChange} error={error} postId={postId} images={images} />
     </>
   }
 
@@ -51,10 +55,10 @@ export default function PostContentEditor({ value, onChange, error }: PostConten
             </button>
           )) }
         </div>
-        <PostEditorView value={value} onChange={onChange} onError={() => setBroken(true)} />
+        <PostEditorView value={value} onChange={onChange} onError={() => setBroken(true)} images={images} />
         { mode === 'preview' && <div className="ui-md__preview">
           { value.trim()
-            ? <PostMarkdown content={value} />
+            ? <PostMarkdown content={value} photos={postId && images ? { postId, images } : undefined} />
             : <p className="ui-md__empty">Пока пусто — напишите текст во вкладке «Текст».</p> }
         </div> }
         <div className="ui-md__foot">
