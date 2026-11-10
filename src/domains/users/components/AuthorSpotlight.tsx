@@ -7,7 +7,9 @@ import AuthorTopics from "@/domains/users/components/AuthorTopics";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import UserFollowButton from "@/domains/users/components/UserFollowButton";
 import UserRoleBadge from "@/domains/users/components/UserRoleBadge";
-import type { DirectoryAuthor } from "@/domains/users/shared/authorsDirectory";
+import UserFollowersCount from "@/domains/users/components/UserFollowersCount";
+import type { DirectoryAuthor } from "@/domains/users/shared/loadAuthorsPage";
+import { AUTHORS_TOPIC } from "@/shared/liveEvents";
 import { IconArrowRight } from "@tabler/icons-react";
 
 type AuthorSpotlightProps = {
@@ -21,7 +23,8 @@ type AuthorSpotlightProps = {
 /*
   Большая карточка на странице авторов (спека 30): обложка, аватар на её краю, имя с ролью,
   «о себе», рубрики, цифры, подписка и «Профиль». На телефоне — узкая карточка в строке,
-  листаемой вбок: рубрики прячутся, цифры — одной строкой. Без 'use client'
+  листаемой вбок: рубрики прячутся, цифры — одной строкой. Читатели — живые, тема authors
+  (спека 53). Без 'use client'
 */
 export default function AuthorSpotlight({ author, cover, rating }: AuthorSpotlightProps) {
   const href = `/authors/${author.id}` as const;
@@ -59,14 +62,14 @@ export default function AuthorSpotlight({ author, cover, rating }: AuthorSpotlig
             <dt>оценка</dt>
           </div> }
           <div>
-            <dd>{ author.followersCount }</dd>
-            <dt>{ plural(author.followersCount, [ 'читатель', 'читателя', 'читателей' ]) }</dt>
+            <dd><UserFollowersCount authorId={author.id} initial={author.followersCount} topic={AUTHORS_TOPIC} view="number" /></dd>
+            <dt><UserFollowersCount authorId={author.id} initial={author.followersCount} topic={AUTHORS_TOPIC} view="label" /></dt>
           </div>
         </dl>
         <p className="ui-spotlight__meta">
           { author.postsCount } { plural(author.postsCount, [ 'пост', 'поста', 'постов' ]) }
           { rating && <> · { rating } ★</> }
-          { ' · ' }{ author.followersCount } { plural(author.followersCount, [ 'читатель', 'читателя', 'читателей' ]) }
+          { ' · ' }<UserFollowersCount authorId={author.id} initial={author.followersCount} topic={AUTHORS_TOPIC} view="text" />
         </p>
 
         <div className="ui-spotlight__actions">

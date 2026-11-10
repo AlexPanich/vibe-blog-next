@@ -1,7 +1,7 @@
 import 'server-only';
 import { db } from "@/globals/db";
 import { liveBus } from "@/globals/liveBus";
-import { userTopic } from "@/shared/liveEvents";
+import { AUTHORS_TOPIC, userTopic } from "@/shared/liveEvents";
 import { isBlockedBetween } from "@/domains/users/shared/userBlocks";
 import { userFollows } from "@/database/schema";
 import { and, count, eq } from "drizzle-orm";
@@ -34,9 +34,12 @@ export async function followersCount(authorId: number){
   return row.n;
 }
 
-// Число подписчиков у всех, кто смотрит автора (спека 29). После commit
+// Число подписчиков у всех, кто смотрит автора или список авторов (спеки 29, 53). После commit
 export async function publishFollowersCount(authorIds: number[]){
   for(const userId of authorIds){
-    liveBus.publishTopic(userTopic(userId), 'user.followers', { userId, followersCount: await followersCount(userId) });
+    const data = { userId, followersCount: await followersCount(userId) };
+
+    liveBus.publishTopic(userTopic(userId), 'user.followers', data);
+    liveBus.publishTopic(AUTHORS_TOPIC, 'user.followers', data);
   }
 }

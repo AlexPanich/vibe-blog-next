@@ -4,11 +4,14 @@ import AuthorTopics from "@/domains/users/components/AuthorTopics";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import UserFollowButton from "@/domains/users/components/UserFollowButton";
 import UserRoleBadge from "@/domains/users/components/UserRoleBadge";
-import type { DirectoryAuthor } from "@/domains/users/shared/authorsDirectory";
+import UserFollowersCount from "@/domains/users/components/UserFollowersCount";
+import type { DirectoryAuthor } from "@/domains/users/shared/loadAuthorsPage";
+import { AUTHORS_TOPIC } from "@/shared/liveEvents";
 
 /*
   Строка списка «Все авторы» (спека 30): автор с «о себе», рубрики, посты, оценка,
-  читатели, подписка. На телефоне — аватар, имя, цифры одной строкой и круглая подписка.
+  читатели (живые, тема authors — спека 53), подписка. На телефоне — аватар, имя, цифры
+  одной строкой и круглая подписка.
   Без 'use client'
 */
 export default function AuthorListRow({ author, rating }: { author: DirectoryAuthor, rating: string | null }) {
@@ -29,14 +32,14 @@ export default function AuthorListRow({ author, rating }: { author: DirectoryAut
           <p className="ui-authors-row__meta">
             { author.postsCount } { plural(author.postsCount, [ 'пост', 'поста', 'постов' ]) }
             { rating && <> · { rating } ★</> }
-            { ' · ' }{ author.followersCount } { plural(author.followersCount, [ 'читатель', 'читателя', 'читателей' ]) }
+            { ' · ' }<UserFollowersCount authorId={author.id} initial={author.followersCount} topic={AUTHORS_TOPIC} view="text" />
           </p>
         </div>
       </div>
       <div className="ui-authors-row__topics"><AuthorTopics topics={author.topics.slice(0, 2)} /></div>
       <span className="ui-authors-row__num" data-label="Постов">{ author.postsCount }</span>
       <span className="ui-authors-row__num" data-label="Оценка">{ rating ? `${rating} ★` : '—' }</span>
-      <span className="ui-authors-row__num" data-label="Читателей">{ author.followersCount }</span>
+      <span className="ui-authors-row__num" data-label="Читателей"><UserFollowersCount authorId={author.id} initial={author.followersCount} topic={AUTHORS_TOPIC} view="number" /></span>
       <div className="ui-authors-row__action"><UserFollowButton authorId={author.id} /></div>
     </li>
   );

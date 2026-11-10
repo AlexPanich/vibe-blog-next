@@ -6,6 +6,7 @@ import type { Role } from "@/database/schema";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import UserFollowButton from "@/domains/users/components/UserFollowButton";
 import UserFollowersCount from "@/domains/users/components/UserFollowersCount";
+import { userTopic } from "@/shared/liveEvents";
 import UserBlockGate from "@/domains/users/components/block/UserBlockGate";
 import UserBlockButton from "@/domains/users/components/block/UserBlockButton";
 import UserBlockMenuItem from "@/domains/users/components/block/UserBlockMenuItem";
@@ -70,7 +71,10 @@ export default function AuthorHead({ author, cover, postsCount, followersCount, 
             <dt>{ plural(postsCount, [ 'пост', 'поста', 'постов' ]) }</dt>
             <dd>{ postsCount.toLocaleString('ru-RU') }</dd>
           </div>
-          <UserFollowersCount authorId={author.id} initial={followersCount} />
+          <div>
+            <dt><UserFollowersCount authorId={author.id} initial={followersCount} topic={userTopic(author.id)} view="label" /></dt>
+            <dd><UserFollowersCount authorId={author.id} initial={followersCount} topic={userTopic(author.id)} view="number" /></dd>
+          </div>
           { rating && <div>
             <dt><span className="ui-author-head__wide">средняя </span>оценка</dt>
             <dd>{ rating }</dd>

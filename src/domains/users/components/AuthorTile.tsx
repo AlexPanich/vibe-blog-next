@@ -2,6 +2,8 @@ import Link from "@/components/general/Link";
 import { plural } from "@/core/plural";
 import UserAvatar from "@/domains/users/components/UserAvatar";
 import UserFollowButton from "@/domains/users/components/UserFollowButton";
+import UserFollowersCount from "@/domains/users/components/UserFollowersCount";
+import { userTopic } from "@/shared/liveEvents";
 
 type AuthorTileProps = {
   author: {
@@ -16,7 +18,8 @@ type AuthorTileProps = {
 
 /*
   Плитка автора на главной (спека 30): фото, имя, «о себе», посты и читатели, подписка.
-  На телефоне — узкая плитка в ленте, листаемой вбок: фото, имя и подписка.
+  На телефоне — узкая плитка в ленте, листаемой вбок: фото, имя и подписка. Читатели —
+  живые (спека 53).
   Без 'use client' — рендерит серверная страница
 */
 export default function AuthorTile({ author }: AuthorTileProps) {
@@ -33,7 +36,7 @@ export default function AuthorTile({ author }: AuthorTileProps) {
       </div>
       <div className="ui-author-tile__foot">
         <span className="ui-author-tile__count">
-          { author.postsCount } { plural(author.postsCount, [ 'пост', 'поста', 'постов' ]) } · { author.followersCount } { plural(author.followersCount, [ 'читатель', 'читателя', 'читателей' ]) }
+          { author.postsCount } { plural(author.postsCount, [ 'пост', 'поста', 'постов' ]) } · <UserFollowersCount authorId={author.id} initial={author.followersCount} topic={userTopic(author.id)} view="text" />
         </span>
         <UserFollowButton authorId={author.id} />
       </div>
