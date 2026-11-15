@@ -17,10 +17,6 @@ type ClientSideInitializerProps = {
 }
 
 export default function ClientSideInitializer({ children, user: initialUser }: ClientSideInitializerProps){
-  // ClientSideInitializer полезен для первичной инициализации чего угодно
-  // Вот например, если tacnstack захотим притащить
-  // const [ queryClient ] = useState(() => new QueryClient());
-
   /*
     В кабинете пользователь приходит с сервера из layout на каждый рендер, в том числе после
     router.refresh() — берём его из prop, а не копируем в state: копия осталась бы прежней
@@ -45,7 +41,6 @@ export default function ClientSideInitializer({ children, user: initialUser }: C
       }
 
       if(result.data){
-        // todo: mb change some d.ts file in better auth for roles additional field
         const { id, name, email, roles, avatarKey } = result.data.user as unknown as AuthUser;
         // better-auth отдаёт id строкой, в AuthUser он числовой (как в requireAuthUser)
         setSessionUser({ id: +id, name, email, roles, avatarKey: avatarKey ?? null });

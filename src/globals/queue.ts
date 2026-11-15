@@ -15,18 +15,15 @@ export const queueNiceLogger: Logger = {
   debug(){  },
 }
 
-// на всякий случай, если внутри библиотеки номрально clearInterval, то это перестраховка при hmr
 /*
-  похоже там реально ставится интервал при defineQueue всегда, даже если
-  мы не хотим слушать очередь, а тупо хотим вызывать add
-  библиотеку на рефакторинг CLAUDE CODE !! :))
+  Экземпляр в globalThis: defineQueue всегда ставит интервал, даже если очередь только
+  пополняют через add, — без этого HMR плодил бы интервалы
 */
 export const queue = moduleGlobalThis.queue ??= defineQueue({ 
   connection: better(new Database("storage/data.db")),
   logger: queueNiceLogger
 });
 
-// лучше сделать свой класс насладник или переопределить d.ts или просто написать библиотеку получше
 export function sendToQueue<T extends keyof QUEUE_SCHEMA>(
   key: T, 
   obj: QUEUE_SCHEMA[T],

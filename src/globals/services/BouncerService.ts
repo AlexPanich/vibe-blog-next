@@ -12,7 +12,7 @@ export default class BoucerService{
     const user = await getAuthUser();
 
     if(!user){
-      return unauthorized(); // forbidden
+      return unauthorized();
     }
 
     if(!(await policyFn(user))){
