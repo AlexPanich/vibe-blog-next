@@ -10,7 +10,6 @@ export function initClient(path: string){
   return drizzle(sqlite, { schema });
 }
 
-/* Никакого DI, делаем в духе Next.js на пофиг :)) */
 export const db = initClient(databaseConfig.path);
 
 export type DBClient = typeof db;

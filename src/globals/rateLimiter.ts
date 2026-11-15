@@ -6,7 +6,6 @@ export const rateLimiters = {
   globalSec: memoryLimiter({ keyPrefix: 'global-sec', points: 30, duration: 1 }),
   globalMin: memoryLimiter({ keyPrefix: 'global-min', points: 300, duration: 60 }),
 
-  /* под конкретные страницы мб */
   signin: memoryLimiter({
     keyPrefix: 'signin',
     points: 5,

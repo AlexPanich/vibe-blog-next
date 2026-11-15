@@ -50,8 +50,6 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ url, user }) => {
-      //await new Promise(r => setTimeout(r, 3000))
-      //console.log(`email,  ${url} ${token}`);
       sendToQueue('auth.send-verification-email', {
         url,
         email: user.email
