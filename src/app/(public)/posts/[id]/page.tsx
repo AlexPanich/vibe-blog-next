@@ -14,6 +14,7 @@ import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
 import { postRatingStats } from "@/domains/posts/shared/postRatings";
 import { postSummary, readingMinutes } from "@/domains/posts/shared/postText";
 import { authorMorePosts } from "@/domains/posts/shared/authorMorePosts";
+import { similarPosts } from "@/domains/posts/shared/similarPosts";
 import { postRatingBlockResource, postResource, routePointsResource } from "@/domains/posts/dto/postResources";
 import { resource } from "@/core/resource";
 import { imageUrl } from "@/core/imageUrl";
@@ -43,6 +44,8 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
     authorMorePosts(post.userId, post.id),
     post.type === 'travel' ? getRoutePoints(post.id) : []
   ]);
+  // После more: из похожих исключаются посты «Ещё у автора» (спека 56, п. 9)
+  const similar = await similarPosts(post, more.map(p => p.id));
   const inline = galleryIdsInText(post.content);
   const cover = inlineCover(post, images, inline) ? null : coverOf(post, images);
 
@@ -90,6 +93,13 @@ export default async function PostPage({ params }: PageProps<'/posts/[id]'>) {
       <h2 className="ui-post-more__title">Ещё у { author.nameGenitive ?? 'автора' }</h2>
       <div className="ui-post-grid">
         { more.map(card => <PostCardBridge key={card.id} post={resource(postResource, card)} />) }
+      </div>
+    </section> }
+
+    { similar.length > 0 && <section className="ui-post-more">
+      <h2 className="ui-post-more__title">Похожие истории</h2>
+      <div className="ui-post-grid">
+        { similar.map(card => <PostCardBridge key={card.id} post={resource(postResource, card)} />) }
       </div>
     </section> }
   </>

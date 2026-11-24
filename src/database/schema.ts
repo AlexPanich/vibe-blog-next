@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const USER_ROLES = ['author', 'moderator', 'admin'] as const;
 
@@ -273,6 +273,19 @@ export const postAiReviews = sqliteTable('post_ai_reviews', {
   check('post_ai_reviews_done_check', sql`(${t.status} = 'done') = (${t.verdict} IS NOT NULL AND ${t.summary} IS NOT NULL AND ${t.issues} IS NOT NULL)`),
   check('post_ai_reviews_failed_check', sql`(${t.status} = 'failed') = (${t.error} IS NOT NULL)`),
 ]);
+
+/*
+  Вектор смысла опубликованного поста (спека 56): один на пост. model — ключ из конфига
+  (ollama/bge-m3, voyage/voyage-4): векторы разных моделей не сравниваются. textHash —
+  sha256 текста, по которому считали: совпал — модель не вызываем
+*/
+export const postEmbeddings = sqliteTable('post_embeddings', {
+  postId: integer('post_id').primaryKey().references(() => posts.id),
+  model: text('model').notNull(),
+  textHash: text('text_hash').notNull(),
+  vector: blob('vector', { mode: 'buffer' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
 
 /*
   Журнал действий admin над пользователями. Записи не перезаписываются и не удаляются,

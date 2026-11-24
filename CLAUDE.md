@@ -298,6 +298,19 @@ MDXEditor начальный: правка снаружи (помощник ст
   `shared/postAssist.ts`, цитаты и экранирование тегов промпта — общие с разбором в
   `shared/postQuotes.ts`. Блоки — `components/assist/`, видимость (`aiEnabled && assistPost`)
   считает page.
+- Эмбеддинги (спека 56) — `aiEmbed({ texts, kind })` / `embedEnabled` / `embedModel` в
+  `globals/ai.ts`, реализации — `core/llm/ollamaEmbed.ts` (`/api/embed`, `OLLAMA_EMBED_MODEL`,
+  bge-m3) и `voyageEmbed.ts` (fetch, `VOYAGE_API_KEY`, `VOYAGE_MODEL`, voyage-4); провайдер — по
+  `AI_PROVIDER`, включаются отдельно от генерации. Векторы нормирует обёртка, сходство и BLOB —
+  `core/vectors.ts`. Таблица `post_embeddings` — вектор на опубликованный пост, `model` — ключ из
+  конфига (`ollama/bge-m3`): смена модели или провайдера = новые векторы. Пороги — `config/ai.ts`.
+- Вектор пересчитывает `changePostStatus` при каждом переходе в `published` (`after()`, совпал
+  `textHash` — без модели). Недостающие досчитывает `ensureEmbeddings()` при чтении (добор в
+  `after()`, флаг в `globalThis`, скрипта нет) — `shared/postEmbeddings.ts`. «Похожие истории» —
+  `shared/similarPosts.ts` (без вектора — по рубрикам), «Похоже по смыслу» под лентой —
+  `shared/semanticFeed.ts` + `PostSemanticResults` под `<Suspense>`. Вектор запроса кэшируется в
+  `globals/queryEmbeddings.ts` (`core/ttlCache.ts`), промахи кэша — лимит `aiSearch` по IP,
+  списывается в server component (сверх лимита блока просто нет).
 
 ## Уведомления и живой канал
 

@@ -18,3 +18,15 @@ export type LlmParseResult<T> = {
 export class LlmError extends Error {
   name = 'LlmError';
 }
+
+// Эмбеддинги (спека 56): document — текст поста, query — поисковый запрос
+export type LlmEmbedInput = {
+  texts: string[],
+  kind: 'document' | 'query'
+}
+
+// Сырые векторы в порядке texts; нормирует вызывающий
+export type LlmEmbedResult = {
+  vectors: number[][],
+  tokens: number
+}

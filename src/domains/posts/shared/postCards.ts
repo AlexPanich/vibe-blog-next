@@ -1,6 +1,7 @@
 import 'server-only';
 import { db } from "@/globals/db";
-import { comments } from "@/database/schema";
+import { comments, posts as postsTable } from "@/database/schema";
+import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRatings } from "@/domains/posts/shared/postRatings";
 import { withCovers } from "@/domains/posts/shared/postImages";
 import { postSummary, readingMinutes } from "@/domains/posts/shared/postText";
@@ -29,6 +30,24 @@ export async function withCardData<T extends CardSource>(posts: T[]){
     commentsCount: counts.get(post.id) ?? 0,
     routeKm: kms.get(post.id) ?? null
   }));
+}
+
+/*
+  Карточки постов по id в заданном порядке (похожие и смысловой блок ленты, спека 56):
+  порядок задаёт сходство, а не база
+*/
+export async function cardsByIds(ids: number[]){
+  if(ids.length === 0){
+    return [];
+  }
+
+  const rows = await db.query.posts.findMany({
+    where: inArray(postsTable.id, ids),
+    with: { author: true, ...POST_TAGS_WITH }
+  });
+  const byId = new Map((await withCardData(rows.map(post => ({ ...post, tags: pickTags(post) })))).map(row => [ row.id, row ]));
+
+  return ids.flatMap(id => byId.get(id) ?? []);
 }
 
 /*

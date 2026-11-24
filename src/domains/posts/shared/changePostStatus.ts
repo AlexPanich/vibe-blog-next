@@ -8,6 +8,7 @@ import { settlePostReports } from "@/domains/posts/shared/postReports";
 import { publishNotifications } from "@/domains/notifications/exports/notify";
 import { liveBus } from "@/globals/liveBus";
 import { startPostAiReview } from "@/domains/posts/shared/postAiReview";
+import { startPostEmbedding } from "@/domains/posts/shared/postEmbeddings";
 import { and, eq, isNull, type SQL } from "drizzle-orm";
 
 type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -22,7 +23,8 @@ type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
   — широковещательный post.published. Уход из published снимает выбор редакции в том же
   UPDATE (спека 39); restore и unblock его не возвращают. Каждый переход в moderating ставит
   submittedAt — время последней отправки, ключ очереди (спека 49), и после commit запускает
-  разбор ИИ этой отправки (спека 54). Права проверяет вызывающий.
+  разбор ИИ этой отправки (спека 54). Каждый переход в published после commit пересчитывает
+  вектор смысла поста (спека 56; текст не менялся — без вызова модели). Права проверяет вызывающий.
 */
 export function changePostStatus(postId: number, transition: PostTransition, actorId: number, also?: (tx: DBTransaction) => void, guard?: SQL){
   const { from, to } = POST_TRANSITIONS[transition];
@@ -63,6 +65,10 @@ export function changePostStatus(postId: number, transition: PostTransition, act
 
   if(submittedAt){
     startPostAiReview(postId, submittedAt);
+  }
+
+  if(to === 'published'){
+    startPostEmbedding(postId);
   }
 }
 
