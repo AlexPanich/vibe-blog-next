@@ -24,7 +24,8 @@
      .ui-account-options, .ui-account-security;
    - заявка в авторы: .ui-request, .ui-request-hero, .ui-request-card, .ui-request-history /
      .ui-request-item; в админке — .ui-request-review, .ui-request-recent, .ui-request-decided;
-   - ревью поста: .ui-review-page, .ui-review-post, .ui-decision, .ui-mod-history / .ui-mod-event;
+   - ревью поста: .ui-review-page, .ui-review-post, .ui-decision, .ui-ai-review (разбор ИИ),
+     .ui-mod-history / .ui-mod-event;
    - жалобы: .ui-report-cards / .ui-report-card, .ui-report-done, .ui-report-kinds, .ui-post-report;
    - справочник рубрик: .ui-tag-bar, .ui-tag-table;
    - все посты в админке: .ui-admin-posts;
@@ -10951,6 +10952,172 @@ span.ui-photo__arrow {
 
 .ui-decision__release:hover:not(:disabled) {
   color: var(--ink);
+}
+
+/* Разбор ИИ (спека 54): карточка над решением, в потоке колонки и на телефоне — шторка только
+   у .ui-decision[data-sheet]. Вердикт: ok — mint, doubt — sun, violation — coral */
+.ui-ai-review {
+  gap: 0.875rem;
+}
+
+.ui-ai-review__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ui-ai-review__head .ui-decision__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.ui-ai-review__head .ui-decision__title svg {
+  color: var(--plum);
+}
+
+.ui-ai-review__chip,
+.ui-queue-row__ai {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.625rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+
+.ui-queue-row__ai {
+  background: var(--paper-tint);
+}
+
+.ui-ai-review__chip[data-verdict='ok'],
+.ui-queue-row__ai[data-verdict='ok'] {
+  color: var(--mint);
+  background: var(--mint-soft);
+}
+
+.ui-ai-review__chip[data-verdict='doubt'],
+.ui-queue-row__ai[data-verdict='doubt'] {
+  color: var(--ink);
+  background: var(--sun-soft);
+}
+
+.ui-ai-review__chip[data-verdict='violation'],
+.ui-queue-row__ai[data-verdict='violation'] {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.ui-ai-review__state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.ui-ai-review__state[data-tone='error'] {
+  color: var(--danger);
+}
+
+.ui-ai-review__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ui-ai-review__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ui-ai-review__issues {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-ai-review__issue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.ui-ai-review__category {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ui-ai-review__quote {
+  padding-left: 0.625rem;
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ui-ai-review__missing {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+.ui-ai-review__explanation {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.ui-ai-review__rerun {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+
+.ui-ai-review__previous {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+}
+
+.ui-ai-review__previous summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.ui-ai-review__previous[open] summary {
+  margin-bottom: 0.75rem;
+}
+
+.ui-ai-review__foot {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
 }
 
 /* История модерации */

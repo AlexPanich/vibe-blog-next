@@ -24,11 +24,16 @@ export type LiveEvents = {
   'post.rating': { postId: number, average: number | null, count: number },
   // Тема автора и тема authors: число подписчиков у всех, кто смотрит автора, его пост или список авторов
   'user.followers': { userId: number, followersCount: number },
+  /*
+    Тема поста, сигнал «перечитай» разбор ИИ — на старте и на финише (спека 54). Тему держит
+    только staff на странице ревью; гостю он ничего не раскрывает: пост в moderating не публичен
+  */
+  'post.ai-review.changed': { postId: number },
 }
 
 export type LiveEventType = keyof LiveEvents;
 
-export const LIVE_EVENT_TYPES = [ 'notification.created', 'notification.read', 'message.created', 'message.deleted', 'message.read', 'post.published', 'post.comments.changed', 'comment.reactions', 'post.rating', 'user.followers' ] as const satisfies readonly LiveEventType[];
+export const LIVE_EVENT_TYPES = [ 'notification.created', 'notification.read', 'message.created', 'message.deleted', 'message.read', 'post.published', 'post.comments.changed', 'comment.reactions', 'post.rating', 'user.followers', 'post.ai-review.changed' ] as const satisfies readonly LiveEventType[];
 
 // Уходят всем через liveBus.broadcast; только на них гость открывает поток
 export const LIVE_BROADCAST_EVENT_TYPES = [ 'post.published' ] as const satisfies readonly LiveEventType[];
@@ -36,7 +41,7 @@ export const LIVE_BROADCAST_EVENT_TYPES = [ 'post.published' ] as const satisfie
 export type LiveBroadcastEventType = (typeof LIVE_BROADCAST_EVENT_TYPES)[number];
 
 // Уходят через liveBus.publishTopic подписчикам темы — вошедшим и гостям
-export const LIVE_TOPIC_EVENT_TYPES = [ 'post.comments.changed', 'comment.reactions', 'post.rating', 'user.followers' ] as const satisfies readonly LiveEventType[];
+export const LIVE_TOPIC_EVENT_TYPES = [ 'post.comments.changed', 'comment.reactions', 'post.rating', 'user.followers', 'post.ai-review.changed' ] as const satisfies readonly LiveEventType[];
 
 export type LiveTopicEventType = (typeof LIVE_TOPIC_EVENT_TYPES)[number];
 

@@ -234,6 +234,46 @@ export const postModerations = sqliteTable('post_moderations', {
   check('post_moderations_required_comment', sql`${t.decision} NOT IN ('rejected', 'blocked') OR length(trim(coalesce(${t.comment}, ''))) > 0`),
 ]);
 
+export const AI_REVIEW_STATUSES = ['pending', 'done', 'failed'] as const;
+
+export type AiReviewStatus = (typeof AI_REVIEW_STATUSES)[number];
+
+export const AI_VERDICTS = ['ok', 'doubt', 'violation'] as const;
+
+export type AiVerdict = (typeof AI_VERDICTS)[number];
+
+export const AI_ISSUE_CATEGORIES = ['spam', 'copyright', 'abuse', 'personal_data', 'wrong_type', 'other'] as const;
+
+export type AiIssueCategory = (typeof AI_ISSUE_CATEGORIES)[number];
+
+/*
+  Разборы ИИ поста на модерации (спека 54). Каждый запуск — новая строка, текущий — последний
+  для текущего posts.submittedAt. Записи не перезаписываются, поэтому без onDelete cascade.
+  issues — JSON-массив пунктов, читается zod-ресурсом
+*/
+export const postAiReviews = sqliteTable('post_ai_reviews', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  postId: integer('post_id').notNull().references(() => posts.id),
+  // К какой отправке относится разбор: posts.submittedAt на момент запуска
+  submittedAt: integer('submitted_at', { mode: 'timestamp' }).notNull(),
+  status: text('status', { enum: AI_REVIEW_STATUSES }).notNull().default('pending'),
+  verdict: text('verdict', { enum: AI_VERDICTS }),
+  summary: text('summary'),
+  issues: text('issues'),
+  rejectComment: text('reject_comment'),
+  model: text('model'),
+  inputTokens: integer('input_tokens'),
+  outputTokens: integer('output_tokens'),
+  // Короткая причина сбоя для модератора, без стека
+  error: text('error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+}, t => [
+  index('post_ai_reviews_post_idx').on(t.postId, t.id),
+  check('post_ai_reviews_done_check', sql`(${t.status} = 'done') = (${t.verdict} IS NOT NULL AND ${t.summary} IS NOT NULL AND ${t.issues} IS NOT NULL)`),
+  check('post_ai_reviews_failed_check', sql`(${t.status} = 'failed') = (${t.error} IS NOT NULL)`),
+]);
+
 /*
   Журнал действий admin над пользователями. Записи не перезаписываются и не удаляются,
   поэтому у внешних ключей нет onDelete cascade
@@ -684,12 +724,17 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   postTags:    many(postTags),
   comments:    many(comments),
   images:      many(postImages),
-  routePoints: many(postRoutePoints)
+  routePoints: many(postRoutePoints),
+  aiReviews:   many(postAiReviews)
 }));
 
 export const postModerationsRelations = relations(postModerations, ({ one }) => ({
   post:      one(posts, { fields: [postModerations.postId], references: [posts.id] }),
   moderator: one(users, { fields: [postModerations.userId], references: [users.id] })
+}));
+
+export const postAiReviewsRelations = relations(postAiReviews, ({ one }) => ({
+  post: one(posts, { fields: [postAiReviews.postId], references: [posts.id] })
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

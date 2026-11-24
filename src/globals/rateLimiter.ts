@@ -31,6 +31,8 @@ export const rateLimiters = {
   dialogCreate: memoryLimiter({ keyPrefix: 'dialog-create', points: 20, duration: 60 * 60 }),
   /* картинки постов и аватары, ключ — id пользователя */
   imageUpload: memoryLimiter({ keyPrefix: 'image-upload', points: 60, duration: 60 * 60 }),
+  /* ручной разбор ИИ на странице ревью (спека 54), ключ — id модератора */
+  aiReview: memoryLimiter({ keyPrefix: 'ai-review', points: 10, duration: 60 }),
   /* перебор текущего пароля обладателем сессии (смена пароля и email), ключ — id пользователя */
   credentialCheck: memoryLimiter({
     keyPrefix: 'credential-check',

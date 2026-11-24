@@ -272,6 +272,19 @@ production-сервер не отдаёт файлы, появившиеся т�
   задача `mail.send` (`{ to, subject, text }`), тексты — `src/shared/mails.ts`. SMTP нет,
   worker печатает письма в консоль.
 
+## ИИ
+
+- Разбор поста на модерации (спека 54). Модель — только через обёртку `globals/ai.ts`
+  (`aiParse`, `aiEnabled`, `LlmError`): код фичи не импортирует ни SDK, ни `core/llm/`.
+  Реализации — `core/llm/` (`ollamaParse`, `anthropicParse`), настройки приходят параметрами.
+- `AI_PROVIDER`: `local` (по умолчанию) — Ollama в LAN, `anthropic` — Claude API
+  (`beta.messages.create` + structured output, `fallbacks: 'default'`; SDK грузится `import()`
+  только в этом режиме). Env — `config/ai.ts` и `.env.example`; нет `OLLAMA_URL` / ключа —
+  ИИ выключен, демо на Render работает на разборах из сида.
+- Разбор идёт в `after()` в процессе Next, а не в `plainjob`: worker не дотянется до `liveBus` и
+  `globals/db`. Цена — разбор теряется при рестарте, поэтому `pending` старше 5 минут — сбой.
+- Запуск — в `changePostStatus` при переходе в `moderating`, вручную — `postAiReviewActions.ts`.
+
 ## Уведомления и живой канал
 
 - Домен `notifications`: `notify(tx, …)` пишет в транзакции действия и возвращает id,
@@ -286,7 +299,7 @@ production-сервер не отдаёт файлы, появившиеся т�
   открывается, лишь пока на странице есть подписчик такого события (`LiveEventsProvider`),
   лимит потоков гостя — по IP.
 - Третий режим — темы (`publishTopic`, спека 29): события открытой страницы — `post:<id>`
-  (комментарии, реакции, оценка), `user:<id>` (число подписчиков) и `authors` — список авторов
+  (комментарии, реакции, оценка, сигнал разбора ИИ `post.ai-review.changed`), `user:<id>` (число подписчиков) и `authors` — список авторов
   (`user.followers` всех авторов, спека 53). Компонент держит тему
   через `useLiveTopic()`, провайдер открывает поток с `?topics=` и переоткрывает его при
   смене тем; гостю тоже. В событии темы — только то, что

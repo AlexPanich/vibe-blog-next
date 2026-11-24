@@ -13,6 +13,10 @@ import PostReviewDecision from "@/domains/posts/components/PostReviewDecision";
 import PostBlockingForm from "@/domains/posts/components/PostBlockingForm";
 import PostModerationHistory from "@/domains/posts/components/PostModerationHistory";
 import PostFeatureButton from "@/domains/posts/components/PostFeatureButton";
+import PostAiReviewBlock from "@/domains/posts/components/review/PostAiReviewBlock";
+import PostReviewDraftProvider from "@/domains/posts/components/review/PostReviewDraftProvider";
+import { loadAiReviewBlock } from "@/domains/posts/shared/postAiReview";
+import { postAiReviewBlockResource } from "@/domains/posts/dto/postAiReviewResources";
 import LocalDate from "@/components/general/LocalDate";
 import { EDITORS_PICK_DAYS, editorsPickUntil, featuredNow } from "@/domains/posts/shared/editorsPick";
 import { postModerateResource } from "@/domains/posts/dto/postResources";
@@ -26,8 +30,8 @@ import { notFound } from "next/navigation";
 import { IconChevronLeft } from "@tabler/icons-react";
 
 /*
-  Ревью поста (спека 42, шаг 14): слева пост глазами читателя, справа карточка решения и
-  история модерации. На телефоне решение — шторка снизу, история — сворачиваемая строка
+  Ревью поста (спека 42, шаг 14): слева пост глазами читателя, справа разбор ИИ (спека 54),
+  карточка решения и история модерации. На телефоне решение — шторка снизу, история — сворачиваемая строка
 */
 export default async function ModerationPostsItem({ params }: PageProps<'/office/moderation/posts/[id]'>) {
   const id = idOrFail((await params).id);
@@ -56,6 +60,8 @@ export default async function ModerationPostsItem({ params }: PageProps<'/office
     getPostImages(post.id),
     post.type === 'travel' ? getRoutePoints(post.id) : []
   ]);
+  // Разбор ИИ — только у moderating (спека 54, п. 11); null — блока нет
+  const ai = post.status === 'moderating' && post.submittedAt ? loadAiReviewBlock(post.id, post.submittedAt, new Date()) : null;
   const back = backlink(post.status);
   const reviewer = post.status === 'moderating' && post.reviewer && post.reviewStartedAt
     ? { name: post.reviewer.name, mine: post.reviewerId === me.id, startedAt: post.reviewStartedAt }
@@ -75,7 +81,10 @@ export default async function ModerationPostsItem({ params }: PageProps<'/office
         <PostReviewPreview post={post} author={post.author} tags={pickTags(post)} images={images} points={points} />
 
         <aside className="ui-review-page__aside">
-          <Decision post={post} me={me} />
+          <PostReviewDraftProvider>
+            { ai && <PostAiReviewBlock postId={post.id} block={resource(postAiReviewBlockResource, ai)} canDecide={decidePostModeration(me, post)} /> }
+            <Decision post={post} me={me} />
+          </PostReviewDraftProvider>
           <PostModerationHistory post={post} moderations={post.moderations} review={reviewer} />
         </aside>
       </div>

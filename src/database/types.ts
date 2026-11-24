@@ -1,8 +1,9 @@
-import { authorRequests, commentReports, comments, dialogs, messages, notificationThrottles, notifications, postImages, postModerations, postReports, postRoutePoints, posts, tags, userAdminActions, users } from './schema';
+import { authorRequests, commentReports, comments, dialogs, messages, notificationThrottles, notifications, postAiReviews, postImages, postModerations, postReports, postRoutePoints, posts, tags, userAdminActions, users } from './schema';
 
 export type User = typeof users.$inferSelect;
 export type Post = typeof posts.$inferSelect;
 export type PostModeration = typeof postModerations.$inferSelect;
+export type PostAiReview = typeof postAiReviews.$inferSelect;
 export type UserAdminAction = typeof userAdminActions.$inferSelect;
 export type AuthorRequest = typeof authorRequests.$inferSelect;
 

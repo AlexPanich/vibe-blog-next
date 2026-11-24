@@ -6,6 +6,8 @@ import { imageUrl } from "@/core/imageUrl";
 import PostClaimButton from "@/domains/posts/components/PostClaimButton";
 import type { PostRowData } from "@/domains/posts/shared/postRows";
 import { tagTone } from "@/domains/tags/exports/tagTone";
+import type { QueueAiVerdict } from "@/domains/posts/dto/postAiReviewResources";
+import { AI_VERDICT_LABELS } from "@/domains/posts/shared/postAiReviewLabels";
 import UserAvatar from "@/domains/users/exports/UserAvatar";
 import { IconArrowRight, IconEye, IconHourglass, IconLock } from "@tabler/icons-react";
 
@@ -15,15 +17,17 @@ type PostQueueRowProps = {
   tags: Pick<Tag, 'id' | 'name'>[],
   // free — никто не взял, mine — ревью ведёте вы, other — ведёт другой модератор
   review: 'free' | 'mine' | 'other',
-  reviewer?: string
+  reviewer?: string,
+  // Вердикт разбора ИИ текущей отправки или «читает» (спека 54); нет — чипа нет
+  ai?: QueueAiVerdict
 }
 
 /*
   Строка очереди модерации (спека 42, шаг 13): обложка, заголовок, автор, рубрика, давность
-  последней отправки (спека 49), кто ведёт ревью; справа — «Взять на ревью», «Продолжить» (своё ревью, рамка коралловая) или
+  последней отправки (спека 49), чип разбора ИИ (спека 54), кто ведёт ревью; справа — «Взять на ревью», «Продолжить» (своё ревью, рамка коралловая) или
   «Занят». Ссылка — на заголовке и растянута на строку, кнопка лежит поверх неё
 */
-export default function PostQueueRow({ post, author, tags, review, reviewer }: PostQueueRowProps) {
+export default function PostQueueRow({ post, author, tags, review, reviewer, ai }: PostQueueRowProps) {
   const href = `/office/moderation/posts/${post.id}` as const;
   const rubric = tags[0];
 
@@ -45,6 +49,7 @@ export default function PostQueueRow({ post, author, tags, review, reviewer }: P
           <span className="ui-queue-row__when">
             <span className="ui-queue-row__when-label">отправлен </span><LocalDate value={post.submittedAt ?? post.createdAt} relative />
           </span>
+          { ai && <span className="ui-queue-row__ai" data-verdict={ai}>ИИ: { ai === 'pending' ? 'читает' : AI_VERDICT_LABELS[ai] }</span> }
         </div>
         { review !== 'free' && <span className="ui-queue-row__reviewer">
           <IconEye size={13} stroke={2} />На ревью: { review === 'mine' ? 'Вы' : reviewer }
