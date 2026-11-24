@@ -262,11 +262,6 @@
   padding-block: 0;
 }
 
-/* Свой крестик закрывает поле, нативный «очистить» у поля type="search" — лишний */
-.ui-header-search .ui-search__input::-webkit-search-cancel-button {
-  appearance: none;
-}
-
 /* Крестик — только на телефоне, где поле закрывает всю строку */
 .ui-header-search__close {
   display: none;
@@ -1184,6 +1179,14 @@ a.ui-tag[data-tone]:not([data-tone='plain']):hover {
   outline: 0;
   color: var(--ink);
   font: inherit;
+}
+
+/*
+  Нативный «очистить» у type="search" только стирает текст, а свой крестик (ссылка
+  .ui-search__clear, в шапке — кнопка закрытия) сбрасывает поиск: вместе их было два
+*/
+.ui-search__input::-webkit-search-cancel-button {
+  appearance: none;
 }
 
 .ui-search__clear {
