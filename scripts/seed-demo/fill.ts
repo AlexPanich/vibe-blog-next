@@ -141,6 +141,26 @@ export function fillDemo(db: BetterSQLite3Database<typeof schema>, files: SeedIm
         for(const staff of [ 'some', 'alice' ].filter(k => k !== post.author)){
           tx.insert(schema.notifications).values({ userId: uid[staff], type: 'post.submitted', actorId: uid[post.author], postId: id, createdAt: new Date(submitted ?? created) }).run();
         }
+
+        // Разборы ИИ (спека 54): готовые, model = 'seed'; previous — к прошлой отправке, до отказа
+        for(const review of post.aiReviews ?? []){
+          const reviewSubmitted = review.previous ? created + HOUR : submitted ?? created;
+
+          tx.insert(schema.postAiReviews).values({
+            postId: id,
+            submittedAt: new Date(reviewSubmitted),
+            status: 'done',
+            verdict: review.verdict,
+            summary: review.summary,
+            issues: JSON.stringify(review.issues.map(issue => ({ ...issue, quoteMissing: false }))),
+            rejectComment: review.rejectComment,
+            model: 'seed',
+            inputTokens: 0,
+            outputTokens: 0,
+            createdAt: new Date(reviewSubmitted + 60_000),
+            finishedAt: new Date(reviewSubmitted + 60_000)
+          }).run();
+        }
       }
 
       postIds[post.url] = { id, userId: uid[post.author], createdAt: created, status, images };

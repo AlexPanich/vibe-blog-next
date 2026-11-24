@@ -8,6 +8,7 @@ import PostFeatureButton from "@/domains/posts/components/PostFeatureButton";
 import { featuredNow } from "@/domains/posts/shared/editorsPick";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { withRowData } from "@/domains/posts/shared/postRows";
+import { loadQueueAiVerdicts } from "@/domains/posts/shared/postAiReview";
 import { POST_MODERATION_TABS, postModerationFilterDto } from "@/domains/posts/dto/postModerationRequests";
 import { requireAuthUser } from "@/shared/auth";
 import OfficeHead from "@/components/layout/OfficeHead";
@@ -44,6 +45,8 @@ export default async function ModerationPosts({ searchParams }: PageProps<'/offi
     orderBy: status === 'moderating' ? [ asc(posts.submittedAt), asc(posts.id) ] : desc(posts.createdAt),
     with: { author: true, reviewer: true, ...POST_TAGS_WITH }
   }));
+  // Чип разбора ИИ у строки очереди (спека 54, п. 13)
+  const verdicts = status === 'moderating' ? loadQueueAiVerdicts(list, new Date()) : new Map();
 
   return (
     <>
@@ -80,6 +83,7 @@ export default async function ModerationPosts({ searchParams }: PageProps<'/offi
             tags={pickTags(post)}
             review={post.reviewerId === null ? 'free' : post.reviewerId === me.id ? 'mine' : 'other'}
             reviewer={post.reviewer?.name}
+            ai={verdicts.get(post.id)}
           />) }
         </div>
       ) : (

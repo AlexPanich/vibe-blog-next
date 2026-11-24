@@ -13,6 +13,7 @@
     "db:seed-dev": "node scripts/seed-dev.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
     "@mantine/core": "^9.7.1",
     "@mantine/hooks": "^9.7.1",
     "@mantine/notifications": "^9.7.4",

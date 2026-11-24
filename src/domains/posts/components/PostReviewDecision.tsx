@@ -9,6 +9,8 @@ import useForm from "@/hooks/useForm";
 import { Button, Textarea } from "@mantine/core";
 import { IconCheck, IconEye, IconHandGrab, IconHandStop, IconX } from "@tabler/icons-react";
 import { useAction } from "next-safe-action/hooks";
+import { useReviewDraft } from "@/domains/posts/components/review/PostReviewDraftProvider";
+import { useState } from "react";
 
 type PostReviewDecisionProps = {
   id: number,
@@ -23,7 +25,8 @@ type PostReviewDecisionProps = {
 /*
   Карточка решения по посту на модерации (спека 42, шаг 14): плашка «кто ведёт ревью»,
   комментарий, «Опубликовать» / «Отклонить», «Снять себя с ревью». На телефоне — шторка,
-  закреплённая снизу. Страница обновляется сама: actions делают revalidatePath
+  закреплённая снизу. Страница обновляется сама: actions делают revalidatePath. Текст
+  комментария может прийти из разбора ИИ — через PostReviewDraftProvider
 */
 export default function PostReviewDecision({ id, review, reviewer, canDecide, canTakeover }: PostReviewDecisionProps) {
   const approve = useAction(approvePostAction.bind(null, id));
@@ -32,8 +35,16 @@ export default function PostReviewDecision({ id, review, reviewer, canDecide, ca
   const release = useAction(releaseReviewAction.bind(null, id));
   const takeover = useAction(takeoverReviewAction.bind(null, id));
   const form = useForm({ comment: '' });
+  const { draft } = useReviewDraft();
+  const [ appliedDraft, setAppliedDraft ] = useState(0);
   const pending = approve.isPending || reject.isPending;
   const error = [ approve, reject, claim, release, takeover ].map(a => a.result.serverError?.message).find(Boolean);
+
+  // «Подставить в комментарий» из разбора ИИ (спека 54): новый черновик — в поле при рендере, без useEffect
+  if(draft && draft.n !== appliedDraft){
+    setAppliedDraft(draft.n);
+    form.update('comment', draft.text);
+  }
 
   return (
     <section className="ui-decision" data-sheet="" aria-label="Решение по посту">

@@ -1,4 +1,4 @@
-import type { PostReportReason, PostStatus, PostType } from "../../src/database/schema.ts";
+import type { AiIssueCategory, AiVerdict, PostReportReason, PostStatus, PostType } from "../../src/database/schema.ts";
 import type { TagName } from "./people.ts";
 
 // [ ключ набора в photos.json, номер фото в наборе, подпись ]
@@ -31,7 +31,20 @@ export type SeedPost = {
   // Жалобы на пост (спека 36): открытые, если не разобраны (reportsResolved)
   reports?: { by: string, reason: PostReportReason, comment?: string }[],
   // Разобраны модератором some: оставил пост или заблокировал его
-  reportsResolved?: 'kept' | 'blocked'
+  reportsResolved?: 'kept' | 'blocked',
+  /*
+    Готовые разборы ИИ у moderating (спека 54), model = 'seed'. previous — к прошлой отправке
+    (нужен moderation). Цитаты — дословно из поста
+  */
+  aiReviews?: SeedAiReview[]
+}
+
+export type SeedAiReview = {
+  verdict: AiVerdict,
+  summary: string,
+  issues: { category: AiIssueCategory, quote: string | null, explanation: string }[],
+  rejectComment: string | null,
+  previous?: true
 }
 
 export type SeedComment = {
