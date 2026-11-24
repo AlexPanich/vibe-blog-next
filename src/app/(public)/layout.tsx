@@ -2,6 +2,9 @@ import ClientSideInitializer from "@/components/general/ClientSideInitializer";
 import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import MobileTabBar from "@/components/navigation/MobileTabBar";
+import { askEnabled } from "@/domains/posts/exports/postAsk";
+import { resource } from "@/core/resource";
+import z from "zod";
 import { fontVariables } from "@/theme/fonts";
 import { defaultColorScheme } from "@/theme/colorScheme";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
@@ -32,7 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </main>
           <SiteFooter />
-          <MobileTabBar />
+          <MobileTabBar ask={resource(z.boolean(), askEnabled)} />
         </ClientSideInitializer>
       </body>
     </html>

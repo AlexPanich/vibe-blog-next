@@ -1,6 +1,9 @@
 import Brand from "@/components/layout/Brand";
 import HeaderSearch from "@/components/layout/HeaderSearch";
 import TopMenu from "@/components/navigation/TopMenu";
+import { askEnabled } from "@/domains/posts/exports/postAsk";
+import { resource } from "@/core/resource";
+import z from "zod";
 import ColorSchemeToggle from "@/components/general/ColorSchemeToggle";
 import UserBox from "@/domains/users/exports/UserBox";
 import NotificationBell from "@/domains/notifications/exports/NotificationBell";
@@ -19,7 +22,7 @@ export default function SiteHeader({ unread }: SiteHeaderProps) {
     <header className="ui-masthead">
       <HeaderSearch
         brand={<Brand />}
-        menu={<TopMenu />}
+        menu={<TopMenu ask={resource(z.boolean(), askEnabled)} />}
         aside={<>
           <ColorSchemeToggle />
           <NotificationBell initialUnread={unread} />

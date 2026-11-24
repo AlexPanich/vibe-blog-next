@@ -5,6 +5,9 @@ import ButtonLink from "@/components/general/ButtonLink";
 import Brand from "@/components/layout/Brand";
 import SiteFooter from "@/components/layout/SiteFooter";
 import TopMenu from "@/components/navigation/TopMenu";
+import { askEnabled } from "@/domains/posts/exports/postAsk";
+import { resource } from "@/core/resource";
+import z from "zod";
 import { fontVariables } from "@/theme/fonts";
 import { defaultColorScheme } from "@/theme/colorScheme";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
@@ -35,7 +38,7 @@ export default function GlobalNotFound() {
           <header className="ui-masthead">
             <div className="ui-shell ui-masthead__row">
               <Brand />
-              <TopMenu />
+              <TopMenu ask={resource(z.boolean(), askEnabled)} />
               <div className="ui-masthead__aside">
                 <ColorSchemeToggle />
               </div>

@@ -1,12 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { LlmError, type LlmParseInput, type LlmParseResult } from './types';
+import { toLlmError } from './anthropicErrors';
 
 export type AnthropicOptions = {
   model: string,
   effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | undefined,
   // Серверный fallback при отказе; у Haiku его нет — с ним запрос падает
-  fallbacks: boolean
+  fallbacks: boolean,
+  // thinking: { type: 'disabled' } — только у потока (спека 57); разбор его не передаёт
+  disableThinking: boolean
 }
 
 let client: Anthropic | undefined;
@@ -79,22 +82,4 @@ function parseOutput<T>(content: Anthropic.Beta.BetaContentBlock[], schema: LlmP
   }
 
   return parsed.data;
-}
-
-function toLlmError(error: unknown){
-  if(error instanceof Anthropic.AuthenticationError){
-    return new LlmError('Неверный ключ API');
-  }
-  else if(error instanceof Anthropic.RateLimitError){
-    return new LlmError('Лимит запросов API');
-  }
-  else if(error instanceof Anthropic.APIConnectionError){
-    // APIConnectionTimeoutError — его подкласс
-    return new LlmError('API недоступен');
-  }
-  else if(error instanceof Anthropic.APIError){
-    return new LlmError(`API: ${error.status}`);
-  }
-
-  return error;
 }

@@ -310,7 +310,21 @@ MDXEditor начальный: правка снаружи (помощник ст
   `shared/similarPosts.ts` (без вектора — по рубрикам), «Похоже по смыслу» под лентой —
   `shared/semanticFeed.ts` + `PostSemanticResults` под `<Suspense>`. Вектор запроса кэшируется в
   `globals/queryEmbeddings.ts` (`core/ttlCache.ts`), промахи кэша — лимит `aiSearch` по IP,
-  списывается в server component (сверх лимита блока просто нет).
+  списывается в server component (сверх лимита блока просто нет). Сам вектор запроса —
+  `shared/postQueryVector.ts` (`{ ok, vector } | { ok: false, reason: 'limit' | 'error' }`).
+- «Спросить блог» (спека 57) — страница `/ask`, route `POST /api/ask`. Потоковая генерация —
+  `aiStream({ purpose: 'ask', system, prompt, maxTokens, signal })` в `globals/ai.ts`: генератор
+  текстовых дельт, return — модель и токены (читать через `next()`, `for await` его теряет).
+  Реализации — `core/llm/ollamaStream.ts` и `anthropicStream.ts` (`beta.messages.stream`), ошибки SDK —
+  `core/llm/anthropicErrors.ts`. Отмена по `signal` — не `LlmError`, пробрасывается как есть.
+  `AI_ASK_MODEL` (Haiku 5.5) / `AI_ASK_EFFORT`; у Haiku мышление выключено (`disableThinking` в
+  `config/ai.ts`: иначе рассуждения съедают 600 токенов ответа), Opus и Sonnet его выключить не дают.
+  Route: всё, в чём можно отказать (Origin — `shared/requestOrigin.ts`, тело, занятый поток, вектор,
+  лимиты), — до потока обычным JSON `{ message }` со статусом; потом NDJSON (`sources` → `delta`… →
+  `done` | `error`), читается `core/ndjson.ts` и на сервере (Ollama), и в браузере (`usePostAsk`).
+  Лимиты — `aiAskGuest*` / `aiAsk*` / `aiAskGlobal` (`shared/postAskLimits.ts`), один поток на
+  пользователя или IP — `globals/askStreams.ts`. Флаг фичи `askEnabled` (`aiEnabled && embedEnabled`)
+  шапка передаёт в `TopMenu` пропом, layout'ы — в `MobileTabBar`.
 
 ## Уведомления и живой канал
 

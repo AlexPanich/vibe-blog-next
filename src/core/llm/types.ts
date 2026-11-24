@@ -30,3 +30,18 @@ export type LlmEmbedResult = {
   vectors: number[][],
   tokens: number
 }
+
+// Потоковая генерация текста (спека 57): signal обрывает запрос к провайдеру
+export type LlmStreamInput = {
+  system: string,
+  prompt: string,
+  maxTokens: number,
+  signal: AbortSignal
+}
+
+// Возвращаемое значение генератора дельт — для строки лога
+export type LlmStreamUsage = {
+  model: string,
+  inputTokens: number,
+  outputTokens: number
+}
