@@ -2,6 +2,9 @@ import ClientSideInitializer from "@/components/general/ClientSideInitializer";
 import SiteHeader from "@/components/layout/SiteHeader";
 import OfficeDesk from "@/components/layout/OfficeDesk";
 import MobileTabBar from "@/components/navigation/MobileTabBar";
+import { askEnabled } from "@/domains/posts/exports/postAsk";
+import { resource } from "@/core/resource";
+import z from "zod";
 import { getAuthUser } from "@/shared/auth";
 import { countUnread } from "@/domains/notifications/exports/countUnread";
 import { fontVariables } from "@/theme/fonts";
@@ -43,7 +46,7 @@ export default async function RootLayout({ children }: LayoutProps<"/office">) {
               {children}
             </OfficeDesk>
           </main>
-          <MobileTabBar />
+          <MobileTabBar ask={resource(z.boolean(), askEnabled)} />
         </ClientSideInitializer>
       </body>
     </html>

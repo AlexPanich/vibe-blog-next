@@ -18,9 +18,17 @@ if(authorEffort !== '' && !isEffort(authorEffort)){
   throw new Error(`AI_AUTHOR_EFFORT: ожидается low, medium, high, xhigh, max или пустое значение, а не «${authorEffort}»`);
 }
 
+const askEffort = process.env.AI_ASK_EFFORT ?? 'low';
+
+if(askEffort !== '' && !isEffort(askEffort)){
+  throw new Error(`AI_ASK_EFFORT: ожидается low, medium, high, xhigh, max или пустое значение, а не «${askEffort}»`);
+}
+
 const moderationModel = process.env.AI_MODERATION_MODEL || 'claude-opus-5-5';
 
 const authorModel = process.env.AI_AUTHOR_MODEL || 'claude-haiku-5-5';
+
+const askModel = process.env.AI_ASK_MODEL || 'claude-haiku-5-5';
 
 const embedModel = provider === 'local'
   ? process.env.OLLAMA_EMBED_MODEL || 'bge-m3'
@@ -42,21 +50,38 @@ export const aiConfig = {
     numCtx: positiveNumber(process.env.OLLAMA_NUM_CTX, 32768),
     moderation: { think: true, timeoutMs: positiveNumber(process.env.OLLAMA_TIMEOUT_MS, 180_000) },
     // Спека 55, п. 10: задачи проще, а ждать в интерфейсе рассуждений долго
-    author: { think: false, timeoutMs: 60_000 }
+    author: { think: false, timeoutMs: 60_000 },
+    // Спека 57, п. 14: ответ печатается, пока читатель ждёт
+    ask: { think: false, timeoutMs: 60_000 }
   },
   // Пустое значение effort — параметр не отправляется (модель без effort)
   anthropic: {
     moderation: {
       model: moderationModel,
       effort: moderationEffort === '' ? undefined : moderationEffort,
-      fallbacks: !moderationModel.startsWith('claude-haiku')
+      fallbacks: !moderationModel.startsWith('claude-haiku'),
+      disableThinking: false
     },
     author: {
       model: authorModel,
       effort: authorEffort === '' ? undefined : authorEffort,
-      fallbacks: !authorModel.startsWith('claude-haiku')
+      fallbacks: !authorModel.startsWith('claude-haiku'),
+      disableThinking: false
+    },
+    /*
+      «Спросить блог» (спека 57, п. 14, план 57, реш. 1): рассуждения Haiku тратят из тех же 600
+      токенов и задерживают первую дельту — выключаем. Opus и Sonnet 5.5 выключить не дают (400),
+      Haiku — только при effort до high
+    */
+    ask: {
+      model: askModel,
+      effort: askEffort === '' ? undefined : askEffort,
+      fallbacks: !askModel.startsWith('claude-haiku'),
+      disableThinking: askModel.startsWith('claude-haiku') && askEffort !== 'xhigh' && askEffort !== 'max'
     }
   },
+  // Ответ по постам (спека 57, п. 5, 7, 14): до 5 источников, текст поста и весь контекст — в символах
+  ask: { maxTokens: 600, sources: 5, postChars: 4000, contextChars: 16000, minRestChars: 500 },
   // Зависший pending (п. 4): больше таймаута любой реализации
   staleMs: 5 * 60_000,
   /*

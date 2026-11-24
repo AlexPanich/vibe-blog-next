@@ -38,6 +38,15 @@ export const rateLimiters = {
   aiAssistDay: memoryLimiter({ keyPrefix: 'ai-assist-day', points: 200, duration: 24 * 60 * 60 }),
   /* вектор поискового запроса мимо кэша (спека 56), ключ — ip; списывается в server component */
   aiSearch: memoryLimiter({ keyPrefix: 'ai-search', points: 20, duration: 60 }),
+  /*
+    «Спросить блог» (спека 57, п. 16): гость — по ip, вошедший — по id, плюс общий потолок на процесс
+    (ключ 'all'). Списываются в route /api/ask перед генерацией: «ничего не нашлось» бесплатно
+  */
+  aiAskGuest: memoryLimiter({ keyPrefix: 'ai-ask-guest', points: 3, duration: 60 }),
+  aiAskGuestDay: memoryLimiter({ keyPrefix: 'ai-ask-guest-day', points: 20, duration: 24 * 60 * 60 }),
+  aiAsk: memoryLimiter({ keyPrefix: 'ai-ask', points: 5, duration: 60 }),
+  aiAskDay: memoryLimiter({ keyPrefix: 'ai-ask-day', points: 50, duration: 24 * 60 * 60 }),
+  aiAskGlobal: memoryLimiter({ keyPrefix: 'ai-ask-global', points: 300, duration: 24 * 60 * 60 }),
   /* перебор текущего пароля обладателем сессии (смена пароля и email), ключ — id пользователя */
   credentialCheck: memoryLimiter({
     keyPrefix: 'credential-check',
