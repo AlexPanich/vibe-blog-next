@@ -13,7 +13,9 @@ import PostFieldLabel from "@/domains/posts/components/editor/PostFieldLabel";
 import PostRouteEditor, { type PostRouteErrors } from "@/domains/posts/components/map/PostRouteEditor";
 import { Input, Textarea, TextInput } from "@mantine/core";
 import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
-import type { ReactNode } from "react";
+import usePostFormAssist from "@/domains/posts/components/assist/usePostFormAssist";
+import type { MDXEditorMethods } from "@mdxeditor/editor";
+import { useRef, type ReactNode } from "react";
 
 type PostFormFieldsProps<T extends TagListResource> = {
   form: PostForm,
@@ -23,7 +25,9 @@ type PostFormFieldsProps<T extends TagListResource> = {
   cover: ReactNode,
   // Галерея для фото в тексте (спека 38); нет — пост ещё не сохранён
   postId?: number,
-  images?: PostGalleryResource
+  images?: PostGalleryResource,
+  // Помощник автора (спека 55): кнопки в подписях и блоки под полями
+  assist: boolean
 }
 
 /*
@@ -31,19 +35,24 @@ type PostFormFieldsProps<T extends TagListResource> = {
   подзаголовок со счётчиком (спека 35), slug с префиксом, поля типа, рубрики-чипы, обложка, текст
 */
 export default function PostFormFields<T extends TagListResource>({
-  form: { nv, update, data },
+  form,
   tagOptions,
   errors,
   cover,
   postId,
-  images
+  images,
+  assist
 }: PostFormFieldsProps<T>) {
+  const { nv, update, data } = form;
+  // Ref редактора текста: помощник стиля показывает правку через setMarkdown
+  const editorRef = useRef<MDXEditorMethods | null>(null);
+  const helper = usePostFormAssist(form, assist, editorRef);
 
   return (
     <>
       <PostTypeCards value={data.type} onChange={type => update('type', type)} />
       <TextInput
-        label={<PostFieldLabel hint={`${data.title.length} / ${POST_TITLE_MAX}`}>Заголовок</PostFieldLabel>}
+        label={<PostFieldLabel hint={`${data.title.length} / ${POST_TITLE_MAX}`} action={helper.title.action}>Заголовок</PostFieldLabel>}
         classNames={{ input: 'ui-title-input' }}
         maxLength={POST_TITLE_MAX}
         placeholder="Короткий и честный"
@@ -51,8 +60,9 @@ export default function PostFormFields<T extends TagListResource>({
         onChange={e => update('title', e.target.value)}
         error={fieldError(errors, 'title')}
       />
+      { helper.title.below }
       <Textarea
-        label={<PostFieldLabel hint={`${data.lead.length} / ${POST_LEAD_MAX}`}>Подзаголовок</PostFieldLabel>}
+        label={<PostFieldLabel hint={`${data.lead.length} / ${POST_LEAD_MAX}`} action={helper.lead.action}>Подзаголовок</PostFieldLabel>}
         description="Пара фраз, о чём пост — видно в ленте и в превью ссылки"
         placeholder="Необязательно"
         autosize
@@ -63,6 +73,7 @@ export default function PostFormFields<T extends TagListResource>({
         onChange={e => update('lead', e.target.value)}
         error={fieldError(errors, 'lead')}
       />
+      { helper.lead.below }
       <TextInput
         label="URL (slug)"
         placeholder="my-first-post"
@@ -80,7 +91,7 @@ export default function PostFormFields<T extends TagListResource>({
         onChange={e => update('source', e.target.value)}
         error={detailsError(errors, 'source')}
       /> }
-      { data.type === 'travel' && <Input.Wrapper label="Маршрут">
+      { data.type === 'travel' && <Input.Wrapper label={<PostFieldLabel action={helper.route.action}>Маршрут</PostFieldLabel>}>
         <PostRouteEditor
           points={data.points}
           onChange={points => update('points', points)}
@@ -88,13 +99,16 @@ export default function PostFormFields<T extends TagListResource>({
           onTravelDays={value => update('travelDays', value)}
           errors={routeErrors(errors)}
         />
+        { helper.route.below }
       </Input.Wrapper> }
       <TagPicker
         options={tagOptions}
         value={data.tagIds}
         onChange={ids => update('tagIds', ids)}
         error={fieldError(errors, 'tagIds')}
+        labelAction={helper.tags.action}
       />
+      { helper.tags.below }
       { cover }
       <PostContentEditor
         value={data.content}
@@ -102,6 +116,9 @@ export default function PostFormFields<T extends TagListResource>({
         error={fieldError(errors, 'content')}
         postId={postId}
         images={images}
+        editorRef={editorRef}
+        footAction={helper.style.action}
+        below={helper.style.below}
       />
     </>
   );

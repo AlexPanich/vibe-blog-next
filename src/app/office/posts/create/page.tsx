@@ -1,5 +1,7 @@
 import { CONTAINER } from "@/globals/container";
-import { createPost } from "@/domains/posts/policy";
+import { assistPost, createPost } from "@/domains/posts/policy";
+import { aiEnabled } from "@/globals/ai";
+import { requireAuthUser } from "@/shared/auth";
 import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
 import PostEditorForm from "@/domains/posts/components/editor/PostEditorForm";
 import PostCoverField from "@/domains/posts/components/editor/PostCoverField";
@@ -13,7 +15,7 @@ export const metadata = { title: 'Новый пост' };
 // Новый пост (спека 42, шаг 4): тот же редактор, что у черновика; фото — после первого сохранения
 export default async function OfficePostsCreate() {
   await CONTAINER.boucerService.breakIfCant(createPost);
-  const tags = await getTagOptions();
+  const [ tags, user ] = await Promise.all([ getTagOptions(), requireAuthUser() ]);
 
   return (
     <PostEditorForm
@@ -24,6 +26,7 @@ export default async function OfficePostsCreate() {
       </>}
       cover={<PostCoverField cover={null} />}
       photos={<PostPhotosCard anchor="photos" />}
+      assist={aiEnabled && assistPost(user)}
     />
   );
 }

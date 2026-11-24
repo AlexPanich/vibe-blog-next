@@ -6,15 +6,28 @@ if(provider !== 'local' && provider !== 'anthropic'){
   throw new Error(`AI_PROVIDER: ожидается local или anthropic, а не «${provider}»`);
 }
 
-const effort = process.env.AI_MODERATION_EFFORT ?? 'low';
+const moderationEffort = process.env.AI_MODERATION_EFFORT ?? 'low';
 
-if(effort !== '' && !isEffort(effort)){
-  throw new Error(`AI_MODERATION_EFFORT: ожидается low, medium, high, xhigh, max или пустое значение, а не «${effort}»`);
+if(moderationEffort !== '' && !isEffort(moderationEffort)){
+  throw new Error(`AI_MODERATION_EFFORT: ожидается low, medium, high, xhigh, max или пустое значение, а не «${moderationEffort}»`);
 }
 
+const authorEffort = process.env.AI_AUTHOR_EFFORT ?? 'low';
+
+if(authorEffort !== '' && !isEffort(authorEffort)){
+  throw new Error(`AI_AUTHOR_EFFORT: ожидается low, medium, high, xhigh, max или пустое значение, а не «${authorEffort}»`);
+}
+
+const moderationModel = process.env.AI_MODERATION_MODEL || 'claude-opus-5-5';
+
+const authorModel = process.env.AI_AUTHOR_MODEL || 'claude-haiku-5-5';
+
 /*
-  ИИ-ассистент модератора (спека 54). ИИ включён, если у выбранной реализации есть адрес или
-  ключ (п. 10). Сам ключ сюда не кладём: SDK читает ANTHROPIC_API_KEY сам
+  ИИ-ассистент модератора (спека 54) и помощник автора (спека 55): настройки — по назначению
+  запроса (purpose). ИИ включён, если у выбранной реализации есть адрес или ключ (п. 10). Сам
+  ключ сюда не кладём: SDK читает ANTHROPIC_API_KEY сам.
+  fallbacks: у Haiku серверного fallback нет (план 55, реш. 1) — с ним отказ так и остаётся
+  отказом, а список моделей даёт 400. Поставят в AI_AUTHOR_MODEL Opus — fallback включится сам
 */
 export const aiConfig = {
   provider,
@@ -23,12 +36,22 @@ export const aiConfig = {
     url: (process.env.OLLAMA_URL ?? '').replace(/\/+$/, ''),
     model: process.env.OLLAMA_MODEL || 'qwen3:14b',
     numCtx: positiveNumber(process.env.OLLAMA_NUM_CTX, 32768),
-    timeoutMs: positiveNumber(process.env.OLLAMA_TIMEOUT_MS, 180_000)
+    moderation: { think: true, timeoutMs: positiveNumber(process.env.OLLAMA_TIMEOUT_MS, 180_000) },
+    // Спека 55, п. 10: задачи проще, а ждать в интерфейсе рассуждений долго
+    author: { think: false, timeoutMs: 60_000 }
   },
+  // Пустое значение effort — параметр не отправляется (модель без effort)
   anthropic: {
-    model: process.env.AI_MODERATION_MODEL || 'claude-opus-5-5',
-    // Пустое значение — параметр не отправляется (модель без effort)
-    effort: effort === '' ? undefined : effort
+    moderation: {
+      model: moderationModel,
+      effort: moderationEffort === '' ? undefined : moderationEffort,
+      fallbacks: !moderationModel.startsWith('claude-haiku')
+    },
+    author: {
+      model: authorModel,
+      effort: authorEffort === '' ? undefined : authorEffort,
+      fallbacks: !authorModel.startsWith('claude-haiku')
+    }
   },
   // Зависший pending (п. 4): больше таймаута любой реализации
   staleMs: 5 * 60_000

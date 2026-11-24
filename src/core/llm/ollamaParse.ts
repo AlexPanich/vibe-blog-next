@@ -5,6 +5,8 @@ export type OllamaOptions = {
   url: string,
   model: string,
   numCtx: number,
+  // Рассуждения модели: задаёт вызывающий
+  think: boolean,
   timeoutMs: number
 }
 
@@ -21,9 +23,9 @@ const ATTEMPTS = 3;
 
 /*
   Structured output через Ollama POST /api/chat. Ответ проверяется zod-схемой; не прошёл —
-  в повтор уходит текст ошибки, до трёх попыток. think: true — без рассуждений Qwen3 не держит
-  указания промпта (ложные wrong_type), окно на них хватает.
-  num_ctx задаём явно: сверх него Ollama молча режет вход
+  в повтор уходит текст ошибки, до трёх попыток. think задаёт вызывающий: разбору модерации
+  без рассуждений Qwen3 не держит указания промпта (ложные wrong_type), а помощнику автора
+  ждать их долго. num_ctx задаём явно: сверх него Ollama молча режет вход
 */
 export async function ollamaParse<T>(options: OllamaOptions, input: LlmParseInput<T>): Promise<LlmParseResult<T>> {
   const messages: OllamaMessage[] = [
@@ -67,7 +69,7 @@ async function chat(options: OllamaOptions, request: { messages: OllamaMessage[]
       body: JSON.stringify({
         model: options.model,
         stream: false,
-        think: true,
+        think: options.think,
         format: request.format,
         options: { num_ctx: options.numCtx, num_predict: request.maxTokens },
         messages: request.messages

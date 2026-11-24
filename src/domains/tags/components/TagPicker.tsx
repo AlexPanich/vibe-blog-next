@@ -7,20 +7,22 @@ import { TAGS_PER_POST } from "@/domains/tags/dto/tagRequests";
 import { tagTone } from "@/domains/tags/shared/tagTone";
 import { Input, Select, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 type TagPickerProps<T extends TagListResource> = {
   options: StrictResource<T, TagListResource>,
   value: number[],
   onChange: (value: number[]) => void,
-  error?: string
+  error?: string,
+  // Кнопка в подписи справа — помощник автора (спека 55)
+  labelAction?: ReactNode
 }
 
 /*
   Рубрики поста — поле-чипы (спека 42): выбранные цветными пилюлями с крестиком, в конце
   поиск «Добавить рубрику…». После трёх поиск прячется — подпись «до 3» объясняет почему
 */
-export default function TagPicker<T extends TagListResource>({ options, value, onChange, error }: TagPickerProps<T>) {
+export default function TagPicker<T extends TagListResource>({ options, value, onChange, error, labelAction }: TagPickerProps<T>) {
   const [ search, setSearch ] = useState('');
   const full = value.length >= TAGS_PER_POST;
   const selected = value.map(id => options.find(tag => tag.id === id)).filter(tag => tag !== undefined);
@@ -28,7 +30,11 @@ export default function TagPicker<T extends TagListResource>({ options, value, o
 
   return (
     <Input.Wrapper
-      label={<span className="ui-field__label">Рубрики <span className="ui-field__hint">до { TAGS_PER_POST }</span></span>}
+      label={<span className="ui-field__label">
+        Рубрики { labelAction
+          ? <span className="ui-field__side"><span className="ui-field__hint">до { TAGS_PER_POST }</span>{ labelAction }</span>
+          : <span className="ui-field__hint">до { TAGS_PER_POST }</span> }
+      </span>}
       error={error}
     >
       { options.length === 0 ? (

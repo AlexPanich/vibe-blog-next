@@ -4,7 +4,9 @@ import { LlmError, type LlmParseInput, type LlmParseResult } from './types';
 
 export type AnthropicOptions = {
   model: string,
-  effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | undefined
+  effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | undefined,
+  // Серверный fallback при отказе; у Haiku его нет — с ним запрос падает
+  fallbacks: boolean
 }
 
 let client: Anthropic | undefined;
@@ -12,9 +14,9 @@ let client: Anthropic | undefined;
 /*
   Structured output через Claude API: один вызов beta.messages.create с форматом из zod-схемы.
   Не parse: он разбирает ответ раньше, чем видно stop_reason, и оборванный ответ выглядел бы
-  ошибкой схемы. Отказы обрабатывает серверный fallback (fallbacks: 'default'); финальный
-  refusal — сбой. thinking не передаём:
-  у Opus 5.5 он адаптивный всегда, глубину задаёт effort. Системный промпт одинаков для всех
+  ошибкой схемы. Отказы обрабатывает серверный fallback (fallbacks: 'default'), если он включён:
+  у Haiku серверного fallback нет. Финальный refusal — сбой. thinking не передаём: у Opus 5.5 и
+  Haiku 5.5 он адаптивный, глубину задаёт effort. Системный промпт одинаков для всех
   запросов — на нём cache_control
 */
 export async function anthropicParse<T>(options: AnthropicOptions, input: LlmParseInput<T>): Promise<LlmParseResult<T>> {
@@ -26,8 +28,7 @@ export async function anthropicParse<T>(options: AnthropicOptions, input: LlmPar
     response = await client.beta.messages.create({
       model: options.model,
       max_tokens: input.maxTokens,
-      betas: [ 'server-side-fallback-2026-07-01' ],
-      fallbacks: 'default',
+      ...(options.fallbacks ? { betas: [ 'server-side-fallback-2026-07-01' ], fallbacks: 'default' as const } : {}),
       system: [ { type: 'text', text: input.system, cache_control: { type: 'ephemeral' } } ],
       messages: [ { role: 'user', content: input.prompt } ],
       output_config: {
@@ -41,7 +42,7 @@ export async function anthropicParse<T>(options: AnthropicOptions, input: LlmPar
   }
 
   if(response.stop_reason === 'refusal'){
-    throw new LlmError('Модель отказалась разбирать пост');
+    throw new LlmError('Модель отказалась отвечать');
   }
 
   if(response.stop_reason === 'max_tokens'){

@@ -219,7 +219,9 @@ production-сервер не отдаёт файлы, появившиеся т�
 библиотека берёт из своих переменных `--base*`: они переопределены на токены в
 `layout.css`, в том числе для порталов (списки, диалог ссылки, тултипы) — селекторы по
 подстроке хешированного класса. Текст, который редактор не разобрал (`onError`:
-картинка, блок кода, сноска), открывается в запасном `PostMarkdownField`.
+картинка, блок кода, сноска), открывается в запасном `PostMarkdownField`. Prop `markdown` у
+MDXEditor начальный: правка снаружи (помощник стиля) — через `setMarkdown` по `editorRef`
+(обычный prop `PostEditorView`, не `ref`: компонент грузится через `dynamic()`).
 
 ## Доступ и 404
 
@@ -274,16 +276,28 @@ production-сервер не отдаёт файлы, появившиеся т�
 
 ## ИИ
 
-- Разбор поста на модерации (спека 54). Модель — только через обёртку `globals/ai.ts`
-  (`aiParse`, `aiEnabled`, `LlmError`): код фичи не импортирует ни SDK, ни `core/llm/`.
-  Реализации — `core/llm/` (`ollamaParse`, `anthropicParse`), настройки приходят параметрами.
+- Разбор поста на модерации (спека 54) и помощник автора в редакторе (спека 55). Модель — только
+  через обёртку `globals/ai.ts` (`aiParse`, `aiEnabled`, `LlmError`): код фичи не импортирует ни
+  SDK, ни `core/llm/`. Реализации — `core/llm/` (`ollamaParse`, `anthropicParse`), настройки
+  приходят параметрами.
+- `aiParse({ purpose, … })`: `purpose` — `moderation` / `author`, по нему обёртка берёт группу
+  настроек из `config/ai.ts` (модель и effort у anthropic, `think` и таймаут у Ollama). Модерация —
+  `AI_MODERATION_MODEL` / `AI_MODERATION_EFFORT`, автор — `AI_AUTHOR_MODEL` (Haiku 5.5) /
+  `AI_AUTHOR_EFFORT`, у Ollama автору `think: false` и 60 с.
 - `AI_PROVIDER`: `local` (по умолчанию) — Ollama в LAN, `anthropic` — Claude API
-  (`beta.messages.create` + structured output, `fallbacks: 'default'`; SDK грузится `import()`
-  только в этом режиме). Env — `config/ai.ts` и `.env.example`; нет `OLLAMA_URL` / ключа —
-  ИИ выключен, демо на Render работает на разборах из сида.
+  (`beta.messages.create` + structured output; SDK грузится `import()` только в этом режиме).
+  `fallbacks: 'default'` — только не у Haiku: серверного fallback у неё нет, с ним запрос падает
+  (флаг `fallbacks` считает `config/ai.ts` по имени модели). Env — `config/ai.ts` и
+  `.env.example`; нет `OLLAMA_URL` / ключа — ИИ выключен, демо на Render работает на разборах из
+  сида, у помощника автора нет кнопок.
 - Разбор идёт в `after()` в процессе Next, а не в `plainjob`: worker не дотянется до `liveBus` и
   `globals/db`. Цена — разбор теряется при рестарте, поэтому `pending` старше 5 минут — сбой.
 - Запуск — в `changePostStatus` при переходе в `moderating`, вручную — `postAiReviewActions.ts`.
+- Помощник автора — `postAssistActions.ts` (пять actions, вход — форма, ничего не сохраняют),
+  логика и промпты — `shared/postAssistRun.ts`, правила текста для клиента и action —
+  `shared/postAssist.ts`, цитаты и экранирование тегов промпта — общие с разбором в
+  `shared/postQuotes.ts`. Блоки — `components/assist/`, видимость (`aiEnabled && assistPost`)
+  считает page.
 
 ## Уведомления и живой канал
 

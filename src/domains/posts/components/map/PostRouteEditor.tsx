@@ -6,7 +6,6 @@ import { POST_ROUTE_MAX, ROUTE_LABEL_MAX, TRAVEL_DAYS_MAX } from "@/domains/post
 import { ActionIcon, Input, NumberInput, TextInput } from "@mantine/core";
 import { IconArrowDown, IconArrowUp, IconX } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
-import { useRef } from "react";
 
 const PostMapView = dynamic(() => import('@/domains/posts/components/map/PostMapView'), {
   ssr: false,
@@ -33,8 +32,6 @@ type PostRouteEditorProps = {
   телефоне, без drag-and-drop). Последнюю оставшуюся точку удалить нельзя
 */
 export default function PostRouteEditor({ points, onChange, travelDays, onTravelDays, errors }: PostRouteEditorProps) {
-  // Ключи новых точек — после начальных (у тех ключ — индекс)
-  const nextKey = useRef(points.length);
   const full = points.length >= POST_ROUTE_MAX;
 
   function add(lat: number, lng: number){
@@ -42,7 +39,10 @@ export default function PostRouteEditor({ points, onChange, travelDays, onTravel
       return;
     }
 
-    onChange([ ...points, { key: nextKey.current++, lat: round(lat), lng: round(lng), label: '' } ]);
+    // Ключ больше любого текущего: точки добавляет и помощник (спека 55)
+    const key = Math.max(-1, ...points.map(p => p.key)) + 1;
+
+    onChange([ ...points, { key, lat: round(lat), lng: round(lng), label: '' } ]);
   }
 
   function patch(index: number, changes: Partial<RouteFormPoint>){

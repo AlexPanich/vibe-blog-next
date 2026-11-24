@@ -11,6 +11,7 @@ import { getRoutePoints } from "@/domains/posts/shared/postRoutePoints";
 import { pickTags, POST_TAGS_WITH } from "@/domains/posts/shared/postTags";
 import { POST_TYPE_LABELS } from "@/domains/posts/shared/postTypes";
 import { plainText } from "@/domains/posts/shared/postText";
+import { cutText, escapePromptTags, quoteFound } from "@/domains/posts/shared/postQuotes";
 import { loadSitePage } from "@/domains/site-pages/exports/loadSitePage";
 import { postTopic } from "@/shared/liveEvents";
 import { and, desc, eq, inArray } from "drizzle-orm";
@@ -22,6 +23,9 @@ const HISTORY_LIMIT = 20;
 
 // Длины режем сами (реш. 7 плана): у схемы для модели ограничений нет. rejectComment — лимит комментария отклонения
 const LIMITS = { summary: 600, quote: 300, explanation: 400, rejectComment: 2000, issues: 10 };
+
+// Теги промпта: закрывающий тег внутри текста поста не должен закрывать разметку
+const PROMPT_TAGS = [ 'post', 'content', 'title', 'lead', 'tags', 'source', 'route_points', 'photo_captions' ];
 
 const STALE_ERROR = 'Разбор не закончился — похоже, сервер перезапускался';
 
@@ -193,6 +197,7 @@ async function runPostAiReview(rowId: number, postId: number){
       content: post.content
     };
     const result = await aiParse({
+      purpose: 'moderation',
       system: await systemPrompt(),
       prompt: postPrompt(input),
       schema: postAiReviewOutputSchema,
@@ -227,6 +232,10 @@ function finish(rowId: number, values: Partial<typeof postAiReviews.$inferInsert
     .run();
 }
 
+/*
+  Цитата ищется (п. 8) и в markdown, и в плоском тексте, и в подписях фото и названиях точек:
+  они тоже уходят в модель
+*/
 function cleanOutput(output: PostAiReviewOutput, haystacks: Haystacks){
   const issues: PostAiReviewIssueResource[] = output.issues.slice(0, LIMITS.issues).map(issue => {
     const quote = issue.quote.trim();
@@ -234,46 +243,20 @@ function cleanOutput(output: PostAiReviewOutput, haystacks: Haystacks){
 
     return {
       category: issue.category,
-      quote: found ? cut(quote, LIMITS.quote) : null,
+      quote: found ? cutText(quote, LIMITS.quote) : null,
       // Пустая цитата — пункт без цитаты, а не галлюцинация
       quoteMissing: quote !== '' && !found,
-      explanation: cut(issue.explanation.trim(), LIMITS.explanation)
+      explanation: cutText(issue.explanation.trim(), LIMITS.explanation)
     };
   });
   const rejectComment = output.verdict === 'ok' ? '' : (output.rejectComment ?? '').trim();
 
   return {
     verdict: output.verdict,
-    summary: cut(output.summary.trim(), LIMITS.summary),
+    summary: cutText(output.summary.trim(), LIMITS.summary),
     issues: JSON.stringify(issues),
-    rejectComment: rejectComment === '' ? null : cut(rejectComment, LIMITS.rejectComment)
+    rejectComment: rejectComment === '' ? null : cutText(rejectComment, LIMITS.rejectComment)
   };
-}
-
-/*
-  Цитата должна дословно встречаться в посте (п. 8) — после нормализации: пробелы, регистр,
-  типографские кавычки и тире, ё. Ищем и в markdown, и в плоском тексте, и в подписях фото и
-  названиях точек: они тоже уходят в модель
-*/
-function quoteFound(quote: string, haystacks: Haystacks){
-  const needle = normalize(quote);
-
-  return haystacks.some(h => normalize(h).includes(needle));
-}
-
-function normalize(text: string){
-  return text
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/[«»“”„"]/g, '"')
-    .replace(/[‘’‚']/g, "'")
-    .replace(/[—–−]/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function cut(text: string, length: number){
-  return text.length > length ? `${text.slice(0, length - 1).trimEnd()}…` : text;
 }
 
 /*
@@ -335,9 +318,8 @@ function postPrompt(post: { title: string, lead: string | null, type: string, so
   return `<post>\n${parts.filter(Boolean).join('\n')}\n</post>`;
 }
 
-// Закрывающий тег внутри текста поста не должен закрывать разметку
 function safe(text: string){
-  return text.replace(/<\/(post|content|title|lead|tags|source|route_points|photo_captions)>/gi, '</ $1>');
+  return escapePromptTags(text, PROMPT_TAGS);
 }
 
 function sameTime(a: Date, b: Date){
