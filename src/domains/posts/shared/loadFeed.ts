@@ -9,7 +9,7 @@ import { feedPeriod } from "@/domains/posts/shared/feedPeriod";
 import { withCardData } from "@/domains/posts/shared/postCards";
 import { blockedWithQueries } from "@/domains/users/exports/userBlocks";
 import { escapeLike } from "@/shared/escapeLike";
-import { and, asc, count, desc, eq, gte, inArray, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, not, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 type FeedConditions = Omit<PostFeedFilterDto, 'limit'>;
@@ -43,6 +43,19 @@ export async function loadFeed(filter: FeedConditions, offset: number, limit: nu
 }
 
 /*
+  Кандидаты смыслового блока (спека 56, п. 12–13): те же фильтры, что у ленты, минус все
+  совпадения по словам — не только первая страница. Лента подписок здесь не бывает
+*/
+export async function semanticCandidateIds(filter: FeedConditions & { search: string }){
+  const where = await feedWhere({ ...filter, search: undefined, follow: undefined }, null);
+  const rows = await db.select({ id: posts.id })
+    .from(posts)
+    .where(and(where, not(searchCondition(filter.search))));
+
+  return rows.map(row => row.id);
+}
+
+/*
   Рубрики по слагам из URL: неизвестные отбрасываются, лента фильтруется по остальным
 */
 export async function findFeedTags(slugs: string[]){
@@ -62,12 +75,7 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
   }
 
   if(filter.search){
-    /*
-      lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts. lead может быть NULL,
-      а конкатенация с NULL даёт NULL — отсюда coalesce (спека 35)
-    */
-    const pattern = `%${escapeLike(filter.search.toLocaleLowerCase('ru'))}%`;
-    conditions.push(sql`lower_ru(${posts.title} || ' ' || coalesce(${posts.lead}, '') || ' ' || ${posts.content}) LIKE ${pattern} ESCAPE '\\'`);
+    conditions.push(searchCondition(filter.search));
   }
 
   if(filter.type){
@@ -98,6 +106,16 @@ async function feedWhere(filter: FeedConditions, viewerId: number | null): Promi
   }
 
   return and(...conditions);
+}
+
+/*
+  Поиск по словам. lower() в SQLite кириллицу не понижает — lower_ru из globals/db.ts. lead
+  может быть NULL, а конкатенация с NULL даёт NULL — отсюда coalesce (спека 35)
+*/
+function searchCondition(search: string): SQL {
+  const pattern = `%${escapeLike(search.toLocaleLowerCase('ru'))}%`;
+
+  return sql`lower_ru(${posts.title} || ' ' || coalesce(${posts.lead}, '') || ' ' || ${posts.content}) LIKE ${pattern} ESCAPE '\\'`;
 }
 
 /*

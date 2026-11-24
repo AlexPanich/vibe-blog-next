@@ -22,6 +22,10 @@ const moderationModel = process.env.AI_MODERATION_MODEL || 'claude-opus-5-5';
 
 const authorModel = process.env.AI_AUTHOR_MODEL || 'claude-haiku-5-5';
 
+const embedModel = provider === 'local'
+  ? process.env.OLLAMA_EMBED_MODEL || 'bge-m3'
+  : process.env.VOYAGE_MODEL || 'voyage-4';
+
 /*
   ИИ-ассистент модератора (спека 54) и помощник автора (спека 55): настройки — по назначению
   запроса (purpose). ИИ включён, если у выбранной реализации есть адрес или ключ (п. 10). Сам
@@ -54,7 +58,26 @@ export const aiConfig = {
     }
   },
   // Зависший pending (п. 4): больше таймаута любой реализации
-  staleMs: 5 * 60_000
+  staleMs: 5 * 60_000,
+  /*
+    Эмбеддинги (спека 56, п. 1–2): провайдер следует за AI_PROVIDER — local → Ollama, anthropic →
+    Voyage AI, — но включаются отдельно от генерации: нужен OLLAMA_URL или VOYAGE_API_KEY.
+    Ключ Voyage кладём сюда: SDK нет, и читать env больше негде.
+    key — модель в post_embeddings (реш. 3 плана): смена модели или провайдера — новые векторы.
+    Пороги сходства (searchMin, similarMin) у моделей разные (п. 15)
+  */
+  embed: {
+    enabled: provider === 'local' ? Boolean(process.env.OLLAMA_URL) : Boolean(process.env.VOYAGE_API_KEY),
+    model: embedModel,
+    key: `${provider === 'local' ? 'ollama' : 'voyage'}/${embedModel}`,
+    voyageKey: process.env.VOYAGE_API_KEY ?? '',
+    numCtx: 8192,
+    timeoutMs: { query: 5_000, document: 30_000 },
+    batch: 16,
+    maxChars: 8000,
+    retryMs: 5 * 60_000,
+    ...(provider === 'local' ? { searchMin: 0.42, similarMin: 0.5 } : { searchMin: 0.35, similarMin: 0.5 })
+  }
 }
 
 function positiveNumber(value: string | undefined, fallback: number){

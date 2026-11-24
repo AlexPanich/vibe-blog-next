@@ -246,6 +246,13 @@
       "when": 1795519171417,
       "tag": "0034_post_ai_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1795528250323,
+      "tag": "0035_post_embeddings",
+      "breakpoints": true
     }
   ]
 }

@@ -40,3 +40,9 @@ services:
       # а база на стенде всегда свежая, поэтому её id = 1
       - key: CONTACT_USER_ID
         value: "1"
+      # Поиск по смыслу (спека 56): эмбеддинги Voyage. Без ключа их нет — похожие по рубрикам.
+      # anthropic без ANTHROPIC_API_KEY — поиск без генерации, так и задумано
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: VOYAGE_API_KEY
+        sync: false

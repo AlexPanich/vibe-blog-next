@@ -9,14 +9,18 @@ import FeedSearch from "@/domains/posts/components/FeedSearch";
 import FeedSortTabs from "@/domains/posts/components/FeedSortTabs";
 import FeedControls from "@/domains/posts/components/FeedControls";
 import FeedList from "@/domains/posts/components/FeedList";
+import FeedEmpty from "@/domains/posts/components/FeedEmpty";
+import PostSemanticResults from "@/domains/posts/components/PostSemanticResults";
+import PostSemanticSkeleton from "@/domains/posts/components/PostSemanticSkeleton";
+import { semanticSearchOn } from "@/domains/posts/shared/semanticFeed";
 import TagFilter from "@/domains/tags/exports/TagFilter";
 import TagFollowButton from "@/domains/tags/exports/TagFollowButton";
-import ButtonLink from "@/components/general/ButtonLink";
 import { plural } from "@/core/plural";
 import { db } from "@/globals/db";
 import { posts as postsTable } from "@/database/schema";
-import { IconMoodEmpty, IconRss } from "@tabler/icons-react";
+import { IconRss } from "@tabler/icons-react";
 import { eq } from "drizzle-orm";
+import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +40,9 @@ export default async function Authros({ searchParams }: PageProps<'/posts'>) {
     author: authors.some(a => a.id === parsed.author) ? parsed.author : undefined
   };
   const { posts, total } = await loadFeed(filter, 0, filter.limit);
+  const listKey = feedUrl({ ...filter, limit: undefined });
+  // Смысловой блок (спека 56): эмбеддинги включены и запрос не короче 3 символов
+  const semantic = semanticSearchOn(filter.search);
 
   return (
     <>
@@ -64,21 +71,21 @@ export default async function Authros({ searchParams }: PageProps<'/posts'>) {
         <a className="ui-rss-link" href={`/tags/${encodeURIComponent(selectedTags[0].slug)}/rss.xml`}><IconRss size={16} stroke={1.8} /> RSS рубрики</a>
       </div> }
 
-      { total === 0 ? (
-        <div className="ui-empty">
-          <IconMoodEmpty size={26} stroke={1.6} />
-          <p>Ничего не нашлось.</p>
-          <ButtonLink href="/posts" variant="default">Сбросить всё</ButtonLink>
-        </div>
-      ) : (
-        <FeedList
-          key={feedUrl({ ...filter, limit: undefined })}
-          initial={resource(postListResource, posts)}
-          total={total}
-          filter={filter}
-          live={isPlainFeed(filter)}
-        />
-      ) }
+      { total === 0 && !semantic && <FeedEmpty /> }
+      {/* По словам ничего: пустое состояние решает смысловой блок — есть похожие или нет */}
+      { total === 0 && semantic && <Suspense key={listKey} fallback={<PostSemanticSkeleton />}>
+        <PostSemanticResults filter={filter} empty />
+      </Suspense> }
+      { total > 0 && <FeedList
+        key={listKey}
+        initial={resource(postListResource, posts)}
+        total={total}
+        filter={filter}
+        live={isPlainFeed(filter)}
+      /> }
+      { total > 0 && semantic && <Suspense key={listKey} fallback={<PostSemanticSkeleton />}>
+        <PostSemanticResults filter={filter} />
+      </Suspense> }
     </>
   );
 }

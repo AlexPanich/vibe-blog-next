@@ -36,6 +36,8 @@ export const rateLimiters = {
   /* помощник автора в редакторе (спека 55), ключ — id пользователя, один лимит на пять функций */
   aiAssist: memoryLimiter({ keyPrefix: 'ai-assist', points: 20, duration: 60 }),
   aiAssistDay: memoryLimiter({ keyPrefix: 'ai-assist-day', points: 200, duration: 24 * 60 * 60 }),
+  /* вектор поискового запроса мимо кэша (спека 56), ключ — ip; списывается в server component */
+  aiSearch: memoryLimiter({ keyPrefix: 'ai-search', points: 20, duration: 60 }),
   /* перебор текущего пароля обладателем сессии (смена пароля и email), ключ — id пользователя */
   credentialCheck: memoryLimiter({
     keyPrefix: 'credential-check',
