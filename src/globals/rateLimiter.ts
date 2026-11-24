@@ -33,6 +33,9 @@ export const rateLimiters = {
   imageUpload: memoryLimiter({ keyPrefix: 'image-upload', points: 60, duration: 60 * 60 }),
   /* ручной разбор ИИ на странице ревью (спека 54), ключ — id модератора */
   aiReview: memoryLimiter({ keyPrefix: 'ai-review', points: 10, duration: 60 }),
+  /* помощник автора в редакторе (спека 55), ключ — id пользователя, один лимит на пять функций */
+  aiAssist: memoryLimiter({ keyPrefix: 'ai-assist', points: 20, duration: 60 }),
+  aiAssistDay: memoryLimiter({ keyPrefix: 'ai-assist-day', points: 200, duration: 24 * 60 * 60 }),
   /* перебор текущего пароля обладателем сессии (смена пароля и email), ключ — id пользователя */
   credentialCheck: memoryLimiter({
     keyPrefix: 'credential-check',

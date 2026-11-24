@@ -1,5 +1,7 @@
 import { CONTAINER } from "@/globals/container";
-import { workWithPost } from "@/domains/posts/policy";
+import { assistPost, workWithPost } from "@/domains/posts/policy";
+import { aiEnabled } from "@/globals/ai";
+import { requireAuthUser } from "@/shared/auth";
 import OfficeCrumbs from "@/components/layout/OfficeCrumbs";
 import PostEditorForm from "@/domains/posts/components/editor/PostEditorForm";
 import PostCoverField from "@/domains/posts/components/editor/PostCoverField";
@@ -39,7 +41,7 @@ export default async function OfficePostsEdit({ params }: PageProps<'/office/pos
     return redirect(`/office/posts/${post.id}`);
   }
 
-  const [ tags, images, points ] = await Promise.all([ getTagOptions(), getPostImages(post.id), getRoutePoints(post.id) ]);
+  const [ tags, images, points, user ] = await Promise.all([ getTagOptions(), getPostImages(post.id), getRoutePoints(post.id), requireAuthUser() ]);
   const tagIds = (await db.select({ tagId: postTags.tagId }).from(postTags).where(eq(postTags.postId, post.id))).map(pt => pt.tagId);
   const cover = images.find(image => image.id === post.coverImageId) ?? images[0] ?? null;
 
@@ -63,6 +65,8 @@ export default async function OfficePostsEdit({ params }: PageProps<'/office/pos
         />}
         images={resource(postGalleryResource, images)}
         photos={<PostPhotosCard images={resource(postGalleryResource, images)} anchor="photos" />}
+        // Помощник (спека 55): владелец без роли author редактор открыть может, а помощника нет
+        assist={aiEnabled && assistPost(user)}
       />
 
       <section id="photos" className="ui-post-photos">

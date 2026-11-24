@@ -29,6 +29,8 @@ export type RoutePointDto = z.infer<typeof routePoint>
 
 const travelDaysMessage = `От 1 до ${TRAVEL_DAYS_MAX}`;
 
+export const POST_SOURCE_MAX = 500;
+
 /*
   Поля, зависящие от типа поста. Ссылка выводится как <a href>, поэтому только http(s)
 */
@@ -36,7 +38,7 @@ export const postDetailsDto = z.discriminatedUnion('type', [
   z.object({ type: z.literal('simple') }),
   z.object({
     type: z.literal('translate'),
-    source: z.url({ protocol: /^https?$/, error: 'Нужна ссылка http(s)://' }).max(500)
+    source: z.url({ protocol: /^https?$/, error: 'Нужна ссылка http(s)://' }).max(POST_SOURCE_MAX)
   }),
   z.object({
     type: z.literal('travel'),

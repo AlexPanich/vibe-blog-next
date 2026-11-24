@@ -14,13 +14,14 @@ import {
   listsPlugin,
   ListsToggle,
   MDXEditor,
+  type MDXEditorMethods,
   quotePlugin,
   Separator,
   thematicBreakPlugin,
   toolbarPlugin,
   UndoRedo
 } from "@mdxeditor/editor";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { imageUrl } from "@/core/imageUrl";
 import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
 import { galleryIdsInText, galleryImageId } from "@/domains/posts/shared/postGalleryRefs";
@@ -34,7 +35,12 @@ export type PostEditorViewProps = {
   // Редактор не разобрал markdown — показать запасное поле
   onError: () => void,
   // Фото галереи для вставки в текст (спека 38); нет — пост ещё не сохранён
-  images?: PostGalleryResource
+  images?: PostGalleryResource,
+  /*
+    Внешняя правка текста (помощник, спека 55): prop markdown начальный, показать новое значение —
+    setMarkdown. Обычный prop, а не ref: компонент грузится через dynamic()
+  */
+  editorRef?: RefObject<MDXEditorMethods | null>
 }
 
 /*
@@ -42,7 +48,7 @@ export type PostEditorViewProps = {
   dynamic(..., { ssr: false }) из PostContentEditor. Значение — строка markdown, та же,
   что в колонке content
 */
-export default function PostEditorView({ value, onChange, onError, images }: PostEditorViewProps) {
+export default function PostEditorView({ value, onChange, onError, images, editorRef }: PostEditorViewProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   // Плагин получает свежий обработчик через свой update; новый — только при смене галереи, и тогда
   // фото в поле перечитываются: удалённое сразу становится заглушкой
@@ -54,6 +60,7 @@ export default function PostEditorView({ value, onChange, onError, images }: Pos
     <div ref={rootRef} className="ui-editor">
       <PostPhotosContext value={{ images, used: galleryIdsInText(value) }}>
         <MDXEditor
+          ref={editorRef}
           markdown={value}
           // Нормализация markdown при монтировании — не правка: форма не должна стать «грязной» (спека 49)
           onChange={(markdown, initialNormalize) => initialNormalize || onChange(markdown)}

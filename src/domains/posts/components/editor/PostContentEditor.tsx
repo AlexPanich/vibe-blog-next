@@ -9,7 +9,8 @@ import { plural } from "@/core/plural";
 import type { PostGalleryResource } from "@/domains/posts/dto/postResources";
 import { Input } from "@mantine/core";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
+import type { MDXEditorMethods } from "@mdxeditor/editor";
 
 const PostEditorView = dynamic(() => import('@/domains/posts/components/editor/PostEditorView'), {
   ssr: false,
@@ -23,7 +24,11 @@ type PostContentEditorProps = {
   error?: string,
   // Галерея поста для фото в тексте (спека 38); на странице создания поста её нет
   postId?: number,
-  images?: PostGalleryResource
+  images?: PostGalleryResource,
+  // Помощник автора (спека 55): ref для setMarkdown, кнопка в подвале и блок под рамкой
+  editorRef?: RefObject<MDXEditorMethods | null>,
+  footAction?: ReactNode,
+  below?: ReactNode
 }
 
 type Mode = 'text' | 'preview'
@@ -33,7 +38,7 @@ type Mode = 'text' | 'preview'
   чтения». Превью — тот же рендер, что на сайте; редактор при этом не размонтируется, только
   прячется — история правок и курсор остаются. Если markdown не разобрался — прежнее поле
 */
-export default function PostContentEditor({ value, onChange, error, postId, images }: PostContentEditorProps) {
+export default function PostContentEditor({ value, onChange, error, postId, images, editorRef, footAction, below }: PostContentEditorProps) {
   const [ broken, setBroken ] = useState(false);
   const [ mode, setMode ] = useState<Mode>('text');
   const words = plainText(value).split(' ').filter(Boolean).length;
@@ -42,6 +47,8 @@ export default function PostContentEditor({ value, onChange, error, postId, imag
     return <>
       <div className="ui-note">Текст не открылся в визуальном редакторе — правьте разметку.</div>
       <PostMarkdownField value={value} onChange={onChange} error={error} postId={postId} images={images} />
+      { footAction && <div className="ui-md__fallback-action">{ footAction }</div> }
+      { below }
     </>
   }
 
@@ -55,7 +62,7 @@ export default function PostContentEditor({ value, onChange, error, postId, imag
             </button>
           )) }
         </div>
-        <PostEditorView value={value} onChange={onChange} onError={() => setBroken(true)} images={images} />
+        <PostEditorView value={value} onChange={onChange} onError={() => setBroken(true)} images={images} editorRef={editorRef} />
         { mode === 'preview' && <div className="ui-md__preview">
           { value.trim()
             ? <PostMarkdown content={value} photos={postId && images ? { postId, images } : undefined} />
@@ -63,9 +70,10 @@ export default function PostContentEditor({ value, onChange, error, postId, imag
         </div> }
         <div className="ui-md__foot">
           <span>{ words } { plural(words, [ 'слово', 'слова', 'слов' ]) } · ~{ readingMinutes(value) } мин чтения</span>
-          <span className="ui-md__foot-hint">Заголовки, списки, цитаты и ссылки — кнопками сверху</span>
+          { footAction ?? <span className="ui-md__foot-hint">Заголовки, списки, цитаты и ссылки — кнопками сверху</span> }
         </div>
       </div>
+      { below }
     </Input.Wrapper>
   );
 }

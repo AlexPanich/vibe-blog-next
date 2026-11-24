@@ -17,6 +17,15 @@ export function editPost(user: AuthUser, post: Pick<Post, 'userId' | 'status'>){
   return workWithPost(user, post) && post.status === 'draft';
 }
 
+/*
+  Помощник автора в редакторе (спека 55, п. 16): тот, кто может открыть редактор. Пост не
+  загружается — модель видит только текст, который прислал сам пользователь, поэтому проверки
+  владельца нет
+*/
+export function assistPost(user: AuthUser){
+  return createPost(user) || adminPosts(user);
+}
+
 export function moderatePosts(user: AuthUser){
   return user.roles.includes('moderator') || user.roles.includes('admin');
 }

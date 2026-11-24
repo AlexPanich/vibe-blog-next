@@ -29,7 +29,9 @@ type PostEditorFormProps<T extends PostFields, U extends TagListResource, G exte
   // Карточка «Фото к посту» в правой колонке
   photos: ReactNode,
   // Галерея для фото в тексте (спека 38); у нового поста её нет
-  images?: StrictResource<G, PostGalleryResource>
+  images?: StrictResource<G, PostGalleryResource>,
+  // Помощник автора (спека 55): ИИ включён и есть право — считает page
+  assist: boolean
 }
 
 const EMPTY = { url: '', title: '', lead: '', content: '', tagIds: [], points: [] }
@@ -47,7 +49,8 @@ export default function PostEditorForm<T extends PostFields, U extends TagListRe
   head,
   cover,
   photos,
-  images
+  images,
+  assist
 }: PostEditorFormProps<T, U, G>) {
   const form = usePostForm(post ?? EMPTY);
   // Сохранённое состояние формы: от него считается «есть несохранённые правки»
@@ -89,7 +92,7 @@ export default function PostEditorForm<T extends PostFields, U extends TagListRe
 
       <div className="ui-post-editor__columns">
         <div className="ui-post-editor__fields">
-          <PostFormFields form={form} tagOptions={tags} errors={action.result.validationErrors} cover={cover} postId={post?.id} images={images} />
+          <PostFormFields form={form} tagOptions={tags} errors={action.result.validationErrors} cover={cover} postId={post?.id} images={images} assist={assist} />
         </div>
 
         <aside className="ui-post-editor__aside">

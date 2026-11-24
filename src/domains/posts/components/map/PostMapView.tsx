@@ -11,7 +11,9 @@ export type PostMapViewProps = {
   points: GeoPoint[],
   // Редактор: клик добавляет точку, метки перетаскиваются; без них карта только показывает
   onAdd?: (lat: number, lng: number) => void,
-  onMove?: (index: number, lat: number, lng: number) => void
+  onMove?: (index: number, lat: number, lng: number) => void,
+  // Меньшая высота — предпросмотр помощника (спека 55)
+  compact?: boolean
 }
 
 /*
@@ -19,14 +21,14 @@ export type PostMapViewProps = {
   через dynamic(..., { ssr: false }) — PostRouteMap / PostRouteEditor.
   Одна точка в показе — круглая метка; маршрут и редактор — линия и номерные метки (спека 37)
 */
-export default function PostMapView({ points, onAdd, onMove }: PostMapViewProps) {
+export default function PostMapView({ points, onAdd, onMove, compact }: PostMapViewProps) {
   const positions = points.map(point => [ point.lat, point.lng ] as LatLngTuple);
   const editable = onAdd !== undefined || onMove !== undefined;
   const icons = useMemo(() => numberIcons(positions.length), [ positions.length ]);
 
   return (
     <MapContainer
-      className={editable ? 'ui-map ui-map--edit' : 'ui-map'}
+      className={[ 'ui-map', editable && 'ui-map--edit', compact && 'ui-map--compact' ].filter(Boolean).join(' ')}
       center={positions[0] ?? EUROPE}
       zoom={positions.length > 0 ? POINT_ZOOM : 3}
       // Колесо не зумирует, пока по карте не кликнули: иначе страница перестаёт прокручиваться
@@ -94,7 +96,9 @@ function FitOnMount({ points }: { points: LatLngTuple[] }){
 
   useEffect(() => {
     if(points.length > 1){
-      map.fitBounds(latLngBounds(points), { padding: [ 24, 24 ], maxZoom: POINT_ZOOM });
+      // Без анимации: карту предпросмотра помощника снимают сразу после «Добавить все», а таймер
+      // незаконченного зума Leaflet падает на снятой карте (_leaflet_pos)
+      map.fitBounds(latLngBounds(points), { padding: [ 24, 24 ], maxZoom: POINT_ZOOM, animate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ map ]);

@@ -1,6 +1,7 @@
 import 'client-only';
 import type { PostType } from "@/database/schema";
 import type { PostEditorDto } from "@/domains/posts/dto/postRequests";
+import type { PostAssistDto } from "@/domains/posts/dto/postAssistRequests";
 import type { PostDetailsResource, RoutePointResource } from "@/domains/posts/dto/postResources";
 import useForm from "@/hooks/useForm";
 
@@ -53,7 +54,22 @@ export default function usePostForm(initial: PostFormInitial){
     return { url, title, lead, content, tagIds, details: details(form.data) };
   }
 
-  return { ...form, payload };
+  // Вход помощника автора (спека 55): текущая форма; source — только у перевода, точки — у путешествия
+  function assistInput(): PostAssistDto {
+    const { type, title, lead, content, source, tagIds, points } = form.data;
+
+    return {
+      type,
+      title,
+      lead,
+      content,
+      source: type === 'translate' ? source : '',
+      tagIds,
+      points: type === 'travel' ? points.map(({ lat, lng, label }) => ({ lat, lng, label })) : []
+    };
+  }
+
+  return { ...form, payload, assistInput };
 }
 
 export type PostForm = ReturnType<typeof usePostForm>
